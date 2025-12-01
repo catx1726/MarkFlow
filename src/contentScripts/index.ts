@@ -184,13 +184,21 @@ function clearPreviewHighlight() {
   const parentsToNormalize = new Set<Node>()
 
   previewElements.forEach((el) => {
-    const parent = el.parentNode
-    if (parent) {
-      parentsToNormalize.add(parent)
+    if (!(el instanceof HTMLElement)) return
 
-      while (el.firstChild) parent.insertBefore(el.firstChild, el)
-
-      parent.removeChild(el)
+    // 如果元素还有其他高亮类，只移除预览类。
+    if (
+      el.className.split(' ').some((cls) => cls.startsWith('webext-highlight-') && cls !== 'webext-highlight-preview')
+    ) {
+      el.classList.remove('webext-highlight-preview')
+    } else {
+      // 否则，它是一个纯粹的预览 span，所以解包它。
+      const parent = el.parentNode
+      if (parent) {
+        parentsToNormalize.add(parent)
+        while (el.firstChild) parent.insertBefore(el.firstChild, el)
+        parent.removeChild(el)
+      }
     }
   })
 
