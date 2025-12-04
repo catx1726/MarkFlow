@@ -63,20 +63,24 @@ export async function getManifest() {
         id: 'highlight-mark-flow@flow.soulboy.site',
         strict_min_version: '109.0',
         // 关键修正：数据收集权限声明
-        data_collection_permissions: [
-          {
-            api: 'host_permissions',
-            text: '此扩展程序仅使用 Storage API 在本地存储用户的高亮内容和设置数据。不收集、不存储、也不向任何外部服务器传输任何个人身份信息。',
-            allowed: false, // 明确声明不允许外部收集
-            required: true // 声明该权限是必需的
-          },
-          {
-            api: 'storage',
-            text: '本地存储仅用于在本地缓存用户设置和高亮数据。',
-            allowed: false, // 明确声明不允许外部收集
-            required: true
-          }
-        ]
+        data_collection_permissions: {
+          // 必须是对象，包含 required 属性
+
+          // 关键修正：使用 AMO 允许的抽象数据类型关键词，满足内容校验和计数要求
+          required: ['websiteContent'],
+
+          // 保持 "denied" 结构不变，用于向用户解释您的真实隐私实践（本地存储）
+          denied: [
+            {
+              api: 'host_permissions',
+              text: '此扩展程序仅使用 Storage API 在本地存储用户的高亮内容和设置数据。不收集、不存储、也不向任何外部服务器传输任何个人身份信息。'
+            },
+            {
+              api: 'storage',
+              text: '本地存储仅用于在本地缓存用户设置和高亮数据。'
+            }
+          ]
+        }
       }
     }
   }
