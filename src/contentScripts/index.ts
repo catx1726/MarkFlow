@@ -249,12 +249,15 @@ function processSelection(event: MouseEvent) {
     targetElement = (targetNode.nodeType === Node.ELEMENT_NODE ? targetNode : targetNode.parentNode) as HTMLElement,
     markElement = targetElement?.closest('span[class*="webext-highlight-"]') as HTMLElement | null
 
-  console.log('mouseup', targetElement, selection, markElement)
-
-  // 如果用户点击了当前的预览高亮区域，则不执行任何操作，以保持工具提示打开状态
-  // 并且不清除预览，这样用户仍然可以保存它。
+  // 优化：处理在预览高亮上再次选择的问题
+  // 如果用户在预览高亮区域内操作...
   if (markElement && markElement.classList.contains('webext-highlight-preview')) {
-    return
+    // ...但他们没有创建一个新的选区（即，只是单击），
+    // 那么我们什么也不做。这允许他们与工具提示进行交互。
+    if (selection.isCollapsed) {
+      return
+    }
+    // 否则，如果他们确实创建了一个新的选区（例如双击或拖动），我们将继续向下处理它。
   }
 
   // 在处理新选区或点击之前，清除任何现有的预览高亮
@@ -268,6 +271,7 @@ function processSelection(event: MouseEvent) {
 
   // 情况2：用户点击了已存在的高亮标记
   if (markElement) {
+    // 此时 markElement 不会是 'webext-highlight-preview'
     handleExistingMarkClick(markElement, event.clientX, event.clientY)
     return
   }
@@ -280,6 +284,16 @@ function processSelection(event: MouseEvent) {
  * 处理新的文本选择
  */
 function handleNewSelection(selection: RangySelection, x: number, y: number) {
+  // 修正：在序列化之前“烘焙”选区。
+  // 双击并拖动以选择文本有时会导致浏览器以“单词”为单位扩展选区。
+  // 当之后反序列化这个选区时，它可能会意外地收缩回最初双击的那个单词。
+  // 通过克隆范围并重新添加它，我们创建了一个没有这种“模式”记忆的新选区，
+  // 确保保存的是用户看到的完整选区。
+  if (selection.rangeCount > 0) {
+    const range = selection.getRangeAt(0).cloneRange()
+    selection.removeAllRanges()
+    selection.addRange(range)
+  }
   currentSelection = selection
   currentMarkIdForColorChange = null // 这是一个新选区，不是已存在的标注
   serializedSelection = rangy.serializeSelection(selection, true)

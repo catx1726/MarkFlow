@@ -1,7 +1,7 @@
 {
   "name": "web-marker-extension",
-  "displayName": "Highlight Keeper",
-  "version": "0.0.1",
+  "displayName": "Highlight Mark Flow",
+  "version": "0.0.9",
   "private": true,
   "packageManager": "pnpm@9.7.1",
   "description": "一款免费的本地网页标记工具，支持高亮、备注、导出、管理标记、快速跳转等功能。",

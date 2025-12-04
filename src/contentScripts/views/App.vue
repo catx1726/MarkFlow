@@ -15,7 +15,7 @@ const [show, toggle] = useToggle(false)
       transition="opacity duration-300"
       :class="show ? 'opacity-100' : 'opacity-0'"
     >
-      <h1 class="text-[18px]">Highlight Keeper</h1>
+      <h1 class="text-[18px]">Highlight Mark Flow</h1>
       <SharedSubtitle />
     </div>
     <button

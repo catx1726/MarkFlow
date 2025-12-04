@@ -33,7 +33,7 @@ async function openSidePanel() {
 <template>
   <main class="w-[300px] px-[16px] py-5 text-gray-800 dark:text-gray-200">
     <div class="flex items-center justify-center gap-[12px] mb-[24px]">
-      <h1 class="text-xl font-bold">Highlight Keeper</h1>
+      <h1 class="text-xl font-bold">Highlight Mark Flow</h1>
     </div>
 
     <p class="mb-[24px] text-center text-[14px]">
