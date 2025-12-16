@@ -97,7 +97,14 @@ function setupShadowDOMAndTooltip(): TooltipInstance {
   shadowDOM.appendChild(root)
 
   // 为工具提示创建一个单独的根
-  const tooltipRoot = document.createElement('div')
+  const tooltipRoot = document.createElement('div'),
+    isDark = window.matchMedia('(prefers-color-scheme: dark)').matches
+  if (isDark) tooltipRoot.classList.add('dark')
+
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+    if (e.matches) tooltipRoot.classList.add('dark')
+    else tooltipRoot.classList.remove('dark')
+  })
   shadowDOM.appendChild(tooltipRoot)
 
   document.body.appendChild(container)

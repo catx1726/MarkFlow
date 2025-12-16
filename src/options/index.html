@@ -1,12 +1,17 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <base target="_blank">
-  <title>Options</title>
-</head>
-<body>
-  <div id="app"></div>
-  <script type="module" src="./main.ts"></script>
-</body>
+  <head>
+    <meta charset="UTF-8" />
+    <base target="_blank" />
+    <title>Options</title>
+    <script>
+      // Immediately set the theme to avoid FOUC
+      if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)
+        document.documentElement.classList.add('dark')
+    </script>
+  </head>
+  <body class="bg-gray-50 dark:bg-gray-900">
+    <div id="app"></div>
+    <script type="module" src="./main.ts"></script>
+  </body>
 </html>

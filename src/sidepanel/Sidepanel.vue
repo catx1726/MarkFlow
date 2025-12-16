@@ -1,10 +1,16 @@
 <!-- src/sidepanel/Sidepanel.vue -->
 <script setup lang="ts">
 import { sendMessage } from 'webext-bridge/popup'
-import { computed, nextTick, onMounted, onUnmounted, ref, toRaw } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, toRaw, watchEffect } from 'vue'
 import { CLEANUP_DAYS_THRESHOLD } from '~/logic/config'
 import type { Mark } from '~/logic/storage'
 import { marksByUrl } from '~/logic/storage'
+import { usePreferredDark } from '@vueuse/core'
+const isDark = usePreferredDark()
+watchEffect(() => {
+  if (isDark.value) document.documentElement.classList.add('dark')
+  else document.documentElement.classList.remove('dark')
+})
 
 const editingMarkId = ref<string | null>(null),
   editingNote = ref(''),
@@ -21,17 +27,13 @@ const editingMarkId = ref<string | null>(null),
   activeMarkMenu = ref<string | null>(null),
   activeUrlMenu = ref<string | null>(null)
 
-onMounted(() => {
-  getStorageUsage()
-  document.addEventListener('click', closeMenus)
-})
-
 onUnmounted(() => {
   document.removeEventListener('click', closeMenus)
 })
 
 onMounted(() => {
   getStorageUsage()
+  document.addEventListener('click', closeMenus)
 })
 
 // --- 结构化回顾功能 ---
@@ -357,17 +359,25 @@ async function cleanupUselessMarks() {
   }
 }
 
-function exportToMarkdown(urlMarks: Mark[], pageTitle: string) {
-  let pageURL = urlMarks[0]?.url,
-    markdown = `
-  # [${pageTitle}](${pageURL})
-  ---
-  `
-  for (const mark of urlMarks) {
-    // 使用 ">" 引用块来表示高亮文本
-    markdown += `> ${mark.text.replace(/>/g, '\\>')}\n\n`
-    if (mark.note) markdown += `${mark.note}\n\n`
-    markdown += '---\n\n'
+function exportToMarkdown(urlData: { pageTitle: string; groups: MarkGroup[] }) {
+  const { pageTitle, groups } = urlData
+  // Get URL from the first mark available
+  const firstMark = groups.length > 0 && groups[0].marks.length > 0 ? groups[0].marks[0] : null
+  const pageURL = firstMark?.url || ''
+
+  let markdown = `# [${pageTitle}](${pageURL})\n\n---\n\n`
+
+  for (const group of groups) {
+    // Use heading level based on contextLevel. H1 -> ##, H2 -> ###, etc.
+    const headingLevel = Math.min(group.level + 1, 6) // Cap at H6
+    const heading = '#'.repeat(headingLevel)
+    markdown += `${heading} ${group.title}\n\n`
+
+    for (const mark of group.marks) {
+      markdown += `> ${mark.text.replace(/>/g, '\\>')}\n\n`
+      if (mark.note) markdown += `${mark.note}\n\n`
+      markdown += `---\n\n` // Use a more subtle separator within a chapter
+    }
   }
 
   const blob = new Blob([markdown], { type: 'text/markdown;charset=utf-8' })
@@ -385,7 +395,9 @@ function exportToMarkdown(urlMarks: Mark[], pageTitle: string) {
 </script>
 
 <template>
-  <main class="min-h-screen bg-gray-100 p-[16px] pb-[144px] font-sans relative text-gray-800">
+  <main
+    class="min-h-screen bg-gray-100 dark:bg-gray-900 p-[16px] pb-[144px] font-sans relative text-gray-800 dark:text-gray-200"
+  >
     <button
       class="absolute top-[16px] right-[16px] p-[8px] text-gray-500 hover:text-gray-800"
       title="打开设置"
@@ -407,11 +419,11 @@ function exportToMarkdown(urlMarks: Mark[], pageTitle: string) {
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
       </svg>
     </button>
-    <h1 class="text-xl font-bold text-center text-gray-800 my-4">标记管理</h1>
+    <h1 class="text-xl font-bold text-center text-gray-800 dark:text-gray-200 my-4">标记管理</h1>
     <div class="space-y-6">
       <div
         v-if="Object.keys(marksByUrl).length === 0"
-        class="flex flex-col items-center justify-center text-gray-500 pt-[40px] rounded-lg bg-white p-[24px] shadow-md"
+        class="flex flex-col items-center justify-center text-gray-500 pt-[40px] rounded-lg bg-white dark:bg-gray-800 p-[24px] shadow-md"
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -434,10 +446,10 @@ function exportToMarkdown(urlMarks: Mark[], pageTitle: string) {
         <section
           v-for="[url, urlData] in Object.entries(structuredMarks)"
           :key="url"
-          class="bg-white rounded-lg shadow-md p-[16px] mb-[16px]"
+          class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-[16px] mb-[16px]"
         >
           <header
-            class="flex justify-between items-center pb-[8px] mb-[8px] border-b border-gray-200 cursor-pointer group/page"
+            class="flex justify-between items-center pb-[8px] mb-[8px] border-b border-gray-200 dark:border-gray-700 cursor-pointer group/page"
             @click="toggleUrlCollapse(url)"
           >
             <div class="flex items-center gap-2 flex-1 min-w-0">
@@ -454,12 +466,15 @@ function exportToMarkdown(urlMarks: Mark[], pageTitle: string) {
                   clip-rule="evenodd"
                 />
               </svg>
-              <h2 class="text-base font-semibold text-gray-700 truncate" :title="url">
+              <h2 class="text-base font-semibold text-gray-700 dark:text-gray-300 truncate" :title="url">
                 {{ urlData.pageTitle }}
               </h2>
             </div>
             <div class="relative flex-shrink-0" @click.stop>
-              <button class="p-1 text-gray-500 hover:text-gray-800 rounded-full" @click="toggleUrlMenu(url)">
+              <button
+                class="p-1 text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 rounded-full"
+                @click="toggleUrlMenu(url)"
+              >
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                   <path
                     d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z"
@@ -468,18 +483,13 @@ function exportToMarkdown(urlMarks: Mark[], pageTitle: string) {
               </button>
               <div
                 v-if="activeUrlMenu === url"
-                class="absolute right-0 mt-2 w-32 bg-white rounded-md shadow-lg z-20 border border-gray-200"
+                class="absolute right-0 mt-2 w-32 bg-white dark:bg-gray-700 rounded-md shadow-lg z-20 border border-gray-200 dark:border-gray-600"
               >
                 <ul class="py-1">
                   <li>
                     <button
-                      class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
-                      @click="
-                        exportToMarkdown(
-                          Object.values(urlData.groups).flatMap((g) => g.marks),
-                          urlData.pageTitle
-                        )
-                      "
+                      class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 flex items-center gap-2"
+                      @click="exportToMarkdown(urlData)"
                     >
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
@@ -500,7 +510,7 @@ function exportToMarkdown(urlMarks: Mark[], pageTitle: string) {
                   </li>
                   <li>
                     <button
-                      class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+                      class="w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/50 flex items-center gap-2"
                       @click="removeAllMarksForUrl(url)"
                     >
                       <svg
@@ -601,13 +611,13 @@ function exportToMarkdown(urlMarks: Mark[], pageTitle: string) {
                     <transition name="fade-scale">
                       <div
                         v-if="activeMarkMenu === mark.id"
-                        class="absolute right-0 mt-2 w-40 bg-white rounded-md shadow-lg z-10 border border-gray-200"
+                        class="absolute right-0 mt-2 w-40 bg-white dark:bg-gray-700 rounded-md shadow-lg z-10 border border-gray-200 dark:border-gray-600"
                         @click.stop
                       >
                         <ul class="py-1 text-sm">
                           <li>
                             <button
-                              class="w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                              class="w-full text-left px-4 py-2 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 flex items-center gap-2"
                               @click="toggleTextExpansion(mark.id)"
                             >
                               <span>{{ expandedTexts.has(mark.id) ? '收起引文' : '展开引文' }}</span>
@@ -615,30 +625,16 @@ function exportToMarkdown(urlMarks: Mark[], pageTitle: string) {
                           </li>
                           <li v-if="mark.note">
                             <button
-                              class="w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                              class="w-full text-left px-4 py-2 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 flex items-center gap-2"
                               @click="toggleNoteExpansion(mark.id)"
                             >
-                              <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                class="h-4 w-4"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                              >
-                                <path
-                                  stroke-linecap="round"
-                                  stroke-linejoin="round"
-                                  stroke-width="2"
-                                  d="M4 8V4m0 0h4M4 4l5 5m11-1V8m0 0h-4m4 0l-5-5M4 16v4m0 0h4m-4 0l5-5m11 1v-4m0 0h-4m4 0l-5 5"
-                                />
-                              </svg>
                               <span>{{ expandedNotes.has(mark.id) ? '收起备注' : '展开备注' }}</span>
                             </button>
                           </li>
                           <div class="my-1 border-t border-gray-100"></div>
                           <li>
                             <button
-                              class="w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                              class="w-full text-left px-4 py-2 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 flex items-center gap-2"
                               @click="copyMarkText(mark)"
                             >
                               <svg
@@ -669,7 +665,7 @@ function exportToMarkdown(urlMarks: Mark[], pageTitle: string) {
                           </li>
                           <li>
                             <button
-                              class="w-full text-left px-4 py-2 text-red-600 hover:bg-red-50 flex items-center gap-2"
+                              class="w-full text-left px-4 py-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/50 flex items-center gap-2"
                               @click="removeMark(mark)"
                             >
                               <svg
@@ -699,27 +695,29 @@ function exportToMarkdown(urlMarks: Mark[], pageTitle: string) {
       </div>
     </div>
 
-    <div class="fixed bottom-0 left-0 right-0 z-10 w-full border-t bg-white/80 p-[16px] shadow-lg backdrop-blur-sm">
-      <h2 class="text-[18px] font-semibold text-gray-700 mb-[8px]">存储管理</h2>
-      <div class="text-[14px] text-gray-600">
+    <div
+      class="fixed bottom-0 left-0 right-0 z-10 w-full border-t border-gray-200 dark:border-gray-700 bg-white/80 dark:bg-gray-800/80 p-[16px] shadow-lg backdrop-blur-sm"
+    >
+      <h2 class="text-[18px] font-semibold text-gray-700 dark:text-gray-200 mb-[8px]">存储管理</h2>
+      <div class="text-[14px] text-gray-600 dark:text-gray-400">
         <p>
           已用空间: {{ (storageUsage / 1024).toFixed(2) }} KB /
           <span v-if="storageQuota">{{ (storageQuota / 1024 / 1024).toFixed(2) }} MB</span>
           <span v-else>无已知限制</span>
         </p>
-        <div class="w-full bg-gray-200 rounded-full h-[10px] mt-[4px]">
+        <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-[10px] mt-[4px]">
           <div class="bg-blue-600 h-[10px] rounded-full" :style="{ width: `${storageUsagePercent}%` }"></div>
         </div>
       </div>
       <div class="mt-[16px] flex gap-[8px]">
         <button
-          class="action-button rounded-md bg-red-100 px-[12px] py-[4px] text-[14px] font-medium text-red-800 hover:bg-red-200"
+          class="action-button rounded-md bg-red-100 px-[12px] py-[4px] text-[14px] font-medium text-red-800 hover:bg-red-200 dark:bg-red-900/50 dark:text-red-400 dark:hover:bg-red-900"
           @click="cleanupOldMarks"
         >
           清理 {{ CLEANUP_DAYS_THRESHOLD }} 天前的标记
         </button>
         <button
-          class="action-button rounded-md bg-yellow-100 px-[12px] py-[4px] text-[14px] font-medium text-yellow-800 hover:bg-yellow-200"
+          class="action-button rounded-md bg-yellow-100 px-[12px] py-[4px] text-[14px] font-medium text-yellow-800 hover:bg-yellow-200 dark:bg-yellow-900/50 dark:text-yellow-400 dark:hover:bg-yellow-900"
           @click="cleanupUselessMarks"
         >
           清理无备注的标记

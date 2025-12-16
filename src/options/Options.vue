@@ -1,8 +1,14 @@
 <script setup lang="ts">
-import { computed, reactive, ref, watch } from 'vue'
+import { computed, reactive, ref, watch, watchEffect } from 'vue'
+import { usePreferredDark } from '@vueuse/core'
 import { settings } from '~/logic/settings'
 import { cloneDeep } from 'lodash-es'
 
+const isDark = usePreferredDark()
+watchEffect(() => {
+  if (isDark.value) document.documentElement.classList.add('dark')
+  else document.documentElement.classList.remove('dark')
+})
 // Local state for editing to enable explicit saving
 const localSettings = reactive(cloneDeep(settings.value))
 const saveStatus = ref('')
@@ -68,7 +74,7 @@ function saveSettings() {
 </script>
 
 <template>
-  <main class="w-full max-w-[768px] mx-auto px-[16px] py-[40px] text-gray-700 dark:text-gray-200">
+  <main class="w-full max-w-[768px] mx-auto px-[16px] py-[40px] text-gray-700 dark:text-gray-200 min-h-screen">
     <h1 class="text-[24px] font-bold mb-[32px]">设置</h1>
 
     <div class="space-y-8">
@@ -173,7 +179,9 @@ function saveSettings() {
     </div>
 
     <!-- Save Button and Status -->
-    <div class="mt-[32px] pt-[24px] border-t border-gray-200 dark:border-gray-700 flex items-center justify-end gap-[16px]">
+    <div
+      class="mt-[32px] pt-[24px] border-t border-gray-200 dark:border-gray-700 flex items-center justify-end gap-[16px]"
+    >
       <span v-if="saveStatus" class="text-green-600 text-[14px] transition-opacity duration-300">{{ saveStatus }}</span>
       <button
         class="px-[16px] py-[8px] text-[14px] font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
@@ -189,7 +197,9 @@ function saveSettings() {
       class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
       @click.self="hideAlert"
     >
-      <div class="bg-white dark:bg-gray-900 rounded-lg shadow-xl p-[24px] w-full max-w-sm text-gray-800 dark:text-gray-200">
+      <div
+        class="bg-white dark:bg-gray-900 rounded-lg shadow-xl p-[24px] w-full max-w-sm text-gray-800 dark:text-gray-200"
+      >
         <h3 class="text-[18px] font-semibold mb-[16px]">提示</h3>
         <p class="text-[14px] mb-[24px]">
           {{ alertInfo.message }}

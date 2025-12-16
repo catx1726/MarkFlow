@@ -2,7 +2,14 @@
 import { computed } from 'vue'
 import { sendMessage } from 'webext-bridge/popup'
 import { marksByUrl } from '~/logic/storage'
-
+import { watchEffect } from 'vue'
+import { usePreferredDark } from '@vueuse/core'
+// Automatically apply dark mode class to the root element
+const isDark = usePreferredDark()
+watchEffect(() => {
+  if (isDark.value) document.documentElement.classList.add('dark')
+  else document.documentElement.classList.remove('dark')
+})
 const totalMarks = computed(() => {
   return Object.values(marksByUrl.value).flat().length
 })
@@ -31,7 +38,7 @@ async function openSidePanel() {
 </script>
 
 <template>
-  <main class="w-[300px] px-[16px] py-5 text-gray-800 dark:text-gray-200">
+  <main class="w-[300px] px-4 py-5 text-center text-gray-700 dark:text-gray-200">
     <div class="flex items-center justify-center gap-[12px] mb-[24px]">
       <h1 class="text-xl font-bold">Highlight Mark Flow</h1>
     </div>

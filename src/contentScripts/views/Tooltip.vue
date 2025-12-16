@@ -1,9 +1,8 @@
 <template>
   <div
     v-if="visible"
-    class="tooltip-card fixed z-max w-[300px] rounded-lg bg-white p-[12px] font-sans shadow-lg dark:border dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200"
+    class="tooltip-card fixed z-max w-[300px] rounded-lg bg-white p-[12px] font-sans shadow-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200"
     :style="{ top: `${position.y}px`, left: `${position.x}px`, 'z-index': zIndex }"
-    :class="{ dark: isDark }"
     @mousedown.stop
   >
     <div class="tooltip-content flex flex-col gap-[12px]">
@@ -78,9 +77,6 @@
 import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { settings } from '~/logic/settings'
 import { getMaxZIndex } from '..'
-import { usePreferredDark } from '@vueuse/core'
-
-const isDark = usePreferredDark()
 
 const visible = ref(false)
 const position = reactive({ x: 0, y: 0 })
