@@ -88,6 +88,7 @@ const defaultHighlightColor = computed(() => settings.value.defaultHighlightColo
 const textareaRef = ref<HTMLTextAreaElement | null>(null)
 const textToCopy = ref('')
 const copySuccess = ref(false)
+const zIndex = ref(0) // 将 zIndex 声明为响应式 ref
 const formatShortcutForDisplay = (shortcut: string) => {
   let text = shortcut
   if (isMac) {
@@ -101,8 +102,7 @@ const formatShortcutForDisplay = (shortcut: string) => {
 }
 const shortcutSaveText = computed(() => formatShortcutForDisplay(settings.value.shortcutSave))
 const shortcutDeleteText = computed(() => formatShortcutForDisplay(settings.value.shortcutDelete))
-const isMac = /mac/i.test(navigator.platform),
-  zIndex = getMaxZIndex() + 1
+const isMac = /mac/i.test(navigator.platform)
 
 const emit = defineEmits<{
   (e: 'save', note: string, color: string): void
@@ -223,6 +223,8 @@ function show(
   initialColor: string | undefined,
   initialTextToCopy = ''
 ) {
+  zIndex.value = getMaxZIndex()
+
   // 工具提示的预估尺寸，用于边界检测
   const tooltipWidth = 300
   const tooltipHeight = 160

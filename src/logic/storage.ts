@@ -13,6 +13,7 @@ export interface Mark {
   color: string // 高亮颜色
   html?: string // 新增：高亮内容的 HTML 格式
   rangySerialized: string // Rangy 序列化后的选区字符串
+  shadowHostSelector?: string // 新增：如果高亮在 Shadow DOM 中，则存储其宿主元素的选择器
   createdAt: number // 创建时间戳
   title?: string // 网页 tab 名称
   // 结构化回顾新增字段
