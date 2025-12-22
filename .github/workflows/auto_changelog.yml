@@ -1,37 +1,50 @@
-name: Auto Changelog Update
+name: Auto Changelog
+
 on:
-  pull_request:
-    types: [closed]
-    branches: [main]
+  push:
+    branches:
+      - main
+    # 忽略对文档和配置的修改，避免不必要的运行
+    paths-ignore:
+      - '**.md'
+      - '.github/workflows/**'
+
 permissions:
   contents: write
+
 jobs:
-  update-changelog:
-    if: github.event.pull_request.merged == true
+  update_changelog:
+    # 只有当 commit message 中不包含 [skip ci] 时才运行
+    if: "!contains(github.event.head_commit.message, '[skip ci]')"
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+      - name: Checkout Code
+        uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 0 # 必须获取完整历史以生成日志
 
-      - name: Update CHANGELOG.md
+      - name: Update Changelog
         run: |
-          DATE=$(date +'%Y-%m-%d')
-          PR_TITLE="${{ github.event.pull_request.title }}"
-          PR_NUMBER="${{ github.event.pull_request.number }}"
-          AUTHOR="${{ github.event.pull_request.user.login }}"
-
-          # 构造日志条目
-          ENTRY="* $DATE - [#$PR_NUMBER] $PR_TITLE (by @$AUTHOR)"
-
-          # 将条目插入到文件顶部（在标题之后）
-          sed -i "2i $ENTRY" CHANGELOG.md || echo "$ENTRY" >> CHANGELOG.md
+          # 这里可以替换为你实际使用的日志生成命令
+          # 目前先用一个简单的追加命令作为演示
+          echo -e "\n## [$(date +'%Y-%m-%d')] \n- $(git log -1 --pretty=format:'%s (%h)')" >> CHANGELOG.md
 
       - name: Commit and Push
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # 检查是否有实际变更
           git add CHANGELOG.md
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+
           git commit -m "docs: 自动更新 CHANGELOG [skip ci]"
-          git push
+          
+          # 核心修复：使用 rebase 策略处理 non-fast-forward 冲突
+          # -X ours 可以在冲突时优先保留自动生成的日志结构
+          git pull origin main --rebase -X ours
+          
+          git push origin main
