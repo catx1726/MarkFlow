@@ -1,5 +1,5 @@
 ---
-name: '🚀 功能开发 (Feature)'
+name: '功能开发 (Feature)'
 about: 描述新功能需求以触发 AI 分析流
 title: '[FEAT]: '
 labels: ai-ready, enhancement
