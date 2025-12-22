@@ -1,41 +1,69 @@
 name: AI PR Summary & Guard
+
 on:
   pull_request:
-    types: [opened, synchronize]
+    types: [opened, synchronize, reopened]
+    branches:
+      - main
+
+permissions:
+  contents: read
+  pull-requests: write
 
 jobs:
-  summary:
+  summary_and_check:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      pull-requests: write
     steps:
-      - name: Checkout
-        uses: actions/checkout@v3
+      - name: Checkout Code
+        uses: actions/checkout@v4
         with:
+          # fetch-depth: 0 确保获取完整历史，以便 git diff 能找到基准分支
           fetch-depth: 0
 
       - name: Generate AI Summary
         id: summary
         run: |
+          # 1. 确保对比基准存在
+          git fetch origin ${{ github.base_ref }}:${{ github.base_ref }}
+          
+          # 2. 初始化 Summary 内容
           echo "### 🤖 AI 代码变更自检" > summary.md
-          echo "#### 1. 变更统计" >> summary.md
-          git diff origin/${{ github.base_ref }} --stat >> summary.md
-
+          echo "#### 1. 变更统计 (Stat)" >> summary.md
+          echo "\`\`\`text" >> summary.md
+          git diff origin/${{ github.base_ref }}...HEAD --stat >> summary.md
+          echo "\`\`\`" >> summary.md
+          
           echo -e "\n#### 2. 关键文件变更清单" >> summary.md
-          git diff origin/${{ github.base_ref }} --name-only | grep -E '\.(js|vue|ts|py|go)$' || echo "无核心逻辑变更" >> summary.md
-
-          # 检查归档文档同步状态
-          echo -e "\n#### 3. SOP 合规性检查" >> summary.md
-          CHANGES=$(git diff --name-only origin/${{ github.base_ref }} | grep '.ai/archive/')
-          if [ -z "$CHANGES" ]; then
-            echo "⚠️ **警告**：未检测到 \`.ai/archive/\` 下的方案归档更新。请确保已同步本次任务的分析文档。" >> summary.md
+          # 排除非业务逻辑目录，保留 src 下的核心逻辑
+          FILES=$(git diff origin/${{ github.base_ref }}...HEAD --name-only | grep -vE '^(\.ai/|\.github/|package\.json|pnpm-lock\.yaml|README\.md)' || true)
+          
+          if [ -z "$FILES" ]; then
+            echo "_无核心逻辑文件变更_" >> summary.md
           else
-            echo "✅ 已检测到归档文档更新。" >> summary.md
+            # 逐行格式化为 Markdown 列表
+            echo "$FILES" | while read -r line; do echo "- \`$line\`"; done >> summary.md
+          fi
+          
+          echo -e "\n#### 3. SOP 合规性检查" >> summary.md
+          # 检查 .ai/archive/ 下是否有对应本次任务的文档更新
+          ARCHIVE_CHANGES=$(git diff origin/${{ github.base_ref }}...HEAD --name-only | grep '.ai/archive/' || true)
+          if [ -z "$ARCHIVE_CHANGES" ]; then
+            echo "❌ **异常**：未检测到 \`.ai/archive/\` 下的归档文档。请确保已同步本次任务的总结文件。" >> summary.md
+            echo "CHECK_STATUS=fail" >> $GITHUB_ENV
+          else
+            echo "✅ **合规**：已检测到归档文档更新：" >> summary.md
+            echo "$ARCHIVE_CHANGES" | while read -r line; do echo "- \`$line\`"; done >> summary.md
+            echo "CHECK_STATUS=pass" >> $GITHUB_ENV
           fi
 
       - name: Comment PR
         uses: thollander/actions-comment-pull-request@v2
         with:
           filePath: summary.md
-          comment_tag: ai-summary # 确保后续更新会覆盖旧评论而非产生大量新评论
+          comment_tag: ai_summary_guard
+
+      - name: Final Check Guard
+        if: env.CHECK_STATUS == 'fail'
+        run: |
+          echo "SOP check failed: Missing archive documentation."
+          exit 1
