@@ -43,7 +43,7 @@ jobs:
             ### ✅ 任务完成与知识沉淀
             本项目已成功合并！以下是本次协作产生的数字资产：
 
-            - **技术归档**: [查看详细方案文档](https://github.com/${context.repo.owner}/${context.repo.repo}/blob/main/.ai/archive/${issueNumber}-summary.md)
+            - **技术归档**: [查看详细方案文档](https://github.com/${context.repo.owner}/${context.repo.repo}/blob/main/.ai/archive/${issueNumber}_summary.md)
             - **核心变更**: ${coreChanges}
             - **学习心得**: ${learning}
 
