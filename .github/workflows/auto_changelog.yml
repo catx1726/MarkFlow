@@ -1,0 +1,36 @@
+name: Auto Changelog Update
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]
+
+jobs:
+  update-changelog:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Update CHANGELOG.md
+        run: |
+          DATE=$(date +'%Y-%m-%d')
+          PR_TITLE="${{ github.event.pull_request.title }}"
+          PR_NUMBER="${{ github.event.pull_request.number }}"
+          AUTHOR="${{ github.event.pull_request.user.login }}"
+
+          # 构造日志条目
+          ENTRY="* $DATE - [#$PR_NUMBER] $PR_TITLE (by @$AUTHOR)"
+
+          # 将条目插入到文件顶部（在标题之后）
+          sed -i "2i $ENTRY" CHANGELOG.md || echo "$ENTRY" >> CHANGELOG.md
+
+      - name: Commit and Push
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add CHANGELOG.md
+          git commit -m "docs: 自动更新 CHANGELOG [skip ci]"
+          git push

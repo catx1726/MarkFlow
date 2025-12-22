@@ -1,0 +1,16 @@
+name: Docs Sync Check
+on: pull_request
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with: { fetch-depth: 0 }
+      - name: Verify Archive Update
+        run: |
+          # 检查 .ai/archive/ 文件夹是否有文件变动
+          CHANGES=$(git diff --name-only origin/main | grep '.ai/archive/')
+          if [ -z "$CHANGES" ]; then
+            echo "❌ 错误：检测到代码变更，但未在 .ai/archive/ 中提交分析归档！"
+            exit 1
+          fi

@@ -1,0 +1,56 @@
+name: Issue Knowledge Closure
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]
+
+jobs:
+  comment-on-issue:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    steps:
+      - name: Post Knowledge Summary
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const prBody = context.payload.pull_request.body || "";
+            const prTitle = context.payload.pull_request.title;
+
+            // 1. 动态获取关联的 Issue 编号 (支持 Fixes, Closes, Resolves)
+            const issueMatch = prBody.match(/(?:Fixes|Closes|Resolves)\s+#(\d+)/i);
+            if (!issueMatch) {
+              console.log("未检测到关联的 Issue 编号，跳过评论。");
+              return;
+            }
+            const issueNumber = issueMatch[1];
+
+            // 2. 动态提取“核心变更”和“学习心得”
+            // 逻辑：从 PR 描述中寻找特定标记后的内容，如果没有则使用 PR 标题
+            const extractSection = (tag) => {
+              const regex = new RegExp(`${tag}\\s*([\\s\\S]*?)(?=\\n###|$)`, 'i');
+              const match = prBody.match(regex);
+              return match ? match[1].trim() : null;
+            };
+
+            const coreChanges = extractSection("核心变更") || prTitle;
+            const learning = extractSection("学习心得") || "本次任务已按既定 SOP 完成，知识已沉淀至归档文档。";
+
+            // 3. 构造动态回帖内容
+            const commentBody = `
+            ### ✅ 任务完成与知识沉淀
+            本项目已成功合并！以下是本次协作产生的数字资产：
+
+            - **技术归档**: [查看详细方案文档](https://github.com/${context.repo.owner}/${context.repo.repo}/blob/main/.ai/archive/${issueNumber}-summary.md)
+            - **核心变更**: ${coreChanges}
+            - **学习心得**: ${learning}
+
+            *此信息由 GitHub Actions 自动从 PR 动态提取并同步。*
+            `;
+
+            // 4. 发表评论
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              body: commentBody.replace(/^\s+/gm, '') // 去除每一行开头的多余空格
+            });

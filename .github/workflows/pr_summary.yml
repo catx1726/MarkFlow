@@ -1,0 +1,41 @@
+name: AI PR Summary & Guard
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+jobs:
+  summary:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Generate AI Summary
+        id: summary
+        run: |
+          echo "### 🤖 AI 代码变更自检" > summary.md
+          echo "#### 1. 变更统计" >> summary.md
+          git diff origin/${{ github.base_ref }} --stat >> summary.md
+
+          echo -e "\n#### 2. 关键文件变更清单" >> summary.md
+          git diff origin/${{ github.base_ref }} --name-only | grep -E '\.(js|vue|ts|py|go)$' || echo "无核心逻辑变更" >> summary.md
+
+          # 检查归档文档同步状态
+          echo -e "\n#### 3. SOP 合规性检查" >> summary.md
+          CHANGES=$(git diff --name-only origin/${{ github.base_ref }} | grep '.ai/archive/')
+          if [ -z "$CHANGES" ]; then
+            echo "⚠️ **警告**：未检测到 \`.ai/archive/\` 下的方案归档更新。请确保已同步本次任务的分析文档。" >> summary.md
+          else
+            echo "✅ 已检测到归档文档更新。" >> summary.md
+          fi
+
+      - name: Comment PR
+        uses: thollander/actions-comment-pull-request@v2
+        with:
+          filePath: summary.md
+          comment_tag: ai-summary # 确保后续更新会覆盖旧评论而非产生大量新评论
