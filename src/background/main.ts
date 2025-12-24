@@ -11,7 +11,6 @@ import {
   type UpdateMarkNotePayload,
   GetMarkByIdPayload
 } from '~/logic/storage'
-import { CLEANUP_DAYS_THRESHOLD } from '~/logic/config'
 
 // only on dev mode
 if (import.meta.hot) {
