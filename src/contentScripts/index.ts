@@ -90,6 +90,9 @@ async function initialize() {
   // 为页面上所有的 Shadow Root 附加监听器，以处理 Web Components 内的选区。
   attachListenersToShadowRoots(document)
 
+  // 监听动态加载的内容，确保 Shadow DOM 监听器被正确附加
+  setupGlobalObserver()
+
   // 处理页面初始加载时的操作，如恢复高亮和滚动到指定标记
   handleInitialLoadActions()
 }
@@ -101,6 +104,29 @@ function handleKeyDown(event: KeyboardEvent) {
   if (event.altKey && mod.toLowerCase() === 'alt' && event.key.toLowerCase() === key.toLowerCase()) {
     event.preventDefault()
   }
+}
+
+/**
+ * 设置一个全局的 MutationObserver 来监视动态添加的内容。
+ * 这对于确保在 Web Components (Shadow DOM) 被 JS 延迟加载到页面后，
+ * 我们的事件监听器仍然可以被正确附加至关重要。
+ */
+let globalObserverTimer: number
+function setupGlobalObserver() {
+  const observer = new MutationObserver((mutations) => {
+    // 如果有任何节点被添加，我们就认为 DOM 可能发生了需要我们关注的变化。
+    const hasAddedNodes = mutations.some((m) => m.addedNodes.length > 0)
+    if (hasAddedNodes) {
+      // 使用防抖来避免在 DOM 快速变化时频繁执行。
+      clearTimeout(globalObserverTimer)
+      globalObserverTimer = window.setTimeout(() => {
+        // 重新扫描整个文档以查找并附加监听器到任何新的 Shadow Root。
+        attachListenersToShadowRoots(document)
+      }, 500)
+    }
+  })
+  // 观察 body 的子节点和整个子树的变化。
+  observer.observe(document.body, { childList: true, subtree: true })
 }
 
 // #endregion
@@ -230,23 +256,10 @@ function handleClearPreview() {
 function handleMouseDown(event: MouseEvent) {
   clearTimeout(debounceTimer)
 
-  const target = event.target as HTMLElement
-  console.log(
-    '[DEBUG] handleMouseDown target:',
-    target,
-    'Has ShadowRoot:',
-    !!(target instanceof Element && target.shadowRoot)
-  )
+  const target = event.target as HTMLElement,
+    tagName = target.tagName
 
-  // 当来自 Shadow DOM 的事件冒泡到 document 时，event.target 会被重定向为宿主元素。
-  // 如果是这种情况，我们直接返回，让 shadowRoot 自己的监听器来处理。
-  // 这可以防止 document 级别的监听器错误地隐藏 Tooltip。
-  if (target instanceof Element && target.shadowRoot) {
-    console.log('[DEBUG] Skipping mousedown on Shadow Host (letting internal listener handle it)')
-    return
-  }
-
-  const tagName = target.tagName
+  if (target instanceof Element && target.shadowRoot) return
 
   if (tagName === 'INPUT' || tagName === 'TEXTAREA' || target.isContentEditable) {
     return
@@ -271,8 +284,6 @@ function handleMouseUp(event: MouseEvent) {
   const target = event.target as HTMLElement,
     tagName = target.tagName
 
-  console.log('[DEBUG] handleMouseUp target:', target)
-
   // 1. 检查 INPUT 或 TEXTAREA 标签
   if (tagName === 'INPUT' || tagName === 'TEXTAREA') {
     // 如果在表单元素中mouseup，则不触发选区处理
@@ -290,13 +301,38 @@ function handleMouseUp(event: MouseEvent) {
   if (event.button === 2 || path.some((el) => el instanceof HTMLElement && el.classList.contains('tooltip-card')))
     return
 
+  // 立即捕获选区，防止在 setTimeout 期间选区丢失（特别是在 Shadow DOM 中）
+  let capturedSerialized: string | null = null
+  let capturedRoot: Node | undefined
+  let capturedText = ''
+
+  if (event.altKey) {
+    const selection = rangy.getSelection()
+    if (!selection.isCollapsed && selection.rangeCount > 0) {
+      try {
+        const range = selection.getRangeAt(0)
+        const root = range.commonAncestorContainer.getRootNode()
+        if (root instanceof ShadowRoot) {
+          capturedRoot = root
+        }
+        capturedSerialized = rangy.serializeRange(range, true, capturedRoot)
+        capturedText = selection.toString()
+      } catch (e) {
+        console.error('Failed to capture selection:', e)
+      }
+    }
+  }
+
   // 延迟一小段时间确保选区稳定
   // 关键修复：同步捕获 target，避免在 setTimeout 中因事件冒泡/重定向导致 target 变为 Shadow Host
   const eventSnapshot = {
     target,
     clientX: event.clientX,
     clientY: event.clientY,
-    altKey: event.altKey
+    altKey: event.altKey,
+    capturedSerialized,
+    capturedRoot,
+    capturedText
   }
   setTimeout(() => processSelection(eventSnapshot), 50)
 }
@@ -308,37 +344,37 @@ function handleMouseUp(event: MouseEvent) {
 /**
  * 处理用户选择或点击操作
  */
-function processSelection(event: { target: EventTarget | null; clientX: number; clientY: number; altKey: boolean }) {
+function processSelection(event: {
+  target: EventTarget | null
+  clientX: number
+  clientY: number
+  altKey: boolean
+  capturedSerialized?: string | null
+  capturedRoot?: Node
+  capturedText?: string
+}) {
   const selection = rangy.getSelection(),
     targetNode = event.target as Node
 
-  console.log('[DEBUG] processSelection targetNode:', targetNode)
-
-  // 当来自 Shadow DOM 的事件冒泡到 document 时，event.target 会被重定向为宿主元素。
-  // 此检查识别出这种情况（监听器在 document 上，但事件源于 Shadow DOM）。
-  // 在这种情况下，我们直接返回，因为 shadowRoot 上更具体的监听器会正确处理它。
-  // 这可以防止 document 级别的监听器错误地隐藏 Tooltip。
-  if (targetNode instanceof Element && targetNode.shadowRoot && selection.isCollapsed) {
-    console.log('[DEBUG] Skipping processSelection on Shadow Host (bubbled event)')
-
+  // 当事件监听器在 `document` 上，而事件源自 Shadow DOM 内部时，`event.target` 会被重定向为宿主元素 (host)。
+  // 这个检查可以识别出这种情况。
+  // 如果是这种情况，并且是一次点击（而不是文本选择），我们直接返回。
+  // 这是因为我们附加到该 Shadow Root 上的、更具体的监听器会正确处理这个事件。
+  // 这样做可以防止 `document` 级别的监听器错误地处理事件（例如，将对高亮的点击误判为空白区域点击），
+  // 从而避免它调用 `tooltipApp?.hide()` 并意外隐藏由 `shadowRoot` 监听器正确显示的 Tooltip。
+  if (targetNode instanceof Element && targetNode.shadowRoot && selection.isCollapsed && !event.capturedSerialized) {
     return
   }
 
   const targetElement = (targetNode.nodeType === Node.ELEMENT_NODE ? targetNode : targetNode.parentNode) as HTMLElement,
     markElement = targetElement?.closest('span[class*="webext-highlight-"]') as HTMLElement | null
 
-  if (markElement) {
-    console.log('[DEBUG] Found markElement:', markElement)
-  } else {
-    console.log('[DEBUG] No markElement found on target')
-  }
-
   // 优化：处理在预览高亮上再次选择的问题
   // 如果用户在预览高亮区域内操作...
   if (markElement && markElement.classList.contains('webext-highlight-preview')) {
     // ...但他们没有创建一个新的选区（即，只是单击），
     // 那么我们什么也不做。这允许他们与工具提示进行交互。
-    if (selection.isCollapsed) {
+    if (selection.isCollapsed && !event.capturedSerialized) {
       return
     }
     // 否则，如果他们确实创建了一个新的选区（例如双击或拖动），我们将继续向下处理它。
@@ -346,6 +382,18 @@ function processSelection(event: { target: EventTarget | null; clientX: number; 
 
   // 在处理新选区或点击之前，清除任何现有的预览高亮
   clearPreviewHighlight()
+
+  // 优先使用捕获的选区
+  if (event.capturedSerialized) {
+    handleNewSelectionFromCapture(
+      event.capturedSerialized,
+      event.capturedRoot,
+      event.capturedText || '',
+      event.clientX,
+      event.clientY
+    )
+    return
+  }
 
   // 情况1：用户选择了新的文本
   if (!selection.isCollapsed) {
@@ -362,6 +410,25 @@ function processSelection(event: { target: EventTarget | null; clientX: number; 
 
   // 情况3：用户点击了页面的其他地方，并且没有选择文本
   tooltipApp?.hide()
+}
+
+/**
+ * 处理从 mouseup 捕获的新文本选择
+ */
+function handleNewSelectionFromCapture(serialized: string, root: Node | undefined, text: string, x: number, y: number) {
+  currentSelection = null
+  serializedSelection = serialized
+  currentSerializationRoot = root
+  currentMarkIdForColorChange = null
+
+  try {
+    const range = rangy.deserializeRange(serialized, root, document)
+    previewApplier?.applyToRange(range)
+  } catch (e) {
+    console.error('Failed to apply preview from capture:', e)
+  }
+
+  showTooltipForSelection(x, y, text)
 }
 
 /**
