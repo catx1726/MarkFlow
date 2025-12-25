@@ -142,7 +142,7 @@ function setupGlobalObserver() {
 function setupShadowDOMAndTooltip(): TooltipInstance {
   const container = document.createElement('div')
   container.id = __NAME__
-  container.style.position = 'relative'
+  container.style.position = 'fixed'
   container.style.zIndex = `${getMaxZIndex() + 1}`
   container.style.fontSize = '16px'
 

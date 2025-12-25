@@ -1,8 +1,8 @@
 <template>
   <div
     v-if="visible"
-    class="tooltip-card fixed z-max w-[300px] rounded-lg bg-white p-[12px] font-sans shadow-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200"
-    :style="{ top: `${position.y}px`, left: `${position.x}px`, 'z-index': zIndex }"
+    class="tooltip-card fixed z-1 w-[300px] rounded-lg bg-white p-[12px] font-sans shadow-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200"
+    :style="{ top: `${position.y}px`, left: `${position.x}px` }"
     @mousedown.stop
   >
     <div class="tooltip-content flex flex-col gap-[12px]">
