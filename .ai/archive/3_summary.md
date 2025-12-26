@@ -1,14 +1,14 @@
----
-
 # 📝 知识归档：Summary for Issue #3
 
 ## 1. 元数据 (Metadata)
 
-* **Task ID**: `#3`
-* **日期**: 2025-12-25
-* **类型**: `FIX` / `FEAT`
-* **涉及文件**: `src/contentScripts/index.ts`
-* **Breaking Changes**: `No`
+---
+
+- **Task ID**: `#3`
+- **日期**: 2025-12-25
+- **类型**: `FIX` / `FEAT`
+- **涉及文件**: `src/contentScripts/index.ts`
+- **Breaking Changes**: `No`
 
 ---
 
