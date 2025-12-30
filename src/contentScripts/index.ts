@@ -7,7 +7,7 @@ import 'rangy/lib/rangy-serializer'
 import Tooltip from './views/Tooltip.vue'
 import { type Mark } from '~/logic/storage'
 import { highlightDefaultStyle, shortcuts } from '~/logic/config'
-import { settings, settingsReady } from '~/logic/settings'
+import { isPageBlacklisted, settings, settingsReady } from '~/logic/settings'
 import '../styles'
 
 type RangySelection = ReturnType<typeof rangy.getSelection>
@@ -69,7 +69,7 @@ function attachListenersToShadowRoots(rootNode: Document | ShadowRoot) {
 async function initialize() {
   await settingsReady
 
-  if (isBlacklisted(window.location.href, settings.value.blacklist)) {
+  if (isPageBlacklisted(window.location.href, settings.value.blacklist)) {
     console.info('[web-marker-extension] Page is blacklisted. Extension disabled.')
     return
   }
@@ -922,15 +922,6 @@ export function getMaxZIndex(): number {
   // 考虑常见的模态框和固定元素的最大值，设置一个安全上限
   // 许多模态框使用 9999 或 2147483647
   return Math.max(maxZIndex, 1000)
-}
-
-function isBlacklisted(url: string, blacklist: string[]): boolean {
-  try {
-    const hostname = new URL(url).hostname
-    return blacklist.some((pattern) => hostname.endsWith(pattern))
-  } catch {
-    return false
-  }
 }
 
 async function scrollToMark(markId: string) {

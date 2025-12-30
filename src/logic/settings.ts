@@ -14,4 +14,13 @@ export const defaultSettings = {
   shortcutDelete: 'Alt+D'
 }
 
+export function isPageBlacklisted(url: string, blacklist: string[]): boolean {
+  try {
+    const hostname = new URL(url).hostname
+    return blacklist.some((pattern) => hostname.endsWith(pattern))
+  } catch {
+    return false
+  }
+}
+
 export const { data: settings, dataReady: settingsReady } = useWebExtensionStorage('webext-settings', defaultSettings)

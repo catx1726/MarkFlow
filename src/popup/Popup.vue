@@ -1,9 +1,45 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { sendMessage } from 'webext-bridge/popup'
 import { marksByUrl } from '~/logic/storage'
 import { watchEffect } from 'vue'
 import { usePreferredDark } from '@vueuse/core'
+import { isPageBlacklisted, settings } from '~/logic/settings'
+
+const currentTab = ref<any>(null)
+
+onMounted(async () => {
+  const tabs = await browser.tabs.query({ active: true, currentWindow: true })
+  currentTab.value = tabs[0]
+})
+
+const isBlocked = computed(() => {
+  if (!currentTab.value?.url) return false
+  return isPageBlacklisted(currentTab.value.url, settings.value.blacklist)
+})
+
+const reloadRequired = ref(false)
+
+function toggleBlacklist() {
+  if (!currentTab.value?.url) return
+  const url = new URL(currentTab.value.url)
+  const hostname = url.hostname
+
+  if (isBlocked.value) {
+    settings.value.blacklist = settings.value.blacklist.filter((pattern) => !hostname.endsWith(pattern))
+  } else {
+    settings.value.blacklist.push(hostname)
+  }
+  reloadRequired.value = true
+}
+
+function reloadPage() {
+  if (currentTab.value?.id) {
+    browser.tabs.reload(currentTab.value.id)
+    window.close()
+  }
+}
+
 // Automatically apply dark mode class to the root element
 const isDark = usePreferredDark()
 watchEffect(() => {
@@ -50,8 +86,22 @@ async function openSidePanel() {
     </p>
 
     <div class="flex flex-col gap-[12px]">
-      <button class="btn-secondary" @click="openSidePanel">打开侧边栏</button>
       <button class="btn-secondary" @click="openOptionsPage">设置</button>
+      <button class="btn-secondary" @click="openSidePanel">打开侧边栏</button>
+      <button class="btn-secondary" @click="toggleBlacklist">{{ isBlocked ? '在此网站启用' : '在此网站禁用' }}</button>
+
+      <div
+        v-if="reloadRequired"
+        class="text-xs text-orange-600 dark:text-orange-300 bg-orange-50 dark:bg-orange-900/30 p-2 rounded border border-orange-200 dark:border-orange-800 animate-fade-in"
+      >
+        <p class="mb-1 font-medium">状态已更新，需刷新页面生效。</p>
+        <button
+          class="underline hover:text-orange-800 dark:hover:text-orange-100 transition-colors"
+          @click="reloadPage"
+        >
+          立即刷新
+        </button>
+      </div>
     </div>
   </main>
 </template>
