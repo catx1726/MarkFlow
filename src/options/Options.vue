@@ -78,6 +78,79 @@ function saveSettings() {
     <h1 class="text-[24px] font-bold mb-[32px]">设置</h1>
 
     <div class="space-y-8">
+      <!-- Welcome Guide -->
+      <div class="setting-card border-l-4 border-blue-500">
+        <h2 class="text-[18px] font-semibold mb-[16px] flex items-center gap-2">👋 欢迎使用 Highlight Mark Flow</h2>
+        <div class="space-y-4 text-[14px]">
+          <!-- Quick Start -->
+          <div class="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-md">
+            <h3 class="font-bold text-gray-900 dark:text-gray-100 mb-1">🚀 快速开始</h3>
+            <p class="text-gray-600 dark:text-gray-300">
+              在任意网页，按住
+              <kbd
+                class="px-1.5 py-0.5 rounded bg-gray-200 dark:bg-gray-600 font-mono text-xs border border-gray-300 dark:border-gray-500"
+              >
+                Alt
+              </kbd>
+              键并拖动鼠标选中文字，即可唤起高亮工具栏。
+            </p>
+          </div>
+
+          <!-- Core Features -->
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <h3 class="font-bold text-gray-900 dark:text-gray-100 mb-1">✨ 核心功能</h3>
+              <ul class="list-disc list-inside text-gray-600 dark:text-gray-400 space-y-1">
+                <li>
+                  <strong>标记 (Mark)</strong>
+                  ：多彩高亮，捕捉灵感
+                </li>
+                <li>
+                  <strong>回顾 (Review)</strong>
+                  ：一览所有标记片段
+                </li>
+              </ul>
+            </div>
+            <div>
+              <h3 class="font-bold text-gray-900 dark:text-gray-100 mb-1">&nbsp;</h3>
+              <ul class="list-disc list-inside text-gray-600 dark:text-gray-400 space-y-1">
+                <li>
+                  <strong>跳转 (Jump)</strong>
+                  ：点击快速定位上下文
+                </li>
+                <li>
+                  <strong>整理 (Organize)</strong>
+                  ：高效管理知识碎片
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- Acknowledgments -->
+          <div class="pt-2 border-t border-gray-100 dark:border-gray-700">
+            <h3 class="font-bold text-gray-900 dark:text-gray-100 mb-1">❤️ 致谢与支持</h3>
+            <p class="text-gray-600 dark:text-gray-400 mb-2">
+              感谢您的使用！如果您觉得这个工具对您有帮助，欢迎在商店评分或分享给朋友。
+            </p>
+            <div class="flex gap-4">
+              <a
+                href="https://github.com/catx1726/Highlight-Mark-Flow"
+                target="_blank"
+                class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 underline"
+              >
+                GitHub
+              </a>
+              <a
+                href="https://addons.mozilla.org/zh-CN/firefox/addon/highlight-mark-flow/"
+                target="_blank"
+                class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 underline"
+              >
+                Firefox Add-ons
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
       <!-- Default Highlight Color -->
       <div class="setting-card">
         <h2 class="text-[18px] font-semibold mb-[12px]">默认高亮颜色</h2>
