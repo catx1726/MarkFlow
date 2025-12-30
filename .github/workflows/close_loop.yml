@@ -3,6 +3,11 @@ on:
   pull_request:
     types: [closed]
     branches: [main]
+  workflow_dispatch: 
+    inputs:
+      issue_number:
+        description: '手动输入的 Issue 编号'
+        required: true
 permissions:
   contents: read
   issues: write
@@ -20,7 +25,8 @@ jobs:
             const prTitle = context.payload.pull_request.title;
 
             // 1. 动态获取关联的 Issue 编号 (支持 Fixes, Closes, Resolves)
-            const issueMatch = prBody.match(/(?:Fixes|Closes|Resolves)\s+#(\d+)/i);
+            const issueMatch = prBody.match(/(?:Fixes|Closes|Resolves)\s+#(\d+)/i) 
+                   || prTitle.match(/#(\d+)/);
             if (!issueMatch) {
               console.log("未检测到关联的 Issue 编号，跳过评论。");
               return;
