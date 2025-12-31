@@ -25,3 +25,6 @@
 
 ## [2025-12-31] 
 - Merge branch 'main' of https://github.com/catx1726/MarkFlow (39f9c07)
+
+## [2025-12-31] 
+- build: 0.5.0 (59dcd09)
