@@ -240,6 +240,15 @@ onMessage<{ url: string }>('remove-marks-by-url', async ({ data }) => {
   }
 })
 
+onMessage('refresh-sidepanel-data', async () => {
+  console.log('[background] Broadcasting refresh-sidepanel-data via native messaging')
+  // 使用原生消息广播给所有扩展页面（包括 Sidepanel, Popup, Options）
+  // 这绕过了 webext-bridge 的上下文路由限制，确保所有打开的 Sidepanel 都能收到通知
+  await browser.runtime.sendMessage({ type: 'refresh-sidepanel-data' }).catch(() => {
+    // 如果没有接收者（例如 Sidepanel 未打开），忽略错误
+  })
+})
+
 /**
  * 当扩展首次安装时，自动打开配置页面。
  */

@@ -1,6 +1,6 @@
 <!-- src/sidepanel/Sidepanel.vue -->
 <script setup lang="ts">
-import { sendMessage } from 'webext-bridge/popup'
+import { sendMessage } from 'webext-bridge/options'
 import { computed, nextTick, onMounted, onUnmounted, ref, toRaw, watchEffect } from 'vue'
 import { CLEANUP_DAYS_THRESHOLD } from '~/logic/config'
 import type { Mark } from '~/logic/storage'
@@ -27,14 +27,36 @@ const editingMarkId = ref<string | null>(null),
   activeMarkMenu = ref<string | null>(null),
   activeUrlMenu = ref<string | null>(null)
 
+let unregisterRefreshListener: (() => void) | null = null
+
 onUnmounted(() => {
   document.removeEventListener('click', closeMenus)
+  unregisterRefreshListener?.()
 })
 
 onMounted(() => {
   getStorageUsage()
   document.addEventListener('click', closeMenus)
+  // 监听来自 Background 的刷新指令
+  // 使用原生监听器以接收来自 background 的原生广播，这能绕过 webext-bridge 的上下文路由问题
+  const refreshListener = (message: any) => {
+    if (message && message.type === 'refresh-sidepanel-data') {
+      console.log('[Sidepanel] Received refresh request (native), refreshing all marks...')
+      refreshAllMarks()
+    }
+  }
+  browser.runtime.onMessage.addListener(refreshListener)
+  unregisterRefreshListener = () => browser.runtime.onMessage.removeListener(refreshListener)
 })
+
+async function refreshAllMarks() {
+  // 遍历当前已加载的 URL，重新获取数据以强制刷新视图
+  const urls = Object.keys(marksByUrl.value)
+  for (const url of urls) {
+    const updatedMarks = await sendMessage('get-marks-for-url', { url }, 'background')
+    marksByUrl.value[url] = updatedMarks || []
+  }
+}
 
 // --- 结构化回顾功能 ---
 
@@ -223,7 +245,13 @@ async function editMark(mark: Mark) {
 
 async function saveNote(mark: Mark) {
   if (editingMarkId.value === mark.id) {
-    await sendMessage('update-mark-details', { id: mark.id, url: mark.url, note: editingNote.value }, 'background')
+    const rawMark = toRaw(mark)
+    const payload = {
+      id: rawMark.id,
+      url: rawMark.url,
+      note: editingNote.value
+    }
+    await sendMessage('update-mark-details', payload, 'background')
     editingMarkId.value = null
     editingNote.value = ''
   }

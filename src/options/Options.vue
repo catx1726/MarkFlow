@@ -3,6 +3,7 @@ import { computed, reactive, ref, watch, watchEffect } from 'vue'
 import { usePreferredDark } from '@vueuse/core'
 import { settings } from '~/logic/settings'
 import { cloneDeep } from 'lodash-es'
+import { sendMessage } from 'webext-bridge/options'
 
 const isDark = usePreferredDark()
 watchEffect(() => {
@@ -70,6 +71,10 @@ function saveSettings() {
   saveTimeout = window.setTimeout(() => {
     saveStatus.value = ''
   }, 2000)
+  // 通知 background 脚本设置已更新，以便它可以广播刷新指令
+  sendMessage('refresh-sidepanel-data', {}, 'background').catch(() => {
+    // 忽略错误
+  })
 }
 </script>
 
@@ -87,11 +92,7 @@ function saveSettings() {
             <h3 class="font-bold text-gray-900 dark:text-gray-100 mb-1">🚀 快速开始</h3>
             <p class="text-gray-600 dark:text-gray-300">
               在任意网页，按住
-              <kbd
-                class="px-1.5 py-0.5 rounded bg-gray-200 dark:bg-gray-600 font-mono text-xs border border-gray-300 dark:border-gray-500"
-              >
-                Alt
-              </kbd>
+              <kbd class="px-1.5 py-0.5 rounded bg-gray-200 dark:bg-gray-600 font-mono text-xs border border-gray-300 dark:border-gray-500">Alt</kbd>
               键并拖动鼠标选中文字，即可唤起高亮工具栏。
             </p>
           </div>

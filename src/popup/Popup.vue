@@ -35,6 +35,11 @@ function toggleBlacklist() {
 
 function reloadPage() {
   if (currentTab.value?.id) {
+    // 通知 background 广播刷新消息给侧边栏
+    // 我们不直接发给 sidepanel，因为在某些情况下 popup 无法直接定位到 sidepanel 上下文
+    sendMessage('refresh-sidepanel-data', {}, 'background').catch(() => {
+      // 忽略发送失败（例如 background 暂时不可达，虽然很少见）
+    })
     browser.tabs.reload(currentTab.value.id)
     window.close()
   }
