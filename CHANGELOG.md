@@ -19,3 +19,6 @@
 
 ## [2025-12-31] 
 - doc: 修改插件名称为 MarkFlow (da9a405)
+
+## [2025-12-31] 
+- Merge branches 'main' and 'main' of github.com:catx1726/Tool-Webext-Tag-Content (83a87c4)
