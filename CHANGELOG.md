@@ -34,3 +34,6 @@
 
 ## [2025-12-31] 
 - Merge branch 'main' of github.com:catx1726/MarkFlow (b2812c5)
+
+## [2025-12-31] 
+- Merge pull request #13 from catx1726/task/12-alt-fix (2438e90)
