@@ -16,3 +16,6 @@
 
 ## [2025-12-31] 
 - Merge pull request #11 from catx1726/task/10-side-save (9db9003)
+
+## [2025-12-31] 
+- doc: 修改插件名称为 MarkFlow (da9a405)
