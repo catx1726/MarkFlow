@@ -1,6 +1,6 @@
 {
   "name": "web-marker-extension",
-  "displayName": "Highlight Mark Flow",
+  "displayName": "MarkFlow",
   "version": "0.3.5",
   "private": true,
   "packageManager": "pnpm@9.7.1",

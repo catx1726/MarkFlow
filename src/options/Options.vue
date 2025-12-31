@@ -85,7 +85,7 @@ function saveSettings() {
     <div class="space-y-8">
       <!-- Welcome Guide -->
       <div class="setting-card border-l-4 border-blue-500">
-        <h2 class="text-[18px] font-semibold mb-[16px] flex items-center gap-2">👋 欢迎使用 Highlight Mark Flow</h2>
+        <h2 class="text-[18px] font-semibold mb-[16px] flex items-center gap-2">👋 欢迎使用 MarkFlow</h2>
         <div class="space-y-4 text-[14px]">
           <!-- Quick Start -->
           <div class="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-md">

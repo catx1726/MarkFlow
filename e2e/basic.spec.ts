@@ -6,7 +6,7 @@ test('example test', async ({ page }, testInfo) => {
   await page.goto('https://example.com')
 
   await page.locator(`#${name} button`).click()
-  await expect(page.locator(`#${name} h1`)).toHaveText('Highlight Mark Flow')
+  await expect(page.locator(`#${name} h1`)).toHaveText('MarkFlow')
 })
 
 test('popup page', async ({ page, extensionId }) => {

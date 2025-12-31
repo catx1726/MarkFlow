@@ -1,4 +1,4 @@
-# 📜 Highlight Mark Flow 开发守则 (rules.md)
+# 📜 MarkFlow 开发守则 (rules.md)
 
 ## 1. 技术栈与环境 (Tech Stack)
 
