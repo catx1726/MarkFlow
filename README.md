@@ -48,15 +48,6 @@
 
 ---
 
-## 🛠️ 开发者与技术细节 / Technical Details
-
-MarkFlow 采用轻量且健壮的架构开发：
-
-- **混合通信**：使用 `webext-bridge` (Options 上下文伪装) 确保侧边栏连接持久稳定。
-- **数据净化**：采用 Vue 3 `toRaw` 处理，确保跨上下文传输的数据安全性。
-
----
-
 ## 📄 开源说明
 
 本项目遵循 MIT 协议。欢迎提交 Issue 或 Pull Request 来完善 MarkFlow。
