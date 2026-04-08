@@ -8,6 +8,7 @@ import Tooltip from './views/Tooltip.vue'
 import { type Mark } from '~/logic/storage'
 import { highlightDefaultStyle, shortcuts } from '~/logic/config'
 import { isPageBlacklisted, settings, settingsReady } from '~/logic/settings'
+import { getHighlightContext, getMaxZIndex, querySelectorAllDeep, querySelectorDeep } from '~/logic/dom'
 import '../styles'
 
 type RangySelection = ReturnType<typeof rangy.getSelection>
@@ -720,7 +721,7 @@ async function createHighlight(
   const selectedText = rangyRange.toString()
 
   // 获取结构化上下文 (如果是自定义函数，请确保其支持原生或包装后的 Range)
-  const { contextTitle, contextSelector, contextLevel, contextOrder } = getHighlightContext(rangyRange)
+  const { contextTitle, contextSelector, contextLevel, contextOrder, surroundingSnippet } = getHighlightContext(rangyRange)
 
   const content = rangyRange.cloneContents()
   const tempDiv = document.createElement('div')
@@ -748,234 +749,14 @@ async function createHighlight(
     contextTitle,
     contextSelector,
     contextLevel,
-    contextOrder
+    contextOrder,
+    surroundingSnippet
   }
 
   // 存储到背景脚本
   await sendMessage('add-mark', markData, 'background')
 }
 
-/**
- * 获取高亮选区的上下文（最近的上级标题）
- * @param range - Rangy Range 对象
- * @returns 返回包含标题文本、选择器和级别的对象
- */
-function getHighlightContext(range: rangy.RangyRange): {
-  contextTitle: string
-  contextSelector: string
-  contextLevel: number
-  contextOrder: number
-} {
-  // Use the start of the range as the reference point.
-  const startNode = range.startContainer
-  const startElement = (
-    startNode.nodeType === Node.ELEMENT_NODE ? startNode : startNode.parentNode
-  ) as HTMLElement | null
-  const allHeadings = Array.from(querySelectorAllDeep('h1, h2, h3, h4, h5, h6'))
-  let lastHeadingBeforeSelection: HTMLElement | null = null
-
-  for (const heading of allHeadings) {
-    // Node.DOCUMENT_POSITION_FOLLOWING means `startElement` is after `heading`.
-    // We want the last heading that comes before our selection.
-    if (startElement && heading.compareDocumentPosition(startElement) & Node.DOCUMENT_POSITION_FOLLOWING) {
-      lastHeadingBeforeSelection = heading as HTMLElement
-    } else {
-      // Once we find a heading that is after our selection, we can stop.
-      // The one we found in the previous iteration is the correct one.
-      break
-    }
-  }
-
-  const heading = lastHeadingBeforeSelection
-  if (heading) {
-    const tagName = heading.tagName.toLowerCase()
-    const level = parseInt(tagName.replace('h', ''), 10)
-    const documentOrderIndex = allHeadings.indexOf(heading)
-
-    return {
-      contextTitle: heading.textContent?.trim() || '无标题章节',
-      contextSelector: getElementSelector(heading),
-      contextLevel: level,
-      contextOrder: documentOrderIndex
-    }
-  }
-
-  // 如果没有找到标题，则返回默认值
-  return {
-    contextTitle: '未分类笔记',
-    contextSelector: 'body',
-    contextLevel: 7,
-    contextOrder: -1 // 未分类笔记排在最前面
-  }
-}
-
-// #endregion
-
-// #region --- Utility Functions ---
-/**
- * Generates a CSS selector for a given element.
- * @param el The element to generate a selector for.
- * @returns A CSS selector string.
- */
-function getElementSelector(el: Element): string {
-  if (!el || !(el instanceof Element)) return ''
-  if (el.id) {
-    return `#${CSS.escape(el.id)}`
-  }
-  const path: string[] = []
-  let current: Element | null = el
-  while (current) {
-    let selector = current.tagName.toLowerCase()
-    if (selector === 'body') {
-      path.unshift(selector)
-      break
-    }
-    const parent = current.parentElement
-    if (!parent) {
-      path.unshift(selector)
-      break
-    }
-    const siblings = Array.from(parent.children).filter((child) => child.tagName === current!.tagName)
-    if (siblings.length > 1) {
-      const index = siblings.indexOf(current) + 1
-      selector += `:nth-of-type(${index})`
-    }
-    path.unshift(selector)
-    current = parent
-  }
-  return path.join(' > ')
-}
-
-/**
- * Recursively searches for an element matching the selector, piercing through Shadow DOMs.
- * @param selector The CSS selector to search for.
- * @param root The root node to start searching from (document or a ShadowRoot).
- * @returns The first matching element or null.
- */
-function querySelectorDeep(selector: string, root: Document | ShadowRoot = document): Element | null {
-  // First, try to find in the current root.
-  const found = root.querySelector(selector)
-  if (found) return found
-
-  // If not found, search in all shadow roots within the current root.
-  const allElements = root.querySelectorAll('*')
-  for (const element of Array.from(allElements)) {
-    if (element.shadowRoot) {
-      const foundInShadow = querySelectorDeep(selector, element.shadowRoot)
-      if (foundInShadow) return foundInShadow
-    }
-  }
-
-  return null
-}
-
-/**
- * Recursively searches for all elements matching the selector, piercing through Shadow DOMs.
- * @param selector The CSS selector to search for.
- * @param root The root node to start searching from (document or a ShadowRoot).
- * @returns An array of matching elements.
- */
-function querySelectorAllDeep(selector: string, root: Document | ShadowRoot = document): Element[] {
-  let results: Element[] = []
-  // Find in the current root.
-  root.querySelectorAll(selector).forEach((el) => results.push(el))
-  // Find in all shadow roots within the current root.
-  const allElements = root.querySelectorAll('*')
-  for (const element of Array.from(allElements)) {
-    if (element.shadowRoot) results = results.concat(querySelectorAllDeep(selector, element.shadowRoot))
-  }
-  return results
-}
-
-/**
- * 用于获取页面上最高且有效的 z-index 值。
- * 1. 专注于查找可能设置 z-index 的元素 (例如具有 id 或类名的元素)。
- * 2. 遍历 document.body 的直接子元素（通常高层级覆盖物会挂载在 body 下）。
- * 3. 仅对具有 position 属性的元素计算 z-index。
- * 4. 增加了对 Shadow DOM 的有限支持（需要额外的遍历逻辑，此处简化）。
- * @returns {number} 页面中最大的有效 z-index 值。
- */
-export function getMaxZIndex(): number {
-  let maxZIndex = 0
-
-  // 1. 针对性查找：只查找 body 下的直接子元素，这些元素通常是最高层级的容器
-  //    以及那些可能设置了高 z-index 的定位元素。
-  const selectors = 'body > *' // 查找 body 的所有直接子元素
-  const elements = document.querySelectorAll(selectors)
-
-  elements.forEach((el) => {
-    // 性能优化：直接使用 element.style.zIndex 可能会错过 CSS 样式表中的值
-    const style = window.getComputedStyle(el),
-      zIndexString = style.zIndex,
-      position = style.position
-
-    // 2. 核心校验: z-index 只有在 position 不是 'static' 时才生效
-    if (zIndexString !== 'auto' && position !== 'static') {
-      const zIndex = parseInt(zIndexString)
-
-      if (!isNaN(zIndex)) {
-        maxZIndex = Math.max(maxZIndex, zIndex)
-      }
-    }
-  })
-
-  // 考虑常见的模态框和固定元素的最大值，设置一个安全上限
-  // 许多模态框使用 9999 或 2147483647
-  return Math.max(maxZIndex, 1000)
-}
-
-async function scrollToMark(markId: string) {
-  // 在滚动前清除任何待定的恢复操作，以防止它们在滚动动画期间改变布局
-  clearTimeout(restoreDebounceTimer)
-
-  const className = `webext-highlight-${markId}`
-  const element = querySelectorDeep(`.${className}`)
-  if (element) {
-    const mark = await sendMessage('get-mark-by-id', { id: markId, url: getCanonicalUrlForMark() }, 'background')
-    if (!mark) return
-
-    element.scrollIntoView({ behavior: 'auto', block: 'center' })
-    // 可以给目标元素一个短暂的闪烁效果以提示用户
-    querySelectorAllDeep(`.${className}`).forEach((el) => {
-      if (!(el instanceof HTMLElement)) return
-      el.style.transition = 'box-shadow 0.5s ease-in-out'
-      el.style.boxShadow = `inset 0 -5px 0 0 ${settings.value.highlightColors[1]}`
-      setTimeout(() => {
-        el.style.boxShadow = `inset 0 -5px 0 0 ${mark.color}`
-      }, 1000)
-    })
-  }
-}
-
-/**
- * 获取当前页面的规范化 URL，移除哈希和尾部斜杠
- */
-function getCanonicalUrlForMark(): string {
-  const { origin, pathname } = window.location
-  // 移除尾部斜杠，但保留根路径的斜杠
-  const cleanedPathname = pathname.length > 1 && pathname.endsWith('/') ? pathname.slice(0, -1) : pathname
-  return origin + cleanedPathname
-}
-
-function findMarkElementInRange(range: Range): HTMLElement | null {
-  // 快速路径：检查共同祖先节点是否在高亮标记内部
-  const ancestor = range.commonAncestorContainer
-  const el = ancestor.nodeType === Node.ELEMENT_NODE ? (ancestor as HTMLElement) : ancestor.parentElement
-  const closestMark = el?.closest('span[class*="webext-highlight-"]')
-  if (closestMark) return closestMark as HTMLElement
-
-  // 备用路径：如果选区跨越多个节点，检查选区内的任何元素节点是否为高亮标记
-  // @ts-expect-error rangy range has getNodes
-  const nodes = range.getNodes([Node.ELEMENT_NODE])
-  return (
-    nodes.find((node: HTMLElement) => node.tagName === 'SPAN' && node.className.includes('webext-highlight-')) || null
-  )
-}
-
-function getMarkIdFromElement(element: HTMLElement): string | null {
-  const highlightClass = Array.from(element.classList).find((c) => c.startsWith('webext-highlight-'))
-  return highlightClass ? highlightClass.replace('webext-highlight-', '') : null
-}
 // #endregion
 
 // #region --- Highlight Restoration ---
