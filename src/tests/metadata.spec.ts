@@ -2,7 +2,7 @@ import { beforeAll, describe, expect, it } from 'vitest'
 import rangy from 'rangy/lib/rangy-core'
 import { getHighlightContext } from '../logic/dom'
 
-describe('Metadata Capture', () => {
+describe('metadata capture', () => {
   beforeAll(() => {
     rangy.init()
   })

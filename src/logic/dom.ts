@@ -1,17 +1,19 @@
-import rangy from 'rangy/lib/rangy-core'
+import type rangy from 'rangy/lib/rangy-core'
 
 /**
  * Recursively searches for an element matching the selector, piercing through Shadow DOMs.
  */
 export function querySelectorDeep(selector: string, root: Document | ShadowRoot = document): Element | null {
   const found = root.querySelector(selector)
-  if (found) return found
+  if (found)
+    return found
 
   const allElements = root.querySelectorAll('*')
   for (const element of Array.from(allElements)) {
     if (element.shadowRoot) {
       const foundInShadow = querySelectorDeep(selector, element.shadowRoot)
-      if (foundInShadow) return foundInShadow
+      if (foundInShadow)
+        return foundInShadow
     }
   }
   return null
@@ -22,10 +24,11 @@ export function querySelectorDeep(selector: string, root: Document | ShadowRoot 
  */
 export function querySelectorAllDeep(selector: string, root: Document | ShadowRoot = document): Element[] {
   let results: Element[] = []
-  root.querySelectorAll(selector).forEach((el) => results.push(el))
+  root.querySelectorAll(selector).forEach(el => results.push(el))
   const allElements = root.querySelectorAll('*')
   for (const element of Array.from(allElements)) {
-    if (element.shadowRoot) results = results.concat(querySelectorAllDeep(selector, element.shadowRoot) as any)
+    if (element.shadowRoot)
+      results = results.concat(querySelectorAllDeep(selector, element.shadowRoot) as any)
   }
   return results
 }
@@ -34,7 +37,8 @@ export function querySelectorAllDeep(selector: string, root: Document | ShadowRo
  * Generates a CSS selector for a given element.
  */
 export function getElementSelector(el: Element): string {
-  if (!el || !(el instanceof Element)) return ''
+  if (!el || !(el instanceof Element))
+    return ''
   if (el.id) {
     const escapedId = (typeof CSS !== 'undefined' && CSS.escape) ? CSS.escape(el.id) : el.id
     return `#${escapedId}`
@@ -52,7 +56,7 @@ export function getElementSelector(el: Element): string {
       path.unshift(selector)
       break
     }
-    const siblings = Array.from(parent.children).filter((child) => child.tagName === current!.tagName)
+    const siblings = Array.from(parent.children).filter(child => child.tagName === current!.tagName)
     if (siblings.length > 1) {
       const index = siblings.indexOf(current) + 1
       selector += `:nth-of-type(${index})`
@@ -61,6 +65,46 @@ export function getElementSelector(el: Element): string {
     current = parent
   }
   return path.join(' > ')
+}
+
+/**
+ * 用于获取页面上最高且有效的 z-index 值。
+ */
+export function getMaxZIndex(): number {
+  let maxZIndex = 0
+  const elements = document.querySelectorAll('body > *')
+
+  elements.forEach((el) => {
+    const style = window.getComputedStyle(el)
+    const zIndexString = style.zIndex
+    const position = style.position
+
+    if (zIndexString !== 'auto' && position !== 'static') {
+      const zIndex = Number.parseInt(zIndexString, 10)
+      if (!Number.isNaN(zIndex)) {
+        maxZIndex = Math.max(maxZIndex, zIndex)
+      }
+    }
+  })
+
+  return Math.max(maxZIndex, 1000)
+}
+
+/**
+ * 获取当前页面的规范化 URL，移除哈希和尾部斜杠
+ */
+export function getCanonicalUrlForMark(): string {
+  const { origin, pathname } = window.location
+  const cleanedPathname = pathname.length > 1 && pathname.endsWith('/') ? pathname.slice(0, -1) : pathname
+  return origin + cleanedPathname
+}
+
+/**
+ * 从元素中提取标记 ID
+ */
+export function getMarkIdFromElement(element: HTMLElement): string | null {
+  const highlightClass = Array.from(element.classList).find(c => c.startsWith('webext-highlight-'))
+  return highlightClass ? highlightClass.replace('webext-highlight-', '') : null
 }
 
 /**
@@ -83,34 +127,24 @@ export function getHighlightContext(range: rangy.RangyRange): {
   for (const heading of allHeadings) {
     if (startElement && heading.compareDocumentPosition(startElement) & Node.DOCUMENT_POSITION_FOLLOWING) {
       lastHeadingBeforeSelection = heading as HTMLElement
-    } else {
+    }
+    else {
       break
     }
   }
 
   // 获取周围片段 (前后各 20 字符)
   const root = startNode.getRootNode()
-  const fullText = root.textContent || ''
-  
-  // 使用 rangy 的 bookmark 功能安全获取偏移量
-  // 注意：此处简化处理，假设在同一个文档/ShadowRoot内
-  const selectedText = range.toString()
-  
-  // 查找匹配项在全文中的位置（近似处理，因为 DOM 结构复杂时很难得到单一 offset）
-  // 更好的做法是利用 range.startContainer 和 startOffset
-  // 但为了快速原型，我们先尝试简单的全文索引寻找（如果文本唯一）
-  // 或者使用更加健壮的算法。
-  
+
   // 暂时使用简单的上下文提取逻辑
   const contextLength = 20
   const rangeText = range.toString()
-  
+
   // 获取整个容器的文本
   const container = (root instanceof ShadowRoot) ? root : document.body
   const containerText = container.textContent || ''
-  
+
   // 尝试在容器文本中定位选区位置
-  // 这是一个启发式方法
   const index = containerText.indexOf(rangeText)
   let surroundingSnippet = ''
   if (index !== -1) {
@@ -122,7 +156,7 @@ export function getHighlightContext(range: rangy.RangyRange): {
   const heading = lastHeadingBeforeSelection
   if (heading) {
     const tagName = heading.tagName.toLowerCase()
-    const level = parseInt(tagName.replace('h', ''), 10)
+    const level = Number.parseInt(tagName.replace('h', ''), 10)
     const documentOrderIndex = allHeadings.indexOf(heading)
 
     return {
@@ -130,7 +164,7 @@ export function getHighlightContext(range: rangy.RangyRange): {
       contextSelector: getElementSelector(heading),
       contextLevel: level,
       contextOrder: documentOrderIndex,
-      surroundingSnippet
+      surroundingSnippet,
     }
   }
 
@@ -139,6 +173,6 @@ export function getHighlightContext(range: rangy.RangyRange): {
     contextSelector: 'body',
     contextLevel: 7,
     contextOrder: -1,
-    surroundingSnippet
+    surroundingSnippet,
   }
 }
