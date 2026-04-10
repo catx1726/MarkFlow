@@ -28,7 +28,7 @@ export function querySelectorAllDeep(selector: string, root: Document | ShadowRo
   const allElements = root.querySelectorAll('*')
   for (const element of Array.from(allElements)) {
     if (element.shadowRoot)
-      results = results.concat(querySelectorAllDeep(selector, element.shadowRoot) as any)
+      results = results.concat(querySelectorAllDeep(selector, element.shadowRoot))
   }
   return results
 }
@@ -46,23 +46,25 @@ export function getElementSelector(el: Element): string {
   const path: string[] = []
   let current: Element | null = el
   while (current) {
-    let selector = current.tagName.toLowerCase()
+    const selector = current.tagName.toLowerCase()
     if (selector === 'body') {
       path.unshift(selector)
       break
     }
-    const parent = current.parentElement
-    if (!parent) {
+    const parentNode: HTMLElement | null = current.parentElement
+    if (!parentNode) {
       path.unshift(selector)
       break
     }
-    const siblings = Array.from(parent.children).filter(child => child.tagName === current!.tagName)
+    const siblings = Array.from(parentNode.children).filter((child: any) => (child as Element).tagName === current!.tagName)
     if (siblings.length > 1) {
       const index = siblings.indexOf(current) + 1
-      selector += `:nth-of-type(${index})`
+      path.unshift(`${selector}:nth-of-type(${index})`)
     }
-    path.unshift(selector)
-    current = parent
+    else {
+      path.unshift(selector)
+    }
+    current = parentNode
   }
   return path.join(' > ')
 }
@@ -125,8 +127,9 @@ export function getHighlightContext(range: rangy.RangyRange): {
   let lastHeadingBeforeSelection: HTMLElement | null = null
 
   for (const heading of allHeadings) {
-    if (startElement && heading.compareDocumentPosition(startElement) & Node.DOCUMENT_POSITION_FOLLOWING) {
-      lastHeadingBeforeSelection = heading as HTMLElement
+    const headingEl = heading as HTMLElement
+    if (startElement && headingEl.compareDocumentPosition(startElement) & Node.DOCUMENT_POSITION_FOLLOWING) {
+      lastHeadingBeforeSelection = headingEl
     }
     else {
       break
@@ -135,17 +138,24 @@ export function getHighlightContext(range: rangy.RangyRange): {
 
   // 获取周围片段 (前后各 20 字符)
   const root = startNode.getRootNode()
-
-  // 暂时使用简单的上下文提取逻辑
-  const contextLength = 20
-  const rangeText = range.toString()
-
-  // 获取整个容器的文本
   const container = (root instanceof ShadowRoot) ? root : document.body
   const containerText = container.textContent || ''
 
-  // 尝试在容器文本中定位选区位置
-  const index = containerText.indexOf(rangeText)
+  // 关键修复：精准计算选区在容器文本中的偏移量，避免 indexOf 在多重复文本下的误判
+  let index = -1
+  try {
+    const preRange = range.cloneRange()
+    preRange.selectNodeContents(container)
+    preRange.setEnd(range.startContainer, range.startOffset)
+    index = preRange.toString().length
+  }
+  catch (e) {
+    console.warn('[WebMarker] Failed to calculate precise offset, falling back to indexOf:', e)
+    index = containerText.indexOf(range.toString())
+  }
+
+  const contextLength = 20
+  const rangeText = range.toString()
   let surroundingSnippet = ''
   if (index !== -1) {
     const start = Math.max(0, index - contextLength)

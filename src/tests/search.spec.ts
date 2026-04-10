@@ -35,18 +35,27 @@ describe('search logic - recursive traversal', () => {
   })
 
   it('should find unique candidate even if text has minor changes (fuzzy)', () => {
-    document.body.innerHTML = '<div>Welcome to the amazing world of coding!</div>'
+    // 构造一个受控的上下文
+    // 前缀(20字): "12345678901234567890"
+    // 文本: "amazing world" -> "amazzing world"
+    // 后缀(20字): "09876543210987654321"
+    const prefix = '12345678901234567890'
+    const suffix = '09876543210987654321'
+    
+    document.body.innerHTML = `<div>${prefix}amazzing world${suffix}</div>`
+    
     const mark = {
+      id: 'test-id',
       text: 'amazing world',
-      surroundingSnippet: 'to the amazing world of coding',
+      surroundingSnippet: `${prefix}amazing world${suffix}`,
     } as Mark
-
-    // Simulate a minor change: "amazing" -> "amazzing"
-    document.body.innerHTML = '<div>Welcome to the amazzing world of coding!</div>'
 
     const result = findCandidateElements(mark, document.body, 10)
 
     expect(result.ambiguityLevel).toBe('unique')
+    expect(result.candidates.length).toBe(1)
     expect(result.candidates[0].similarityScore).toBeGreaterThan(85)
+    // 夹逼算法应该精准提取出中间部分
+    expect(result.candidates[0].displayTextSnippet).toBe('amazzing world')
   })
 })
