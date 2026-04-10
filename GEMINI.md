@@ -31,7 +31,8 @@ sequenceDiagram
     AI->>VCS: git commit & update ops_changelog.md (提交变更 & 更新审计日志)
     AI->>VCS: gh pr create (创建 PR)<br/><i>🔒 自动触发 CI 检查：审计日志、Spec/Plan 同步、AI 审查</i>
     CI->>CI: 执行自动化检查<br/><i>🔴 audit_check (强制) + 🟡 spec_plan_sync + ai_review (建议)</i>
-    D->>VCS: gh pr merge (Driver 批准并合并 PR)<br/><i>🔒 触发 close_loop 知识闭环</i>
+    D->>VCS: gh pr merge (Driver 批准并合并 PR)<br/><i>🔒 触发 close_loop 知识闭环 (Issue 回帖 + CHANGELOG 自动更新)</i>
+    CI->>VCS: git commit (自动更新 CHANGELOG.md)
     AI->>VCS: gh issue close (Issue 关闭)<br/><i>(仅在 PR 合并且 Driver 确认后执行)</i>
 
     Note over AI: 14. 流程反馈与自我反思 (Feedback & Self-Reflection)
