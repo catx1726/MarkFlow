@@ -1,7 +1,7 @@
 ## 🚀 变更摘要 (Summary)
 <!-- 简述本次变更意图，引用关联 Issue：Closes #N 或 Fixes #N -->
 
-**关联 Issue**: #<!-- Issue 编号 -->
+**关联 Issue**: Closes #<!-- Issue 编号 -->
 
 **变更类型**:
 - [ ] 🐛 Bug 修复
