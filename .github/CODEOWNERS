@@ -1,0 +1,32 @@
+# CODEOWNERS 文件定义了不同目录的代码评审负责人
+# 语法: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# 默认评审：所有未匹配的路径
+* @CAD
+
+# 核心源码
+/src/ @CAD
+
+# 测试文件
+/tests/ @CAD
+
+# 配置文件
+/src/config/ @CAD
+
+# 爬虫模块
+/src/scrapers/ @CAD
+
+# 服务模块
+/src/services/ @CAD
+
+# GitHub Actions 工作流
+/.github/workflows/ @CAD
+
+# Superpowers 文档
+/docs/superpowers/ @CAD
+
+# 产品配置
+/src/config/products/ @CAD
+
+# 生命周期与审计日志
+/.gemini/ @CAD

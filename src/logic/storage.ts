@@ -21,13 +21,15 @@ export interface Mark {
   contextSelector?: string // 最近的上级标题的 CSS 选择器
   contextLevel?: number // 最近的上级标题级别 (h1=1, h6=6)
   contextOrder?: number // 新增：标题在文档中的顺序索引
+  surroundingSnippet?: string // 新增：选区前后各 20 个字符
 }
 
 export interface UpdateMarkNotePayload {
   url: string
   id: Mark['id'] // 使用 Mark 接口中的 id 类型
-  note: string
-  color: string
+  note?: string
+  color?: string
+  rangySerialized?: string
 
   [key: string]: any // 允许对象拥有任何 string 类型的键
 }

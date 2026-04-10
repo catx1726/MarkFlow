@@ -1,0 +1,57 @@
+name: Spec-Plan Sync Check
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches: [main]
+
+jobs:
+  check-docs-sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify Spec & Plan Documents
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          # 获取所有代码变更
+          CODE_CHANGES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -vE '^(docs/|\.github/|\.gemini/)' || true)
+
+          if [ -n "$CODE_CHANGES" ]; then
+            echo "检测到代码变更，检查 Spec/Plan 文档同步..."
+            
+            # 提取 PR 描述中的 Issue ID
+            ISSUE_MATCH=$(echo "$PR_BODY" | grep -oE '(?:Closes|Fixes|Resolves) #([0-9]+)' | head -1 | grep -oE '[0-9]+' || true)
+            BRANCH_NAME="${{ github.head_ref }}"
+            ISSUE_ID="${ISSUE_MATCH:-$(echo "$BRANCH_NAME" | sed -E 's/^issue-//' | grep -oE '^[0-9]+' || echo '')}"
+
+            if [ -z "$ISSUE_ID" ]; then
+              echo "⚠️ 警告：无法识别 Issue ID，跳过文档检查"
+              exit 0
+            fi
+
+            # 检查是否有对应的 Spec 或 Plan 文档
+            HAS_SPEC=$(git diff --name-only origin/${{ github.base_ref }}...HEAD | grep "docs/superpowers/specs/.*${ISSUE_ID}" || true)
+            HAS_PLAN=$(git diff --name-only origin/${{ github.base_ref }}...HEAD | grep "docs/superpowers/plans/.*${ISSUE_ID}" || true)
+
+            # 或者检查文档是否已存在（即使不在本次 PR 中）
+            EXISTING_SPEC=$(find docs/superpowers/specs/ -name "*${ISSUE_ID}*" 2>/dev/null | head -1 || true)
+            EXISTING_PLAN=$(find docs/superpowers/plans/ -name "*${ISSUE_ID}*" 2>/dev/null | head -1 || true)
+
+            if [ -n "$HAS_SPEC" ] || [ -n "$EXISTING_SPEC" ]; then
+              echo "✅ 检测到 Spec 文档"
+            else
+              echo "⚠️ 建议：为核心功能变更补充 Spec 文档"
+            fi
+
+            if [ -n "$HAS_PLAN" ] || [ -n "$EXISTING_PLAN" ]; then
+              echo "✅ 检测到 Plan 文档"
+            else
+              echo "⚠️ 建议：为复杂实现补充 Plan 文档"
+            fi
+          else
+            echo "无代码变更，跳过检查"
+          fi

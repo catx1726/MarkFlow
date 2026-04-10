@@ -76,7 +76,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { settings } from '~/logic/settings'
-import { getMaxZIndex } from '..'
+import { getMaxZIndex } from '../../logic/dom'
 
 const visible = ref(false)
 const position = reactive({ x: 0, y: 0 })

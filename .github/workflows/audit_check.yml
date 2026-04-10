@@ -1,0 +1,30 @@
+name: Audit Log Integrity Guard
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  audit-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Verify Audit Log Update
+        run: |
+          # 提取除文档和配置外的所有代码变更文件
+          CHANGES=$(git diff --name-only origin/main...HEAD | grep -vE '^(\.github/|openspec/|README\.md|ARCHITECTURE\.md|GETTING_STARTED\.md|docs/)' || true)
+
+          if [ -n "$CHANGES" ]; then
+            # 如果有代码变更，强制检查 ops_changelog.md 是否在本次提交中
+            LOG_CHANGED=$(git diff --name-only origin/main...HEAD | grep '\.gemini/ops_changelog\.md')
+
+            if [ -z "$LOG_CHANGED" ]; then
+              echo "❌ **物理熔断**: 检测到代码变更，但未在 .gemini/ops_changelog.md 中提交审计日志！"
+              echo "请记录变更意图与 Undo_CMD。"
+              exit 1
+            fi
+            echo "✅ **合规**: 操作审计记录已存在。"
+          else
+            echo "ℹ️ 本次 PR 无代码变更（仅文档/配置），跳过审计日志检查。"
+          fi

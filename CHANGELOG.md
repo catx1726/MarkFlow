@@ -1,5 +1,16 @@
 # Unreleased
 
+## [2026-04-08] - Highlight Disambiguation
+### Added
+- Implement tiered matching algorithm (Exact -> Contextual -> Fuzzy) for highlight restoration.
+- New `DisambiguationModal` UI for manual resolution of multiple candidates.
+- Context fingerprinting: Capture 20-char snippets before and after selection.
+- Automatic storage repair: Update Rangy paths after successful manual resolution.
+
+### Changed
+- Refactored `src/contentScripts/index.ts` to integrate tiered restoration flow.
+- Enhanced `findCandidateElements` with fuzzy similarity scoring (Dice's Coefficient).
+
 # Released
 
 ## [2025-12-22] 
