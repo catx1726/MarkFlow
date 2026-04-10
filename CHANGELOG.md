@@ -1,5 +1,9 @@
 # Unreleased
 
+### [2026-04-10] feat: automate CHANGELOG.md update and update GEMINI.md diagram (#19)
+feat: automate CHANGELOG.md update and update GEMINI.md diagram
+
+
 ## [2026-04-08] - Highlight Disambiguation
 ### Added
 - Implement tiered matching algorithm (Exact -> Contextual -> Fuzzy) for highlight restoration.
