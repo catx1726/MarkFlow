@@ -1,3 +1,58 @@
+/**
+ * # 标记搜索算法 (Mark Search Algorithm)
+ *
+ * 本模块实现了网页标记的模糊搜索与恢复机制。当 Level 1 路径还原失败时，
+ * `findCandidateElements()` 被调用，通过两级搜索策略（L2 + L3）在页面中重新定位标记。
+ *
+ * ## 在四级恢复架构中的位置
+ *
+ * ```
+ * Level 1: Rangy 反序列化 (contentScripts/index.ts)  ← 失败时调用本模块
+ * Level 2: 精确匹配 (本模块)
+ * Level 3: 夹逼搜索 (本模块)
+ * Level 4: DisambiguationModal (contentScripts/index.ts)  ← 本模块输出歧义结果
+ * ```
+ *
+ * ## 搜索策略层级
+ *
+ * | 层级 | 名称 | 触发条件 | 算法 | 阈值 |
+ * |------|------|----------|------|------|
+ * | L2 | 精确匹配 (Exact Match) | 始终执行 | 全文本 `indexOf` 查找标记原文 | - |
+ * | L3 | 夹逼搜索 (Sandwich) | 存在 `surroundingSnippet` | 前哨 + 后哨双向匹配，锁定中间文本 | 前后哨各 >70% |
+ *
+ * ### L2 - 精确匹配
+ * 最基础的匹配：在页面全文中查找标记的原始文本 (`mark.text`)。
+ * 若页面内容未变，此方法 100% 命中。同一文本出现多次时会产生多个候选。
+ *
+ * ### L3 - 夹逼搜索 (Sandwich Method)
+ * 当 L2 找到的匹配可能位置偏移，或原文已被修改时使用。
+ * 1. 将 `surroundingSnippet` 拆分为前哨 (前 20 字符) 和后哨 (后 20 字符)
+ * 2. 在全文中扫描最佳前哨位置
+ * 3. 从前哨位置之后，扫描最佳后哨位置
+ * 4. 前后哨都 >70% 相似度时，中间即为目标文本（即使中间文字已被修改）
+ *
+ * **核心优势**: 不依赖原文内容，仅依赖"邻居文本"，因此即使高亮文字被删改，
+ * 只要上下文还在，就能毫米级定位。
+ *
+ * ## 相似度算法
+ * 使用 Dice's Coefficient (双字母集合交集) 计算字符串相似度，返回 0-100 的整数百分比。
+ * - 短字符串 (<2 字符) 降级为字符包含匹配
+ * - 精确相等直接返回 100
+ *
+ * ## 歧义判定 (Ambiguity Level)
+ * 搜索完成后，根据候选数量和质量判定歧义级别，供调用方决策：
+ *
+ * | 级别 | 条件 | 调用方行为 |
+ * |------|------|-----------|
+ * | `unique` | 仅 1 个候选且 score ≥ 85；或多个候选但最佳 ≥ 98 且领先第二名 > 15 分 | 自动恢复 (Level 2/3) |
+ * | `multiple` | 其余情况 | 加入歧义队列，最终弹出 DisambiguationModal (Level 4) |
+ *
+ * ## Shadow DOM 支持
+ * `getAllTextNodes()` 递归遍历 Shadow Root，确保 Web Components 内的文本也能被搜索到。
+ *
+ * @module search
+ */
+
 import type { Mark } from './storage'
 import { querySelectorDeep } from './dom'
 
