@@ -369,60 +369,35 @@ function applyPreciseHighlight(
   container: HTMLElement,
   textToFind: string,
   applier: rangy.RangyClassApplier,
-  preferredOffset?: number,
+  preferredOffset: number,
 ): { range: rangy.RangyRange, actualText: string } | null {
   const textNodes = getAllTextNodes(container)
-  const fullText = textNodes.map(n => n.textContent || '').join('')
-  let matchIndex = preferredOffset !== undefined ? preferredOffset : fullText.indexOf(textToFind)
-  let actualMatchText = textToFind
+  let currentLen = 0
+  let startNode: Text | null = null
+  let startOffset = 0
+  let endNode: Text | null = null
+  let endOffset = 0
 
-  if (matchIndex === -1 && preferredOffset === undefined) {
-    let bestScore = 0
-    for (let i = 0; i < fullText.length - textToFind.length + 1; i++) {
-      const sub = fullText.substring(i, i + textToFind.length)
-      const score = calculateSimilarity(sub, textToFind)
-      if (score > bestScore) {
-        bestScore = score
-        matchIndex = i
-      }
+  for (const node of textNodes) {
+    const nodeLen = (node.textContent || '').length
+    if (!startNode && preferredOffset < currentLen + nodeLen) {
+      startNode = node
+      startOffset = preferredOffset - currentLen
     }
-    if (bestScore > 75) {
-      actualMatchText = fullText.substring(matchIndex, matchIndex + textToFind.length)
-    } else {
-      matchIndex = -1
+    if (startNode && preferredOffset + textToFind.length <= currentLen + nodeLen) {
+      endNode = node
+      endOffset = (preferredOffset + textToFind.length) - currentLen
+      break
     }
+    currentLen += nodeLen
   }
 
-  if (preferredOffset !== undefined) {
-    actualMatchText = fullText.substring(preferredOffset, preferredOffset + textToFind.length)
-  }
-
-  if (matchIndex !== -1) {
-    let currentLen = 0
-    let startNode: Text | null = null
-    let startOffset = 0
-    let endNode: Text | null = null
-    let endOffset = 0
-    for (const node of textNodes) {
-      const nodeLen = (node.textContent || '').length
-      if (!startNode && matchIndex < currentLen + nodeLen) {
-        startNode = node
-        startOffset = matchIndex - currentLen
-      }
-      if (startNode && matchIndex + actualMatchText.length <= currentLen + nodeLen) {
-        endNode = node
-        endOffset = (matchIndex + actualMatchText.length) - currentLen
-        break
-      }
-      currentLen += nodeLen
-    }
-    if (startNode && endNode) {
-      const range = rangy.createRange()
-      range.setStart(startNode, startOffset)
-      range.setEnd(endNode, endOffset)
-      applier.applyToRange(range)
-      return { range, actualText: actualMatchText }
-    }
+  if (startNode && endNode) {
+    const range = rangy.createRange()
+    range.setStart(startNode, startOffset)
+    range.setEnd(endNode, endOffset)
+    applier.applyToRange(range)
+    return { range, actualText: range.toString() }
   }
   return null
 }
