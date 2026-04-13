@@ -54,7 +54,7 @@
  */
 
 import type { Mark } from './storage'
-import { querySelectorDeep } from './dom'
+import { findCommonAncestor, querySelectorDeep } from './dom'
 
 export interface Candidate {
   id: string
@@ -244,49 +244,52 @@ function createCandidate(mark: Mark, matchIndex: number, textNodes: Text[], full
   if (matchIndex < 0)
     return null
 
-  let currentLen = 0
-  let matchedNode: Text | null = null
+  const matchEnd = matchIndex + mark.text.length
+  const involvedNodes: Text[] = []
+  let currentPos = 0
+
   for (const node of textNodes) {
-    const nodeTextLen = (node.textContent || '').length
-    if (matchIndex < currentLen + nodeTextLen) {
-      matchedNode = node
+    const len = (node.textContent || '').length
+    const nodeEnd = currentPos + len
+    if (nodeEnd > matchIndex && currentPos < matchEnd) {
+      involvedNodes.push(node)
+    }
+    currentPos = nodeEnd
+    if (currentPos >= matchEnd)
       break
-    }
-    currentLen += nodeTextLen
   }
 
-  if (matchedNode) {
-    const parentElement = matchedNode.parentElement || (matchedNode.parentNode as HTMLElement)
-    if (parentElement) {
-      // --- 关键修复：计算相对于 parentElement 的本地偏移量 ---
-      let parentStartOffset = 0
-      for (const node of textNodes) {
-        if (parentElement.contains(node))
-          break
-        parentStartOffset += (node.textContent || '').length
-      }
-      const localMatchIndex = matchIndex - parentStartOffset
+  if (involvedNodes.length === 0)
+    return null
 
-      const contextLength = 20
-      const start = Math.max(0, matchIndex - contextLength)
-      const end = Math.min(fullText.length, matchIndex + mark.text.length + contextLength)
-      const surroundingSnippet = fullText.substring(start, end)
+  const lca = findCommonAncestor(involvedNodes)
 
-      const blockContainer = findNearestBlockContainer(matchedNode)
-      const richContext = blockContainer ? (blockContainer.textContent?.trim() || '') : surroundingSnippet
-
-      return {
-        id: `${mark.id}-${matchIndex}-${Math.random().toString(36).substring(2, 7)}`,
-        originalMarkId: mark.id,
-        originalMarkText: mark.text,
-        candidateElement: parentElement,
-        displayTitle: mark.contextTitle,
-        displayTextSnippet: mark.text,
-        displayContext: richContext,
-        matchIndex: localMatchIndex, // 现在存储的是本地坐标
-        matchLength: mark.text.length,
-      }
-    }
+  // 计算相对于 LCA 的本地 matchIndex
+  let lcaStartPos = 0
+  for (const node of textNodes) {
+    if (lca.contains(node))
+      break
+    lcaStartPos += (node.textContent || '').length
   }
-  return null
+  const localMatchIndex = matchIndex - lcaStartPos
+
+  const contextLength = 20
+  const start = Math.max(0, matchIndex - contextLength)
+  const end = Math.min(fullText.length, matchIndex + mark.text.length + contextLength)
+  const surroundingSnippet = fullText.substring(start, end)
+
+  const blockContainer = findNearestBlockContainer(involvedNodes[0])
+  const richContext = blockContainer ? (blockContainer.textContent?.trim() || '') : surroundingSnippet
+
+  return {
+    id: `${mark.id}-${matchIndex}-${Math.random().toString(36).substring(2, 7)}`,
+    originalMarkId: mark.id,
+    originalMarkText: mark.text,
+    candidateElement: lca,
+    displayTitle: mark.contextTitle,
+    displayTextSnippet: fullText.substring(matchIndex, matchEnd),
+    displayContext: richContext,
+    matchIndex: localMatchIndex,
+    matchLength: mark.text.length,
+  }
 }
