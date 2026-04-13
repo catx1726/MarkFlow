@@ -57,15 +57,16 @@ import type { Mark } from './storage'
 import { querySelectorDeep } from './dom'
 
 export interface Candidate {
-  id: string // 候选者唯一标识 (用于 UI 绑定)
+  id: string
   originalMarkId: string
-  originalMarkText: string // 原始标注的文本
-  candidateElement: HTMLElement
+  originalMarkText: string
+  candidateElement: HTMLElement // 现在将是最小公共祖先
   displayTitle?: string
   displayTextSnippet: string
   displayContext: string
   similarityScore?: number
-  matchIndex: number // 关键：存储全局文本流中的精确起始偏移量
+  matchIndex: number // 相对于 candidateElement 的本地起始偏移
+  matchLength: number // 匹配文本的长度
 }
 
 /**
@@ -283,6 +284,7 @@ function createCandidate(mark: Mark, matchIndex: number, textNodes: Text[], full
         displayTextSnippet: mark.text,
         displayContext: richContext,
         matchIndex: localMatchIndex, // 现在存储的是本地坐标
+        matchLength: mark.text.length,
       }
     }
   }

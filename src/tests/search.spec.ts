@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { findCandidateElements } from '../logic/search'
+import { findCandidateElements, getAllTextNodes } from '../logic/search'
 import type { Mark } from '../logic/storage'
 
 describe('search logic - recursive traversal', () => {
@@ -57,5 +57,12 @@ describe('search logic - recursive traversal', () => {
     expect(result.candidates[0].similarityScore).toBeGreaterThan(85)
     // 夹逼算法应该精准提取出中间部分
     expect(result.candidates[0].displayTextSnippet).toBe('amazzing world')
+  })
+
+  it('should extract text across multiple block elements', () => {
+    document.body.innerHTML = '<div id="test"><p>Hello </p><p>World</p></div>'
+    const nodes = getAllTextNodes(document.getElementById('test')!)
+    const fullText = nodes.map((n: Text) => n.textContent).join('')
+    expect(fullText).toBe('Hello World')
   })
 })
