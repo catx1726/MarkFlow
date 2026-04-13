@@ -181,6 +181,37 @@ export function getMarkIdFromElement(element: HTMLElement): string | null {
 }
 
 /**
+ * 寻找一组节点的最小公共祖先 (Least Common Ancestor)
+ * 
+ * @param nodes 节点数组
+ * @returns 最小公共祖先元素，默认为 document.body
+ */
+export function findCommonAncestor(nodes: Node[]): HTMLElement {
+  if (nodes.length === 0)
+    return document.body
+  if (nodes.length === 1)
+    return (nodes[0].nodeType === Node.ELEMENT_NODE ? nodes[0] : nodes[0].parentElement) as HTMLElement
+
+  const contain = (parent: Node, child: Node) => {
+    let curr: Node | null = child
+    while (curr) {
+      if (curr === parent)
+        return true
+      curr = curr.parentNode
+    }
+    return false
+  }
+
+  let lca = (nodes[0].nodeType === Node.ELEMENT_NODE ? nodes[0] : nodes[0].parentElement) as HTMLElement
+  for (let i = 1; i < nodes.length; i++) {
+    while (lca && !contain(lca, nodes[i])) {
+      lca = lca.parentElement as HTMLElement
+    }
+  }
+  return lca || (document.body as HTMLElement)
+}
+
+/**
  * 获取高亮选区的上下文（最近的上级标题）
  * 
  * 通过查找选区起始点之前最近的标题元素 (h1-h6)，
