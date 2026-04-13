@@ -128,6 +128,9 @@ import type { Mark } from '~/logic/storage'
 import { highlightDefaultStyle, shortcuts } from '~/logic/config'
 import { isPageBlacklisted, settings, settingsReady } from '~/logic/settings'
 import {
+  applyPreciseHighlight,
+  calculateSimilarity,
+  getAllTextNodes,
   getCanonicalUrlForMark,
   getHighlightContext,
   getMarkIdFromElement,
@@ -136,7 +139,7 @@ import {
   querySelectorDeep,
   getElementSelector,
 } from '~/logic/dom'
-import { type Candidate, calculateSimilarity, findCandidateElements, getAllTextNodes } from '~/logic/search'
+import { type Candidate, findCandidateElements } from '~/logic/search'
 import '../styles'
 
 // #region --- Type Definitions ---
@@ -365,7 +368,7 @@ async function handleConfirmResolution(selections: { originalMarkId: string, can
   }
 }
 
-function applyPreciseHighlight(
+export function applyPreciseHighlight(
   container: HTMLElement,
   textToFind: string,
   applier: rangy.RangyClassApplier,
