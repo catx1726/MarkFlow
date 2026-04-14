@@ -72,4 +72,46 @@ describe('cross-element integration', () => {
     const highlights = document.querySelectorAll('.test-highlight-2')
     expect(highlights.length).toBe(3) // "rt", "Middle", "E"
   })
+
+  it('should handle deletion in middle of cross-element highlight (Reported Issue)', () => {
+    // 构造 DOM
+    // 注意：手动加入换行和空格，模拟真实环境
+    document.body.innerHTML = '<div id="container">' + 
+      '<div id="d1">妮好 Lorem ipsum dolor sit am`e elit. Distinctio nulla ratione amet 121QW1111111</div>' +
+      '    <div id="d2">妮好 soluta illo, vero sint cumque deserunt omnis aut ratione 122AS1111112</div>' +
+      '</div>'
+
+    const mark = {
+      id: 'reported-id',
+      text: "妮好 Lorem ipsum dolor sit am\`e elit. Distinctio nulla ratione amet 121QW1111111\n    妮好 soluta illo, vero sint cumque deserunt omnis aut ratione 122AS1111112",
+      surroundingSnippet: "\n    1-2\n    妮好 Lorem ipsum dolor sit am\`e elit. Distinctio nulla ratione amet 121QW1111111\n    妮好 soluta illo, vero sint cumque deserunt omnis aut ratione 122AS1111112\n    3-4",
+    } as Mark
+
+    // 执行删除操作
+    const d1 = document.getElementById('d1')!
+    d1.textContent = "妮好  Distinctio nulla ratione amet 121QW1111111"
+
+    // 1. Search
+    const { ambiguityLevel, candidates } = findCandidateElements(mark, document.body)
+    
+    expect(candidates.length).toBeGreaterThan(0)
+    const candidate = candidates[0]
+    
+    // 验证内容是否包含两部分
+    expect(candidate.displayTextSnippet).toContain("Distinctio nulla ratione")
+    expect(candidate.displayTextSnippet).toContain("122AS1111112")
+
+    // 2. Apply (模拟 Hover)
+    const applier = rangy.createClassApplier('test-preview')
+    const rangeResult = applyPreciseHighlight(
+      candidate.candidateElement,
+      candidate.displayTextSnippet,
+      applier,
+      candidate.matchIndex
+    )
+
+    expect(rangeResult).not.toBeNull()
+    const previewHighlights = document.querySelectorAll('.test-preview')
+    expect(previewHighlights.length).toBeGreaterThanOrEqual(2)
+  })
 })
