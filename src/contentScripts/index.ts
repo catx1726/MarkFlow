@@ -282,6 +282,8 @@ function setupShadowDOMAndUI(): { tooltip: TooltipInstance, modal: Disambiguatio
       'onConfirmResolution': handleConfirmResolution,
       'onDiscardMark': handleDiscardMark, // 物理删除
       'onCancel': () => { modalState.visible = false },
+      'onHover-list-item': handleCandidateHover,
+      'onLeave-list-item': handleCandidateLeave,
     }),
   })
   modalApp.mount(modalRoot)
@@ -300,6 +302,33 @@ function setupShadowDOMAndUI(): { tooltip: TooltipInstance, modal: Disambiguatio
       },
     },
   }
+}
+
+async function handleCandidateHover(item: Candidate) {
+  const applier = rangy.createClassApplier('webext-highlight-preview-ambiguous', {
+    elementTagName: 'span',
+    elementAttributes: { style: 'background-color: rgba(255, 165, 0, 0.4); border-bottom: 2px solid orange;' },
+  })
+  
+  const rangeResult = applyPreciseHighlight(item.candidateElement, item.displayTextSnippet, applier, item.matchIndex)
+  if (rangeResult) {
+    rangeResult.range.commonAncestorContainer.parentElement?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }
+}
+
+function handleCandidateLeave() {
+  const previewElements = querySelectorAllDeep('.webext-highlight-preview-ambiguous')
+  const parentsToNormalize = new Set<Node>()
+  previewElements.forEach((el) => {
+    if (!(el instanceof HTMLElement)) return
+    const parent = el.parentNode
+    if (parent) {
+      parentsToNormalize.add(parent)
+      while (el.firstChild) parent.insertBefore(el.firstChild, el)
+      parent.removeChild(el)
+    }
+  })
+  parentsToNormalize.forEach(parent => parent.normalize())
 }
 
 async function handleDiscardMark(markId: string) {

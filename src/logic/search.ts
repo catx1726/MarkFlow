@@ -46,7 +46,7 @@ export function findCandidateElements(
   // --- Level 2: Exact Match ---
   let matchIndex = fullText.indexOf(mark.text)
   while (matchIndex !== -1) {
-    const candidate = createCandidate(mark, matchIndex, textNodes, fullText)
+    const candidate = createCandidate(mark, matchIndex, textNodes, fullText, mark.text.length)
     if (candidate) {
       const similarity = mark.surroundingSnippet ? calculateSimilarity(candidate.displayContext, mark.surroundingSnippet) : 100
       candidate.similarityScore = similarity
@@ -56,12 +56,19 @@ export function findCandidateElements(
   }
 
   // --- Level 3: Fuzzy Match (Context Anchoring / Sandwich Method) ---
-  if (mark.surroundingSnippet) {
+  // 关键：如果已经找到了 100% 匹配的候选者，且数量合理，可以跳过 L3 搜索，减少干扰项
+  if (mark.surroundingSnippet && candidates.length === 0) {
     console.log('[WebMarker-Search] Performing Level 3 Sandwich Search...')
     
-    const prefix = mark.surroundingSnippet.substring(0, 20)
-    const suffix = mark.surroundingSnippet.substring(mark.surroundingSnippet.length - 20)
+    // 灵活处理指纹长度
+    const prefixLen = Math.min(20, Math.floor(mark.surroundingSnippet.length / 2.5))
+    const suffixLen = prefixLen
     
+    const prefix = mark.surroundingSnippet.substring(0, prefixLen)
+    const suffix = mark.surroundingSnippet.substring(mark.surroundingSnippet.length - suffixLen)
+    
+    console.log(`[WebMarker-Search] L3 Params: prefix="${prefix}", suffix="${suffix}"`)
+
     let bestPrefixScore = 0
     let bestPrefixIndex = -1
     let bestSuffixScore = 0
@@ -75,9 +82,10 @@ export function findCandidateElements(
       }
     }
 
-    if (bestPrefixScore > 70) {
+    if (bestPrefixScore > 60) { // 稍微降低门槛
       const searchStart = bestPrefixIndex + prefix.length
-      for (let i = searchStart; i < Math.min(fullText.length, searchStart + mark.text.length + 100); i++) {
+      // 搜索范围：原位置之后，合理距离内
+      for (let i = searchStart; i < Math.min(fullText.length, searchStart + mark.text.length + 200); i++) {
         const score = calculateSimilarity(fullText.substring(i, i + suffix.length), suffix)
         if (score > bestSuffixScore) {
           bestSuffixScore = score
@@ -86,22 +94,30 @@ export function findCandidateElements(
       }
     }
 
-    if (bestPrefixScore > 70 && bestSuffixScore > 70 && bestSuffixIndex > bestPrefixIndex) {
+    console.log(`[WebMarker-Search] L3 Results: prefixScore=${bestPrefixScore}, suffixScore=${bestSuffixScore}`)
+
+    if (bestPrefixScore > 60 && bestSuffixScore > 60 && bestSuffixIndex > bestPrefixIndex) {
       const start = bestPrefixIndex + prefix.length
       const end = bestSuffixIndex
       const actualText = fullText.substring(start, end).trim()
+      const matchLength = end - start
       
-      const candidate = createCandidate(mark, start, textNodes, fullText)
+      const candidate = createCandidate(mark, start, textNodes, fullText, matchLength)
       if (candidate) {
         candidate.similarityScore = (bestPrefixScore + bestSuffixScore) / 2
         candidate.displayTextSnippet = actualText || mark.text
         candidates.push(candidate)
+        console.log(`[WebMarker-Search] L3 Candidate added: "${actualText}"`)
       }
     }
   }
 
-  candidates.sort((a, b) => (b.similarityScore || 0) - (a.similarityScore || 0))
-  const uniqueCandidates = Array.from(new Map(candidates.map(c => [c.candidateElement, c])).values())
+  // 去重并按分值排序
+  // 关键：根据 candidateElement 和 matchIndex 进行去重，防止 L2 和 L3 找到同一个位置
+  const uniqueCandidates = Array.from(new Map(candidates.map(c => [`${c.candidateElement.innerHTML}-${c.matchIndex}`, c])).values())
+  uniqueCandidates.sort((a, b) => (b.similarityScore || 0) - (a.similarityScore || 0))
+
+  console.log(`[WebMarker-Search] Total unique candidates: ${uniqueCandidates.length}`)
 
   let ambiguityLevel: AmbiguityLevel = 'none'
   if (uniqueCandidates.length === 1) {
@@ -135,11 +151,11 @@ function findNearestBlockContainer(node: Node): HTMLElement | null {
   return null
 }
 
-function createCandidate(mark: Mark, matchIndex: number, textNodes: Text[], fullText: string): Candidate | null {
+function createCandidate(mark: Mark, matchIndex: number, textNodes: Text[], fullText: string, matchLength: number): Candidate | null {
   if (matchIndex < 0)
     return null
 
-  const matchEnd = matchIndex + mark.text.length
+  const matchEnd = matchIndex + matchLength
   const involvedNodes: Text[] = []
   let currentPos = 0
 
@@ -169,15 +185,13 @@ function createCandidate(mark: Mark, matchIndex: number, textNodes: Text[], full
 
   const contextLength = 20
   const start = Math.max(0, matchIndex - contextLength)
-  const end = Math.min(fullText.length, matchIndex + mark.text.length + contextLength)
+  const end = Math.min(fullText.length, matchEnd + contextLength)
   const surroundingSnippet = fullText.substring(start, end)
 
   const blockContainer = findNearestBlockContainer(involvedNodes[0])
   let richContext = blockContainer ? (blockContainer.textContent?.trim() || '') : surroundingSnippet
   
-  // 如果找到的块容器文本比我们要找的文本还短（说明是跨块高亮），或者相似度可能很低
-  // 则回退到使用周围片段作为 context，以确保相似度计算的稳健性
-  if (richContext.length < mark.text.length) {
+  if (richContext.length < matchLength) {
     richContext = surroundingSnippet
   }
 
@@ -190,6 +204,6 @@ function createCandidate(mark: Mark, matchIndex: number, textNodes: Text[], full
     displayTextSnippet: fullText.substring(matchIndex, matchEnd),
     displayContext: richContext,
     matchIndex: localMatchIndex,
-    matchLength: mark.text.length,
+    matchLength,
   }
 }

@@ -13,11 +13,12 @@ const emit = defineEmits<{
   (e: 'confirmResolution', selections: { originalMarkId: string; candidateElement: HTMLElement; actualText: string; matchIndex: number }[]): void
   (e: 'discardMark', markId: string): void
   (e: 'cancel'): void
+  (e: 'hover-list-item', item: Candidate): void
+  (e: 'leave-list-item', item: Candidate): void
 }>()
 
 const searchTerm = ref('')
 const selectedCandidateIds = ref<Set<string>>(new Set()) // Format: "candidateId"
-const hoveredElement = ref<HTMLElement | null>(null)
 const hoveredCandidateId = ref<string | null>(null)
 
 const filteredMarks = computed(() => {
@@ -47,21 +48,14 @@ const groupedMarks = computed(() => {
 
 function handleItemHover(item: Candidate) {
   hoveredCandidateId.value = item.id
-  if (hoveredElement.value)
-    hoveredElement.value.style.outline = ''
-  item.candidateElement.style.outline = '2px solid orange'
-  item.candidateElement.scrollIntoView({ behavior: 'smooth', block: 'center' })
-  hoveredElement.value = item.candidateElement
+  emit('hover-list-item', item)
 }
 
 function handleItemLeave(item: Candidate) {
   if (hoveredCandidateId.value === item.id) {
     hoveredCandidateId.value = null
   }
-  if (hoveredElement.value === item.candidateElement) {
-    hoveredElement.value.style.outline = ''
-    hoveredElement.value = null
-  }
+  emit('leave-list-item', item)
 }
 
 function handleItemClick(item: Candidate) {
@@ -99,9 +93,6 @@ watch(() => props.modelValue, (val) => {
     searchTerm.value = ''
     selectedCandidateIds.value.clear()
     hoveredCandidateId.value = null
-    if (hoveredElement.value)
-      hoveredElement.value.style.outline = ''
-    hoveredElement.value = null
   }
 })
 </script>

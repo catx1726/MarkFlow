@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { findCandidateElements, getAllTextNodes } from '../logic/search'
+import { findCandidateElements } from '../logic/search'
+import { getAllTextNodes } from '../logic/dom'
 import type { Mark } from '../logic/storage'
 
 describe('search logic - recursive traversal', () => {
