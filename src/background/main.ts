@@ -122,39 +122,15 @@ onMessage<UpdateMarkNotePayload>('update-mark-note', async ({ data }) => {
 })
 
 onMessage<UpdateMarkNotePayload>('update-mark-details', async ({ data }) => {
-  const { url, id, note, color, rangySerialized, surroundingSnippet, shadowHostSelector, contextTitle, contextSelector, contextLevel, contextOrder } = data
+  const { url, id, ...updates } = data
   if (marksByUrl.value[url]) {
-    const markToUpdate = marksByUrl.value[url].find((m) => m.id === id)
-    if (markToUpdate) {
-      if (note !== undefined)
-        markToUpdate.note = note
-
-      if (color !== undefined)
-        markToUpdate.color = color
-
-      if (rangySerialized !== undefined)
-        markToUpdate.rangySerialized = rangySerialized
-
-      if (surroundingSnippet !== undefined)
-        markToUpdate.surroundingSnippet = surroundingSnippet
-
-      if (shadowHostSelector !== undefined)
-        markToUpdate.shadowHostSelector = shadowHostSelector
-
-      if (contextTitle !== undefined)
-        markToUpdate.contextTitle = contextTitle
-
-      if (contextSelector !== undefined)
-        markToUpdate.contextSelector = contextSelector
-
-      if (contextLevel !== undefined)
-        markToUpdate.contextLevel = contextLevel
-
-      if (contextOrder !== undefined)
-        markToUpdate.contextOrder = contextOrder
-
-      // 核心修复：强制触发响应式更新以确保数据写入持久存储 (Storage)
+    const index = marksByUrl.value[url].findIndex((m) => m.id === id)
+    if (index !== -1) {
+      // 核心修复：合并更新并确保响应式触发
+      const markToUpdate = marksByUrl.value[url][index]
+      Object.assign(markToUpdate, updates)
       marksByUrl.value = { ...marksByUrl.value }
+      console.log(`[background] Mark ${id} updated successfully with keys: ${Object.keys(updates).join(', ')}`)
     }
   }
 })

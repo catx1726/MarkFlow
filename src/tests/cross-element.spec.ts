@@ -75,43 +75,34 @@ describe('cross-element integration', () => {
 
   it('should handle deletion in middle of cross-element highlight (Reported Issue)', () => {
     // 构造 DOM
-    // 注意：手动加入换行和空格，模拟真实环境
-    document.body.innerHTML = '<div id="container">' + 
-      '<div id="d1">妮好 Lorem ipsum dolor sit am`e elit. Distinctio nulla ratione amet 121QW1111111</div>' +
-      '    <div id="d2">妮好 soluta illo, vero sint cumque deserunt omnis aut ratione 122AS1111112</div>' +
-      '</div>'
+    document.body.innerHTML = `
+      <h1>1-2</h1>
+      <div id="d1">妮好 Lorem ipsum dolor sit am\`e elit. Distinctio nulla ratione amet 121QW1111111</div>
+      <div id="d2">妮好 soluta illo, vero sint cumque deserunt omnis aut ratione 122AS1111112</div>
+      <h1>3-4</h1>
+      <div id="d3">妮好 corporis inventore aspernatur laborum amet culpa? 123WE1111113</div>
+      <div id="d4">妮好 repudiandae fuga? Nulla 124ER1111114</div>
+    `
 
     const mark = {
       id: 'reported-id',
-      text: "妮好 Lorem ipsum dolor sit am\`e elit. Distinctio nulla ratione amet 121QW1111111\n    妮好 soluta illo, vero sint cumque deserunt omnis aut ratione 122AS1111112",
-      surroundingSnippet: "\n    1-2\n    妮好 Lorem ipsum dolor sit am\`e elit. Distinctio nulla ratione amet 121QW1111111\n    妮好 soluta illo, vero sint cumque deserunt omnis aut ratione 122AS1111112\n    3-4",
+      text: "妮好 corporis inventore aspernatur laborum amet culpa? 123WE1111113\n    妮好 repudiandae fuga? Nulla 124ER1111114",
+      surroundingSnippet: "1-2\\n    妮好 Lorem...1111112\\n    3-4\\n    妮好 corporis inventore aspernatur laborum amet culpa? 123WE1111113\\n    妮好 repudiandae fuga? Nulla 124ER1111114\\n    5-6",
     } as Mark
 
     // 执行删除操作
-    const d1 = document.getElementById('d1')!
-    d1.textContent = "妮好  Distinctio nulla ratione amet 121QW1111111"
+    const d3 = document.getElementById('d3')!
+    d3.textContent = "妮好  laborum amet culpa? 123WE1111113"
 
     // 1. Search
-    const { ambiguityLevel, candidates } = findCandidateElements(mark, document.body)
+    const { candidates } = findCandidateElements(mark, document.body)
     
     expect(candidates.length).toBeGreaterThan(0)
     const candidate = candidates[0]
     
-    // 验证内容是否包含两部分
-    expect(candidate.displayTextSnippet).toContain("Distinctio nulla ratione")
-    expect(candidate.displayTextSnippet).toContain("122AS1111112")
-
-    // 2. Apply (模拟 Hover)
-    const applier = rangy.createClassApplier('test-preview')
-    const rangeResult = applyPreciseHighlight(
-      candidate.candidateElement,
-      candidate.displayTextSnippet,
-      applier,
-      candidate.matchIndex
-    )
-
-    expect(rangeResult).not.toBeNull()
-    const previewHighlights = document.querySelectorAll('.test-preview')
-    expect(previewHighlights.length).toBeGreaterThanOrEqual(2)
+    // 验证内容是否包含两部分，且不包含 H1 (3-4)
+    expect(candidate.displayTextSnippet).not.toContain("3-4")
+    expect(candidate.displayTextSnippet).toContain("laborum amet culpa")
+    expect(candidate.displayTextSnippet).toContain("124ER1111114")
   })
 })

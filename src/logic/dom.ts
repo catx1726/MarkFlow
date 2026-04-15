@@ -226,18 +226,30 @@ export function getMarkIdFromElement(element: HTMLElement): string | null {
  */
 export function getAllTextNodes(root: Node): Text[] {
   const nodes: Text[] = []
-  const walker = (node: Node) => {
+  const stack: Node[] = [root]
+
+  while (stack.length > 0) {
+    const node = stack.pop()!
+
     if (node.nodeType === Node.TEXT_NODE) {
       nodes.push(node as Text)
     }
     else {
+      // 穿透 Shadow DOM
       if (node.nodeType === Node.ELEMENT_NODE && (node as HTMLElement).shadowRoot) {
-        Array.from((node as HTMLElement).shadowRoot!.childNodes).forEach(walker)
+        const shadowNodes = (node as HTMLElement).shadowRoot!.childNodes
+        for (let i = shadowNodes.length - 1; i >= 0; i--) {
+          stack.push(shadowNodes[i])
+        }
       }
-      Array.from(node.childNodes).forEach(walker)
+
+      // 处理常规子节点 (倒序压栈，确保正序处理)
+      const childNodes = node.childNodes
+      for (let i = childNodes.length - 1; i >= 0; i--) {
+        stack.push(childNodes[i])
+      }
     }
   }
-  walker(root)
   return nodes
 }
 

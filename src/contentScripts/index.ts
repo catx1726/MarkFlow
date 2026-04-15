@@ -158,6 +158,7 @@ interface DisambiguationModalInstance {
 
 // #region --- State Management ---
 const restoredMarkIds = new Set<string>()
+const failedRestoreCooldowns = new Map<string, number>() // markId -> nextAllowedRetryTimestamp
 const ambiguousMarksQueue = ref<Candidate[]>([])
 
 const modalState = reactive({
@@ -174,7 +175,8 @@ let currentSerializationRoot: Node | undefined
 let serializedSelection: string | null = null
 let currentMarkIdForColorChange: string | null = null
 let previewApplier: rangy.RangyClassApplier | null = null
-
+let isRestoring = false
+// #endregion
 /**
  * 递归地为页面及其所有 Shadow Root 附加鼠标事件监听器。
  * 
@@ -381,11 +383,18 @@ async function handleConfirmResolution(selections: { originalMarkId: string, can
           shadowHostSelector = chain.join('|>>>|')
         }
 
+        const content = range.cloneContents()
+        const tempDiv = document.createElement('div')
+        tempDiv.appendChild(content)
+        const actualHtml = content.constructor === DocumentFragment ? tempDiv.innerHTML : range.toString()
+
         await sendMessage('update-mark-details', {
           id: mark.id,
           url: mark.url,
+          text: actualText,
+          html: actualHtml,
           rangySerialized: newSerialized,
-          shadowHostSelector,
+          shadowHostSelector: shadowHostSelector || null,
           contextTitle,
           contextSelector,
           contextLevel,
@@ -395,6 +404,10 @@ async function handleConfirmResolution(selections: { originalMarkId: string, can
       }
     }
   }
+  // 清理歧义队列中已解决的项
+  ambiguousMarksQueue.value = ambiguousMarksQueue.value.filter(
+    m => !restoredMarkIds.has(m.originalMarkId)
+  )
 }
 
 export function applyPreciseHighlight(
@@ -790,33 +803,67 @@ async function restoreHighlights() {
   const marks = await sendMessage('get-marks-for-url', { url: canonicalUrl }, 'background')
   if (!marks || marks.length === 0) return
   ambiguousMarksQueue.value = []
-  const marksToRestore = marks.filter(mark => !restoredMarkIds.has(mark.id))
-  applyMarks(marksToRestore)
+
+  const now = Date.now()
+  const marksToRestore = marks.filter((mark) => {
+    if (restoredMarkIds.has(mark.id))
+      return false
+    const cooldown = failedRestoreCooldowns.get(mark.id)
+    if (cooldown && now < cooldown)
+      return false
+    return true
+  })
+
+  if (marksToRestore.length > 0)
+    applyMarks(marksToRestore)
+
   if (ambiguousMarksQueue.value.length > 0) {
     disambiguationModalApp?.show(ambiguousMarksQueue.value)
   }
   const observer = new MutationObserver((mutations) => {
     const hasAddedNodes = mutations.some(m => m.addedNodes.length > 0)
-    if (!hasAddedNodes) return
+    if (!hasAddedNodes)
+      return
     debouncedRestore()
   })
   observer.observe(document.body, { childList: true, subtree: true })
 }
 
 function debouncedRestore() {
+  if (isRestoring)
+    return
   clearTimeout(restoreDebounceTimer)
   restoreDebounceTimer = window.setTimeout(async () => {
     const canonicalUrl = getCanonicalUrlForMark()
     const marks = await sendMessage('get-marks-for-url', { url: canonicalUrl }, 'background')
-    if (!marks) return
-    const marksToRestore = marks.filter(mark => !restoredMarkIds.has(mark.id))
-    if (marksToRestore.length > 0) applyMarks(marksToRestore)
+    if (!marks)
+      return
+
+    const now = Date.now()
+    const marksToRestore = marks.filter((mark) => {
+      if (restoredMarkIds.has(mark.id))
+        return false
+      const cooldown = failedRestoreCooldowns.get(mark.id)
+      if (cooldown && now < cooldown)
+        return false
+      return true
+    })
+
+    if (marksToRestore.length > 0) {
+      isRestoring = true
+      try {
+        await applyMarks(marksToRestore)
+      }
+      finally {
+        isRestoring = false
+      }
+    }
     attachListenersToShadowRoots(document)
-  }, 500)
+  }, 1000) // 增加到 1秒，减少动态页面压力
 }
 
-function applyMarks(marks: Mark[]) {
-  marks.forEach((mark) => {
+async function applyMarks(marks: Mark[]) {
+  for (const mark of marks) {
     const applier = rangy.createClassApplier(`webext-highlight-${mark.id}`, {
       elementTagName: 'span',
       elementAttributes: { style: highlightDefaultStyle(mark.color) },
@@ -829,41 +876,66 @@ function applyMarks(marks: Mark[]) {
         let currentRoot: Document | ShadowRoot = document
         for (const selector of chain) {
           host = currentRoot.querySelector(selector)
-          if (host && host.shadowRoot) currentRoot = host.shadowRoot
+          if (host && host.shadowRoot)
+            currentRoot = host.shadowRoot
           else { host = null; break }
         }
-      } else {
+      }
+      else {
         host = querySelectorDeep(mark.shadowHostSelector)
       }
-      if (host && host.shadowRoot) deserializationRoot = host.shadowRoot
+      if (host && host.shadowRoot)
+        deserializationRoot = host.shadowRoot
       else return
     }
     try {
       console.log(`[WebMarker] Starting Level 1 Restore for mark: ${mark.id} ("${mark.text}")`)
       const range = rangy.deserializeRange(mark.rangySerialized, deserializationRoot, document)
-      if (!range || range.toString().trim() !== mark.text.trim()) {
-        console.warn(`[WebMarker] Level 1 Content Mismatch for ${mark.id}`)
+      if (!range)
+        throw new Error('Failed to deserialize range')
+
+      const rangeText = range.toString().trim()
+      const markText = mark.text.trim()
+      const contentSim = calculateSimilarity(rangeText, markText)
+
+      if (contentSim < 95) {
+        console.warn(`[WebMarker] Level 1 Content Mismatch for ${mark.id}: ${contentSim}% (Expected: "${markText}", Got: "${rangeText}")`)
         throw new Error('Content mismatch at path')
       }
+
       if (mark.surroundingSnippet) {
         const currentContext = getHighlightContext(range)
-        const similarity = calculateSimilarity(currentContext.surroundingSnippet, mark.surroundingSnippet)
-        console.log(`[WebMarker] Level 1 Context Similarity for ${mark.id}: ${similarity}%`)
-        if (similarity < 100) {
-          console.warn(`[WebMarker] Level 1 Context NOT perfect (${similarity}%)`)
+        const contextSim = calculateSimilarity(currentContext.surroundingSnippet, mark.surroundingSnippet)
+        console.log(`[WebMarker] Level 1 Context Similarity for ${mark.id}: ${contextSim}%`)
+
+        // 降低阈值：从 100% 降至 80%，处理页面微小变动
+        if (contextSim < 80) {
+          console.warn(`[WebMarker] Level 1 Context integrity too low (${contextSim}%)`)
           throw new Error('Context integrity mismatch')
         }
       }
       applier.applyToRange(range)
       restoredMarkIds.add(mark.id)
+      failedRestoreCooldowns.delete(mark.id) // 成功后清除冷却
       console.log(`[WebMarker] Level 1 Restore SUCCESS for ${mark.id}`)
-    } catch (e) {
+    }
+    catch (e) {
       console.warn(`[WebMarker] Level 1 Restore FAILED for ${mark.id}:`, (e as Error).message)
       const root = deserializationRoot || document.documentElement
-      console.log(`[WebMarker] Triggering findCandidateElements for ${mark.id}`)
-      const { ambiguityLevel, candidates } = findCandidateElements(mark, root, 10)
-      console.log(`[WebMarker] Search Result for ${mark.id}: level=${ambiguityLevel}, count=${candidates.length}`)
+      console.log(`[WebMarker] Triggering scoped search for ${mark.id} in ${root.nodeName}`)
       
+      let { ambiguityLevel, candidates } = findCandidateElements(mark, root, 10)
+      
+      // 核心修复：如果局部搜索失败，且我们有限制范围，尝试全局搜索
+      if (candidates.length === 0 && root !== document.documentElement) {
+        console.log(`[WebMarker] Scoped search failed for ${mark.id}, falling back to GLOBAL search.`)
+        const globalResult = findCandidateElements(mark, document.documentElement, 10)
+        ambiguityLevel = globalResult.ambiguityLevel
+        candidates = globalResult.candidates
+      }
+
+      console.log(`[WebMarker] Final Search Result for ${mark.id}: level=${ambiguityLevel}, count=${candidates.length}`)
+
       if (ambiguityLevel === 'unique' && candidates.length === 1) {
         const candidate = candidates[0]
         const similarity = mark.surroundingSnippet ? calculateSimilarity(candidate.displayContext, mark.surroundingSnippet) : 100
@@ -875,15 +947,36 @@ function applyMarks(marks: Mark[]) {
           if (rangeResult) {
             const { range } = rangeResult
             restoredMarkIds.add(mark.id)
+            failedRestoreCooldowns.delete(mark.id)
             const root = candidate.candidateElement.getRootNode()
             const newSerialized = rangy.serializeRange(range, true, root instanceof ShadowRoot ? root : undefined)
             const { contextTitle, contextSelector, contextLevel, contextOrder, surroundingSnippet } = getHighlightContext(range)
 
-            sendMessage('update-mark-details', {
+            // 核心修复：自动恢复时也要正确更新 shadowHostSelector
+            let shadowHostSelector: string | undefined
+            if (root instanceof ShadowRoot) {
+              const chain: string[] = []
+              let currRoot: Node = root
+              while (currRoot instanceof ShadowRoot) {
+                chain.unshift(getElementSelector(currRoot.host))
+                currRoot = currRoot.host.getRootNode()
+              }
+              shadowHostSelector = chain.join('|>>>|')
+            }
+
+            // 核心修复：自动恢复时也要正确更新 text 和 html，避免下次 L1 失败
+            const content = range.cloneContents()
+            const tempDiv = document.createElement('div')
+            tempDiv.appendChild(content)
+            const actualHtml = content.constructor === DocumentFragment ? tempDiv.innerHTML : range.toString()
+
+            await sendMessage('update-mark-details', {
               id: mark.id,
               url: mark.url,
+              text: candidate.displayTextSnippet,
+              html: actualHtml,
               rangySerialized: newSerialized,
-              shadowHostSelector: mark.shadowHostSelector,
+              shadowHostSelector, // 使用新计算的
               contextTitle,
               contextSelector,
               contextLevel,
@@ -891,20 +984,24 @@ function applyMarks(marks: Mark[]) {
               surroundingSnippet,
             } as any, 'background')
           }
-        } else {
+        }
+        else {
           console.warn(`[WebMarker] Unique candidate similarity too low (${similarity}%). Forcing modal.`)
           const otherMarksInQueue = ambiguousMarksQueue.value.filter(m => m.originalMarkId !== mark.id)
           ambiguousMarksQueue.value = [...otherMarksInQueue, candidate]
         }
-      } else if (ambiguityLevel === 'multiple') {
+      }
+      else if (ambiguityLevel === 'multiple') {
         console.log(`[WebMarker] Multiple candidates found for ${mark.id}. Updating queue.`)
         const otherMarksInQueue = ambiguousMarksQueue.value.filter(m => m.originalMarkId !== mark.id)
         ambiguousMarksQueue.value = [...otherMarksInQueue, ...candidates]
-      } else {
-        console.error(`[WebMarker] No candidates found for ${mark.id}. Highlight is lost.`)
+      }
+      else {
+        console.warn(`[WebMarker] No candidates found for ${mark.id} even after global search. Setting short cooldown.`)
+        failedRestoreCooldowns.set(mark.id, Date.now() + 3000) // 缩短至 3秒冷却
       }
     }
-  })
+  }
 }
 
 async function refreshHighlights() {

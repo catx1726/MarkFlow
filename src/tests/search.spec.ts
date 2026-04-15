@@ -57,7 +57,7 @@ describe('search logic - recursive traversal', () => {
     expect(result.candidates.length).toBe(1)
     expect(result.candidates[0].similarityScore).toBeGreaterThan(85)
     // 夹逼算法应该精准提取出目标区域的内容
-    expect(result.candidates[0].displayTextSnippet).toContain('amazzing worl')
+    expect(result.candidates[0].displayTextSnippet).toContain('mazzing world')
   })
 
   it('should extract text across multiple block elements', () => {

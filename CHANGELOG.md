@@ -5,6 +5,7 @@
 - Refactored search algorithm to use Least Common Ancestor (LCA) for candidate containers.
 - Enhanced highlight application logic to correctly handle cross-TextNode boundaries.
 - Centralized DOM manipulation logic in `src/logic/dom.ts`.
+- **Fix**: Improved search boundary alignment to handle large deletions within cross-element highlights, preventing preview truncation.
 
 ### [2026-04-10] feat: automate CHANGELOG.md update and update GEMINI.md diagram (#19)
 feat: automate CHANGELOG.md update and update GEMINI.md diagram
