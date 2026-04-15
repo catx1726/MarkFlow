@@ -10,6 +10,8 @@ feat: robust cross-element restoration with self-healing
 - Enhanced highlight application logic to correctly handle cross-TextNode boundaries.
 - Centralized DOM manipulation logic in `src/logic/dom.ts`.
 - **Fix**: Improved search boundary alignment to handle large deletions within cross-element highlights, preventing preview truncation.
+- **Fix**: Implemented data sanitization to strip existing highlight tags from captured HTML, preventing nested styles (#4).
+- **Fix**: Enhanced Markdown export by converting HTML content to clean Markdown using Turndown (#16).
 
 ### [2026-04-10] feat: automate CHANGELOG.md update and update GEMINI.md diagram (#19)
 feat: automate CHANGELOG.md update and update GEMINI.md diagram

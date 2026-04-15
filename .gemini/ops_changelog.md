@@ -7,3 +7,4 @@
 | 2026-04-10 13:30:00 | Add post-mortem report for task 17 | .ai/archive/17_summary.md | Satisfy SOP requirement for task completion | HEAD | - |
 | 2026-04-10 16:20:00 | Automate CHANGELOG.md update and update GEMINI.md diagram | .github/workflows/close_loop.yml, GEMINI.md | Close the loop for user-facing changes and update SOP docs | 3ed03ef | - |
 | 2026-04-14 11:30:00 | Implement robust cross-element restoration with self-healing | src/contentScripts/index.ts, src/logic/search.ts, src/logic/dom.ts, src/background/main.ts, README.md | Support cross-element highlights, self-healing, and global fallback for dynamic pages (Bilibili/Reddit) | 5f22aea | git reset --hard HEAD~1 |
+| 2026-04-14 17:00:00 | Fix nested highlight capture and Markdown export | src/logic/dom.ts, src/contentScripts/index.ts, src/sidepanel/Sidepanel.vue | Strip existing highlight tags when capturing HTML (#4) and use Turndown for Markdown export (#16) | HEAD | - |

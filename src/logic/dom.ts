@@ -222,6 +222,41 @@ export function getMarkIdFromElement(element: HTMLElement): string | null {
 }
 
 /**
+ * 剔除 DOM 树中扩展程序添加的高亮标签，同时保留其内部文本/HTML 内容。
+ * 用于数据脱敏，确保存储的 HTML 不含重复嵌套的高亮 span。
+ */
+export function stripHighlights(root: Node): void {
+  const isElement = root.nodeType === Node.ELEMENT_NODE
+  const isFragment = root.nodeType === Node.DOCUMENT_FRAGMENT_NODE
+  const nodes = (isElement || isFragment) ? (root as any).querySelectorAll('span[class*="webext-highlight-"]') : []
+
+  const process = (el: Element) => {
+    const isHighlight = Array.from(el.classList).some(c => c.startsWith('webext-highlight-'))
+    if (isHighlight) {
+      const parent = el.parentNode
+      if (parent) {
+        while (el.firstChild) {
+          parent.insertBefore(el.firstChild, el)
+        }
+        parent.removeChild(el)
+      }
+    }
+  }
+
+  if (nodes.length > 0) {
+    // 逆序处理，避免节点移动影响遍历
+    for (let i = nodes.length - 1; i >= 0; i--) {
+      process(nodes[i])
+    }
+  }
+
+  // 额外处理 root 本身（如果是 Element 且匹配）
+  if (isElement) {
+    process(root as Element)
+  }
+}
+
+/**
  * 获取指定节点下的所有文本节点（包含 Shadow DOM）
  */
 export function getAllTextNodes(root: Node): Text[] {

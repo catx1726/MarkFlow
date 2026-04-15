@@ -138,6 +138,7 @@ import {
   querySelectorAllDeep,
   querySelectorDeep,
   getElementSelector,
+  stripHighlights,
 } from '~/logic/dom'
 import { type Candidate, findCandidateElements } from '~/logic/search'
 import '../styles'
@@ -384,6 +385,7 @@ async function handleConfirmResolution(selections: { originalMarkId: string, can
         }
 
         const content = range.cloneContents()
+        stripHighlights(content)
         const tempDiv = document.createElement('div')
         tempDiv.appendChild(content)
         const actualHtml = content.constructor === DocumentFragment ? tempDiv.innerHTML : range.toString()
@@ -747,6 +749,7 @@ async function createHighlight(rangyRange: rangy.RangyRange, note?: string, colo
   const selectedText = rangyRange.toString()
   const { contextTitle, contextSelector, contextLevel, contextOrder, surroundingSnippet } = getHighlightContext(rangyRange)
   const content = rangyRange.cloneContents()
+  stripHighlights(content)
   const tempDiv = document.createElement('div')
   tempDiv.appendChild(content)
   const selectedHtml = content.constructor === DocumentFragment ? tempDiv.innerHTML : selectedText

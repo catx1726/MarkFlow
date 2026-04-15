@@ -6,7 +6,14 @@ import { CLEANUP_DAYS_THRESHOLD } from '~/logic/config'
 import type { Mark } from '~/logic/storage'
 import { marksByUrl } from '~/logic/storage'
 import { usePreferredDark } from '@vueuse/core'
+import TurndownService from 'turndown'
+
 const isDark = usePreferredDark()
+const turndownService = new TurndownService()
+turndownService.addRule('strikethrough', {
+  filter: ['del', 's', 'strike'],
+  replacement: (content) => `~~${content}~~`,
+})
 watchEffect(() => {
   if (isDark.value) document.documentElement.classList.add('dark')
   else document.documentElement.classList.remove('dark')
@@ -403,8 +410,14 @@ function exportToMarkdown(urlData: { pageTitle: string; groups: MarkGroup[] }) {
 
     for (const mark of group.marks) {
       if (mark.html) {
-        // 如果有 HTML 内容，直接使用它
-        markdown += `${mark.html}\n\n`
+        // 使用 Turndown 将 HTML 转换为干净的 Markdown
+        try {
+          const contentMd = turndownService.turndown(mark.html)
+          markdown += `${contentMd}\n\n`
+        } catch (e) {
+          console.error('Turndown conversion failed:', e)
+          markdown += `> ${mark.text.replace(/>/g, '\\>')}\n\n`
+        }
       } else {
         // 否则，回退到纯文本并使用 Markdown 引用
         markdown += `> ${mark.text.replace(/>/g, '\\>')}\n\n`
