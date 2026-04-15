@@ -44,7 +44,48 @@
  * @module dom
  */
 
-import type rangy from 'rangy/lib/rangy-core'
+import rangy from 'rangy/lib/rangy-core'
+
+/**
+ * 计算两个字符串的相似度 (Dice's Coefficient + Short String Fallback)
+ */
+export function calculateSimilarity(str1: string, str2: string): number {
+  const s1 = str1.replace(/\s+/g, '').toLowerCase()
+  const s2 = str2.replace(/\s+/g, '').toLowerCase()
+  if (s1 === s2)
+    return 100
+  if (!s1 || !s2)
+    return 0
+
+  if (s1.length < 2 || s2.length < 2) {
+    const longer = s1.length > s2.length ? s1 : s2
+    const shorter = s1.length > s2.length ? s2 : s1
+    let matches = 0
+    for (const char of shorter) {
+      if (longer.includes(char))
+        matches++
+    }
+    return Math.round((matches / longer.length) * 100)
+  }
+
+  const bigrams1 = new Set<string>()
+  for (let i = 0; i < s1.length - 1; i++) {
+    bigrams1.add(s1.substring(i, i + 2))
+  }
+
+  const bigrams2 = new Set<string>()
+  for (let i = 0; i < s2.length - 1; i++) {
+    bigrams2.add(s2.substring(i, i + 2))
+  }
+
+  let intersection = 0
+  for (const bigram of bigrams1) {
+    if (bigrams2.has(bigram))
+      intersection++
+  }
+
+  return Math.round((2 * intersection) / (bigrams1.size + bigrams2.size) * 100)
+}
 
 /**
  * 递归穿透 Shadow DOM，查找第一个匹配选择器的元素。
@@ -178,6 +219,114 @@ export function getMaxZIndex(): number {
 export function getMarkIdFromElement(element: HTMLElement): string | null {
   const highlightClass = Array.from(element.classList).find(c => c.startsWith('webext-highlight-'))
   return highlightClass ? highlightClass.replace('webext-highlight-', '') : null
+}
+
+/**
+ * 获取指定节点下的所有文本节点（包含 Shadow DOM）
+ */
+export function getAllTextNodes(root: Node): Text[] {
+  const nodes: Text[] = []
+  const stack: Node[] = [root]
+
+  while (stack.length > 0) {
+    const node = stack.pop()!
+
+    if (node.nodeType === Node.TEXT_NODE) {
+      nodes.push(node as Text)
+    }
+    else {
+      // 穿透 Shadow DOM
+      if (node.nodeType === Node.ELEMENT_NODE && (node as HTMLElement).shadowRoot) {
+        const shadowNodes = (node as HTMLElement).shadowRoot!.childNodes
+        for (let i = shadowNodes.length - 1; i >= 0; i--) {
+          stack.push(shadowNodes[i])
+        }
+      }
+
+      // 处理常规子节点 (倒序压栈，确保正序处理)
+      const childNodes = node.childNodes
+      for (let i = childNodes.length - 1; i >= 0; i--) {
+        stack.push(childNodes[i])
+      }
+    }
+  }
+  return nodes
+}
+
+/**
+ * 在容器中精确应用高亮
+ * 
+ * @param container 容器元素
+ * @param textToFind 要高亮的文本
+ * @param applier Rangy 高亮应用器
+ * @param preferredOffset 首选偏移量
+ */
+export function applyPreciseHighlight(
+  container: HTMLElement,
+  textToFind: string,
+  applier: rangy.RangyClassApplier,
+  preferredOffset: number,
+): { range: rangy.RangyRange, actualText: string } | null {
+  const textNodes = getAllTextNodes(container)
+  let currentLen = 0
+  let startNode: Text | null = null
+  let startOffset = 0
+  let endNode: Text | null = null
+  let endOffset = 0
+
+  for (const node of textNodes) {
+    const nodeLen = (node.textContent || '').length
+    if (!startNode && preferredOffset < currentLen + nodeLen) {
+      startNode = node
+      startOffset = preferredOffset - currentLen
+    }
+    if (startNode && preferredOffset + textToFind.length <= currentLen + nodeLen) {
+      endNode = node
+      endOffset = (preferredOffset + textToFind.length) - currentLen
+      break
+    }
+    currentLen += nodeLen
+  }
+
+  if (startNode && endNode) {
+    const range = (rangy as any).createRange ? (rangy as any).createRange() : (startNode.ownerDocument as any).createRange()
+    range.setStart(startNode, startOffset)
+    range.setEnd(endNode, endOffset)
+    applier.applyToRange(range)
+    return { range, actualText: range.toString() }
+  }
+  return null
+}
+
+/**
+ * 寻找一组节点的最小公共祖先 (Least Common Ancestor)
+ * 
+ * @param nodes 节点数组
+ * @returns 最小公共祖先元素，默认为 document.body
+ */
+export function findCommonAncestor(nodes: Node[]): HTMLElement {
+  if (nodes.length === 0)
+    return document.body
+  if (nodes.length === 1)
+    return (nodes[0].nodeType === Node.ELEMENT_NODE ? nodes[0] : nodes[0].parentElement) as HTMLElement
+
+  const contain = (parent: Node, child: Node) => {
+    let curr: Node | null = child
+    while (curr) {
+      if (curr === parent)
+        return true
+      curr = curr.parentNode
+    }
+    return false
+  }
+
+  let lca = (nodes[0].nodeType === Node.ELEMENT_NODE ? nodes[0] : nodes[0].parentElement) as HTMLElement
+  for (let i = 1; i < nodes.length; i++) {
+    while (lca && !contain(lca, nodes[i])) {
+      lca = lca.parentElement as HTMLElement
+    }
+  }
+  return lca || (document.body as HTMLElement)
 }
 
 /**

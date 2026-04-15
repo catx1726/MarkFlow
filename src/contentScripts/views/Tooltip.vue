@@ -121,6 +121,14 @@ watch(selectedColor, (newColor) => {
 const handleKeydown = (event: KeyboardEvent) => {
   if (!visible.value) return
 
+  if (event.key === 'Escape') {
+    event.preventDefault()
+    event.stopPropagation()
+    if (!isHighlighted.value) emit('clear-preview')
+    hide()
+    return
+  }
+
   // Handle Ctrl+C / Cmd+C for copying original text
   // This should not override the default copy behavior inside the textarea.
   const isPrimaryModifierOnly =
@@ -255,6 +263,9 @@ function show(
 }
 
 function hide() {
+  if (visible.value && !isHighlighted.value) {
+    emit('clear-preview')
+  }
   visible.value = false
 }
 

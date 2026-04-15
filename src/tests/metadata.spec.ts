@@ -1,13 +1,29 @@
 import { beforeAll, describe, expect, it } from 'vitest'
 import rangy from 'rangy/lib/rangy-core'
-import { getHighlightContext } from '../logic/dom'
+import { findCommonAncestor, getHighlightContext } from '../logic/dom'
 
 describe('metadata capture', () => {
   beforeAll(() => {
     rangy.init()
   })
 
-  it('should capture context from a simple heading', () => {
+  it('should find common ancestor for multiple nodes', () => {
+    document.body.innerHTML = `
+      <div id="parent">
+        <p id="p1">First</p>
+        <div>
+          <span id="s1">Second</span>
+        </div>
+      </div>
+    `
+    const p1 = document.getElementById('p1')!
+    const s1 = document.getElementById('s1')!
+    const parent = document.getElementById('parent')!
+
+    expect(findCommonAncestor([p1, s1])).toBe(parent)
+  })
+
+  it('should find context from a simple heading', () => {
     document.body.innerHTML = `
       <h1 id="h1">Section 1</h1>
       <p id="p1">Target text</p>

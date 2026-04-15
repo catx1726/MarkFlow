@@ -10,34 +10,38 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: 'update:modelValue', value: boolean): void
-  (e: 'confirmResolution', selections: { originalMarkId: string; candidateElement: HTMLElement; actualText: string; matchIndex: number }[]): void
+  (
+    e: 'confirmResolution',
+    selections: { originalMarkId: string; candidateElement: HTMLElement; actualText: string; matchIndex: number }[]
+  ): void
   (e: 'discardMark', markId: string): void
   (e: 'cancel'): void
+  (e: 'hover-list-item', item: Candidate): void
+  (e: 'leave-list-item', item: Candidate): void
 }>()
 
 const searchTerm = ref('')
 const selectedCandidateIds = ref<Set<string>>(new Set()) // Format: "candidateId"
-const hoveredElement = ref<HTMLElement | null>(null)
 const hoveredCandidateId = ref<string | null>(null)
 
 const filteredMarks = computed(() => {
-  if (!searchTerm.value)
-    return props.ambiguousMarksData
+  if (!searchTerm.value) return props.ambiguousMarksData
   const term = searchTerm.value.toLowerCase()
-  return props.ambiguousMarksData.filter(m =>
-    m.displayTextSnippet.toLowerCase().includes(term)
-    || m.displayContext.toLowerCase().includes(term)
-    || (m.displayTitle && m.displayTitle.toLowerCase().includes(term)),
+  return props.ambiguousMarksData.filter(
+    (m) =>
+      m.displayTextSnippet.toLowerCase().includes(term) ||
+      m.displayContext.toLowerCase().includes(term) ||
+      (m.displayTitle && m.displayTitle.toLowerCase().includes(term))
   )
 })
 
 const groupedMarks = computed(() => {
-  const groups: Record<string, { text: string, items: Candidate[] }> = {}
+  const groups: Record<string, { text: string; items: Candidate[] }> = {}
   filteredMarks.value.forEach((m) => {
     if (!groups[m.originalMarkId]) {
       groups[m.originalMarkId] = {
         text: m.originalMarkText,
-        items: [],
+        items: []
       }
     }
     groups[m.originalMarkId].items.push(m)
@@ -47,27 +51,20 @@ const groupedMarks = computed(() => {
 
 function handleItemHover(item: Candidate) {
   hoveredCandidateId.value = item.id
-  if (hoveredElement.value)
-    hoveredElement.value.style.outline = ''
-  item.candidateElement.style.outline = '2px solid orange'
-  item.candidateElement.scrollIntoView({ behavior: 'smooth', block: 'center' })
-  hoveredElement.value = item.candidateElement
+  emit('hover-list-item', item)
 }
 
 function handleItemLeave(item: Candidate) {
   if (hoveredCandidateId.value === item.id) {
     hoveredCandidateId.value = null
   }
-  if (hoveredElement.value === item.candidateElement) {
-    hoveredElement.value.style.outline = ''
-    hoveredElement.value = null
-  }
+  emit('leave-list-item', item)
 }
 
 function handleItemClick(item: Candidate) {
   // 同一 markId 只能选一个
   for (const id of Array.from(selectedCandidateIds.value)) {
-    const candidate = props.ambiguousMarksData.find(c => c.id === id)
+    const candidate = props.ambiguousMarksData.find((c) => c.id === id)
     if (candidate && candidate.originalMarkId === item.originalMarkId) {
       selectedCandidateIds.value.delete(id)
     }
@@ -77,12 +74,12 @@ function handleItemClick(item: Candidate) {
 
 function handleConfirm() {
   const results = Array.from(selectedCandidateIds.value).map((id) => {
-    const candidate = props.ambiguousMarksData.find(c => c.id === id)
+    const candidate = props.ambiguousMarksData.find((c) => c.id === id)
     return {
       originalMarkId: candidate!.originalMarkId,
       candidateElement: candidate!.candidateElement,
       actualText: candidate!.displayTextSnippet,
-      matchIndex: candidate!.matchIndex,
+      matchIndex: candidate!.matchIndex
     }
   })
   emit('confirmResolution', results)
@@ -94,16 +91,16 @@ function handleCancel() {
   emit('update:modelValue', false)
 }
 
-watch(() => props.modelValue, (val) => {
-  if (!val) {
-    searchTerm.value = ''
-    selectedCandidateIds.value.clear()
-    hoveredCandidateId.value = null
-    if (hoveredElement.value)
-      hoveredElement.value.style.outline = ''
-    hoveredElement.value = null
+watch(
+  () => props.modelValue,
+  (val) => {
+    if (!val) {
+      searchTerm.value = ''
+      selectedCandidateIds.value.clear()
+      hoveredCandidateId.value = null
+    }
   }
-})
+)
 </script>
 
 <template>
@@ -137,12 +134,12 @@ watch(() => props.modelValue, (val) => {
         <div v-for="(group, markId) in groupedMarks" :key="markId" class="mb-8">
           <div class="flex items-center justify-between mb-4 pb-2 border-b border-blue-100">
             <div class="flex items-center gap-2">
-              <div class="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs font-bold rounded">寻找位置</div>
+              <div class="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs font-bold rounded flex-shrink-0">寻找位置</div>
               <span class="text-sm font-bold text-gray-700">“{{ group.text }}”</span>
             </div>
-            <button 
-              @click="emit('discardMark', markId as string)" 
-              class="flex items-center gap-1 text-xs text-red-400 hover:text-red-600 transition-colors"
+            <button
+              @click="emit('discardMark', markId as string)"
+              class="flex flex-shrink-0 items-center gap-1 text-xs text-red-400 hover:text-red-600 transition-colors"
               title="由于内容已删除，彻底移除此标记"
             >
               <div i-carbon-trash-can />
@@ -160,17 +157,12 @@ watch(() => props.modelValue, (val) => {
             @select-list-item="handleItemClick"
           />
         </div>
-        <div v-if="Object.keys(groupedMarks).length === 0" class="text-center py-10 text-gray-400">
-          未找到匹配项
-        </div>
+        <div v-if="Object.keys(groupedMarks).length === 0" class="text-center py-10 text-gray-400">未找到匹配项</div>
       </div>
 
       <!-- Footer -->
       <div class="p-4 bg-gray-50 border-t border-gray-100 flex justify-end gap-3">
-        <button
-          @click="handleCancel"
-          class="px-4 py-2 text-gray-600 hover:bg-gray-200 rounded transition-colors"
-        >
+        <button @click="handleCancel" class="px-4 py-2 text-gray-600 hover:bg-gray-200 rounded transition-colors">
           取消
         </button>
         <button
