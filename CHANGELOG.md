@@ -1,5 +1,9 @@
 # Unreleased
 
+### [2026-04-15] feat: robust cross-element restoration with self-healing (#21)
+feat: robust cross-element restoration with self-healing
+
+
 ### [2026-04-10] feat: implement cross-element highlight restoration (#20)
 - Support restoring highlights that span across multiple block elements (e.g., between `<p>` tags).
 - Refactored search algorithm to use Least Common Ancestor (LCA) for candidate containers.
