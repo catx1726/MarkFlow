@@ -1,10 +1,14 @@
 # Unreleased
 
+# Released
+
 ### [2026-04-16] Error Collection & Export
+
 - **Feat**: Implement unified error collection (`ErrorCollector`) to intercept and store runtime errors and unhandled rejections from background and content scripts.
 - **Feat**: Add "Export Error Logs" functionality in Options page for manual feedback reporting.
 
 ### [2026-04-15] Robustness & Performance Update
+
 - **Fix**: Resolved restoration performance issues on dynamic SPA pages (e.g., Bilibili) by implementing 300ms debounce and global search fallback.
 - **Fix**: Added pre-check filtering using `innerText` to prevent expensive DOM traversals for missing elements.
 - **Fix**: Corrected data persistence logic to ensure restored mark details (`text`, `html`, `shadowHostSelector`) are properly updated in background storage.
@@ -12,6 +16,7 @@
 - **Fix**: Optimized mutation observation to target specific comment containers instead of document.body, significantly reducing CPU overhead.
 
 ### [2026-04-10] Cross-Element Restoration & Self-healing
+
 - **Feat**: Support restoring highlights spanning multiple block elements.
 - **Feat**: Introduced "Mark Evolution" (Self-healing) mechanism that updates mark metadata after successful non-perfect recovery.
 - **Feat**: Refactored search algorithm using Least Common Ancestor (LCA) and multi-anchor consensus.
@@ -19,7 +24,7 @@
 
 ### [2026-04-10] feat: automate CHANGELOG.md update and update GEMINI.md diagram (#19)
 
-feat: automate CHANGELOG.md update and update GEMINI.md diagram
+- **Feat**: automate CHANGELOG.md update and update GEMINI.md diagram
 
 ### [2026-04-08] - Highlight Disambiguation
 
@@ -30,8 +35,6 @@ feat: automate CHANGELOG.md update and update GEMINI.md diagram
 
 - Refactored `src/contentScripts/index.ts` to integrate tiered restoration flow.
 - Enhanced `findCandidateElements` with fuzzy similarity scoring (Dice's Coefficient).
-
-# Released
 
 ## [2025-12-22]
 
