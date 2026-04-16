@@ -1,5 +1,9 @@
 # Unreleased
 
+### [2026-04-16] Error Collection & Export
+- **Feat**: Implement unified error collection (`ErrorCollector`) to intercept and store runtime errors and unhandled rejections from background and content scripts.
+- **Feat**: Add "Export Error Logs" functionality in Options page for manual feedback reporting.
+
 ### [2026-04-15] Robustness & Performance Update
 - **Fix**: Resolved restoration performance issues on dynamic SPA pages (e.g., Bilibili) by implementing 300ms debounce and global search fallback.
 - **Fix**: Added pre-check filtering using `innerText` to prevent expensive DOM traversals for missing elements.
