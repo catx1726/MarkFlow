@@ -4,6 +4,7 @@ import { usePreferredDark } from '@vueuse/core'
 import { settings } from '~/logic/settings'
 import { cloneDeep } from 'lodash-es'
 import { sendMessage } from 'webext-bridge/options'
+import { getLogs } from '../logic/errorCollector'
 
 const isDark = usePreferredDark()
 watchEffect(() => {
@@ -75,6 +76,16 @@ function saveSettings() {
   sendMessage('refresh-sidepanel-data', {}, 'background').catch(() => {
     // 忽略错误
   })
+}
+
+async function exportLogs() {
+  const logs = await getLogs()
+  const blob = new Blob([JSON.stringify(logs, null, 2)], { type: 'application/json' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `error-logs-${Date.now()}.json`
+  a.click()
 }
 </script>
 
@@ -276,25 +287,6 @@ function saveSettings() {
         保存设置
       </button>
     </div>
-
-    <script setup lang="ts">
-import { computed, reactive, ref, watch, watchEffect } from 'vue'
-import { usePreferredDark } from '@vueuse/core'
-import { settings } from '~/logic/settings'
-import { cloneDeep } from 'lodash-es'
-import { sendMessage } from 'webext-bridge/options'
-import { getLogs } from '../logic/errorCollector'
-
-async function exportLogs() {
-  const logs = await getLogs()
-  const blob = new Blob([JSON.stringify(logs, null, 2)], { type: 'application/json' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = `error-logs-${Date.now()}.json`
-  a.click()
-}
-...
 
     <!-- 弹窗提示 -->
     <div
