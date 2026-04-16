@@ -250,6 +250,18 @@ function saveSettings() {
           placeholder="google.com&#10;github.com"
         />
       </div>
+
+      <!-- Error Logs -->
+      <div class="setting-card">
+        <h2 class="text-[18px] font-semibold mb-[12px]">错误日志</h2>
+        <p class="text-[14px] text-gray-500 mb-[16px]">如果扩展运行异常，请导出错误日志发送给我们。</p>
+        <button
+          class="px-[16px] py-2 text-[14px] font-medium text-white bg-amber-600 rounded-md hover:bg-amber-700"
+          @click="exportLogs"
+        >
+          导出错误日志
+        </button>
+      </div>
     </div>
 
     <!-- Save Button and Status -->
@@ -264,6 +276,25 @@ function saveSettings() {
         保存设置
       </button>
     </div>
+
+    <script setup lang="ts">
+import { computed, reactive, ref, watch, watchEffect } from 'vue'
+import { usePreferredDark } from '@vueuse/core'
+import { settings } from '~/logic/settings'
+import { cloneDeep } from 'lodash-es'
+import { sendMessage } from 'webext-bridge/options'
+import { getLogs } from '../logic/errorCollector'
+
+async function exportLogs() {
+  const logs = await getLogs()
+  const blob = new Blob([JSON.stringify(logs, null, 2)], { type: 'application/json' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `error-logs-${Date.now()}.json`
+  a.click()
+}
+...
 
     <!-- 弹窗提示 -->
     <div
