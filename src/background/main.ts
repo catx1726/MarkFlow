@@ -20,6 +20,10 @@ if (import.meta.hot) {
   import('./contentScriptHMR')
 }
 
+import { collectError } from '../logic/errorCollector'
+window.addEventListener('error', (event) => collectError(event.error, 'background'))
+window.addEventListener('unhandledrejection', (event) => collectError(event.reason, 'background'))
+
 // remove or turn this off if you don't use side panel
 const USE_SIDE_PANEL = true
 
