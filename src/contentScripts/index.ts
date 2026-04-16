@@ -116,6 +116,11 @@
  * @module contentScripts/index
  */
 
+import { collectError } from '../logic/errorCollector'
+
+window.addEventListener('error', (event) => collectError(event.error, 'content'))
+window.addEventListener('unhandledrejection', (event) => collectError(event.reason, 'content'))
+
 /* eslint-disable no-console */
 console.log('[WebMarker] CONTENT SCRIPT LOADED AT TOP LEVEL')
 import { onMessage, sendMessage } from 'webext-bridge/content-script'
