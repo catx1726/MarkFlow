@@ -315,6 +315,8 @@ export function applyPreciseHighlight(
   preferredOffset: number,
 ): { range: rangy.RangyRange, actualText: string } | null {
   const textNodes = getAllTextNodes(container)
+  console.log(`[WebMarker-Debug] applyPreciseHighlight: container=${container.nodeName}, nodesFound=${textNodes.length}, searching="${textToFind}", offset=${preferredOffset}`);
+  
   let currentLen = 0
   let startNode: Text | null = null
   let startOffset = 0
@@ -323,13 +325,16 @@ export function applyPreciseHighlight(
 
   for (const node of textNodes) {
     const nodeLen = (node.textContent || '').length
+    
     if (!startNode && preferredOffset < currentLen + nodeLen) {
       startNode = node
       startOffset = preferredOffset - currentLen
+      console.log(`[WebMarker-Debug] Found startNode at offset ${startOffset}, node: "${node.textContent?.substring(0, 20)}..."`);
     }
     if (startNode && preferredOffset + textToFind.length <= currentLen + nodeLen) {
       endNode = node
       endOffset = (preferredOffset + textToFind.length) - currentLen
+      console.log(`[WebMarker-Debug] Found endNode at offset ${endOffset}, node: "${node.textContent?.substring(0, 20)}..."`);
       break
     }
     currentLen += nodeLen
@@ -340,8 +345,10 @@ export function applyPreciseHighlight(
     range.setStart(startNode, startOffset)
     range.setEnd(endNode, endOffset)
     applier.applyToRange(range)
+    console.log(`[WebMarker-Debug] Highlight applied successfully.`);
     return { range, actualText: range.toString() }
   }
+  console.warn(`[WebMarker-Debug] applyPreciseHighlight FAILED: startNode=${!!startNode}, endNode=${!!endNode}, containerContentLen=${currentLen}`);
   return null
 }
 

@@ -5,6 +5,7 @@
 - **Fix**: Added pre-check filtering using `innerText` to prevent expensive DOM traversals for missing elements.
 - **Fix**: Corrected data persistence logic to ensure restored mark details (`text`, `html`, `shadowHostSelector`) are properly updated in background storage.
 - **Fix**: Improved markup sanitization to strip nested highlight tags (#4) and enhanced Markdown export format (#16).
+- **Fix**: Optimized mutation observation to target specific comment containers instead of document.body, significantly reducing CPU overhead.
 
 ### [2026-04-10] Cross-Element Restoration & Self-healing
 - **Feat**: Support restoring highlights spanning multiple block elements.
