@@ -421,42 +421,7 @@ async function handleConfirmResolution(selections: { originalMarkId: string, can
   )
 }
 
-export function applyPreciseHighlight(
-  container: HTMLElement,
-  textToFind: string,
-  applier: rangy.RangyClassApplier,
-  preferredOffset: number,
-): { range: rangy.RangyRange, actualText: string } | null {
-  const textNodes = getAllTextNodes(container)
-  let currentLen = 0
-  let startNode: Text | null = null
-  let startOffset = 0
-  let endNode: Text | null = null
-  let endOffset = 0
-
-  for (const node of textNodes) {
-    const nodeLen = (node.textContent || '').length
-    if (!startNode && preferredOffset < currentLen + nodeLen) {
-      startNode = node
-      startOffset = preferredOffset - currentLen
-    }
-    if (startNode && preferredOffset + textToFind.length <= currentLen + nodeLen) {
-      endNode = node
-      endOffset = (preferredOffset + textToFind.length) - currentLen
-      break
-    }
-    currentLen += nodeLen
-  }
-
-  if (startNode && endNode) {
-    const range = rangy.createRange()
-    range.setStart(startNode, startOffset)
-    range.setEnd(endNode, endOffset)
-    applier.applyToRange(range)
-    return { range, actualText: range.toString() }
-  }
-  return null
-}
+// Removed duplicate applyPreciseHighlight declaration
 
 async function handleInitialLoadActions() {
   try {

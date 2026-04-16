@@ -1,73 +1,85 @@
 # Unreleased
 
-### [2026-04-15] feat: robust cross-element restoration with self-healing (#21)
-feat: robust cross-element restoration with self-healing
+### [2026-04-15] Robustness & Performance Update
+- **Fix**: Resolved restoration performance issues on dynamic SPA pages (e.g., Bilibili) by implementing 300ms debounce and global search fallback.
+- **Fix**: Added pre-check filtering using `innerText` to prevent expensive DOM traversals for missing elements.
+- **Fix**: Corrected data persistence logic to ensure restored mark details (`text`, `html`, `shadowHostSelector`) are properly updated in background storage.
+- **Fix**: Improved markup sanitization to strip nested highlight tags (#4) and enhanced Markdown export format (#16).
 
-
-### [2026-04-10] feat: implement cross-element highlight restoration (#20)
-- Support restoring highlights that span across multiple block elements (e.g., between `<p>` tags).
-- Refactored search algorithm to use Least Common Ancestor (LCA) for candidate containers.
-- Enhanced highlight application logic to correctly handle cross-TextNode boundaries.
-- Centralized DOM manipulation logic in `src/logic/dom.ts`.
-- **Fix**: Improved search boundary alignment to handle large deletions within cross-element highlights, preventing preview truncation.
-- **Fix**: Implemented data sanitization to strip existing highlight tags from captured HTML, preventing nested styles (#4).
-- **Fix**: Enhanced Markdown export by converting HTML content to clean Markdown using Turndown (#16).
+### [2026-04-10] Cross-Element Restoration & Self-healing
+- **Feat**: Support restoring highlights spanning multiple block elements.
+- **Feat**: Introduced "Mark Evolution" (Self-healing) mechanism that updates mark metadata after successful non-perfect recovery.
+- **Feat**: Refactored search algorithm using Least Common Ancestor (LCA) and multi-anchor consensus.
+- **Fix**: Improved search boundary alignment to prevent preview truncation in large content deletion scenarios.
 
 ### [2026-04-10] feat: automate CHANGELOG.md update and update GEMINI.md diagram (#19)
+
 feat: automate CHANGELOG.md update and update GEMINI.md diagram
 
+### [2026-04-08] - Highlight Disambiguation
 
-## [2026-04-08] - Highlight Disambiguation
-### Added
 - Implement tiered matching algorithm (Exact -> Contextual -> Fuzzy) for highlight restoration.
 - New `DisambiguationModal` UI for manual resolution of multiple candidates.
 - Context fingerprinting: Capture 20-char snippets before and after selection.
 - Automatic storage repair: Update Rangy paths after successful manual resolution.
 
-### Changed
 - Refactored `src/contentScripts/index.ts` to integrate tiered restoration flow.
 - Enhanced `findCandidateElements` with fuzzy similarity scoring (Dice's Coefficient).
 
 # Released
 
-## [2025-12-22] 
+## [2025-12-22]
+
 - Add '结构性回顾' to package.json keywords (194a907)
 
-## [2025-12-30] 
+## [2025-12-30]
+
 - Merge pull request #5 from catx1726/task/3-fix-shadow-dom (096d935)
 
-## [2025-12-30] 
+## [2025-12-30]
+
 - Merge pull request #8 from catx1726/task/7-options-desc (9d9c57a)
 
-## [2025-12-30] 
+## [2025-12-30]
+
 - Merge pull request #9 from catx1726/test/6-options-blacklist (0b1b4cb)
 
-## [2025-12-31] 
+## [2025-12-31]
+
 - Merge pull request #11 from catx1726/task/10-side-save (9db9003)
 
-## [2025-12-31] 
+## [2025-12-31]
+
 - doc: 修改插件名称为 MarkFlow (da9a405)
 
-## [2025-12-31] 
+## [2025-12-31]
+
 - Merge branches 'main' and 'main' of github.com:catx1726/Tool-Webext-Tag-Content (83a87c4)
 
-## [2025-12-31] 
+## [2025-12-31]
+
 - Merge branch 'main' of https://github.com/catx1726/MarkFlow (39f9c07)
 
-## [2025-12-31] 
+## [2025-12-31]
+
 - build: 0.5.0 (59dcd09)
 
-## [2025-12-31] 
+## [2025-12-31]
+
 - doc: index.html (ce80904)
 
-## [2025-12-31] 
+## [2025-12-31]
+
 - Merge branch 'main' of github.com:catx1726/MarkFlow (b2812c5)
 
-## [2025-12-31] 
+## [2025-12-31]
+
 - Merge pull request #13 from catx1726/task/12-alt-fix (2438e90)
 
-## [2025-12-31] 
+## [2025-12-31]
+
 - env:update version (f197d9d)
 
-## [2026-03-27] 
+## [2026-03-27]
+
 - Merge branch 'main' of github.com:catx1726/MarkFlow (6824d53)
