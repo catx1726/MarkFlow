@@ -117,6 +117,7 @@
  */
 
 /* eslint-disable no-console */
+console.log('[WebMarker] CONTENT SCRIPT LOADED AT TOP LEVEL');
 import { onMessage, sendMessage } from 'webext-bridge/content-script'
 import { createApp, h, reactive, ref } from 'vue'
 import rangy from 'rangy/lib/rangy-core'
@@ -178,13 +179,9 @@ let currentMarkIdForColorChange: string | null = null
 let previewApplier: rangy.RangyClassApplier | null = null
 let isRestoring = false
 // #endregion
+
 /**
  * 递归地为页面及其所有 Shadow Root 附加鼠标事件监听器。
- * 
- * 这是 Shadow DOM 支持的核心：通过捕获阶段 (useCapture=true) 确保
- * 即使事件目标在 Shadow DOM 内部，内容脚本也能接收到事件。
- * 
- * @param rootNode 起始节点 (Document 或 ShadowRoot)
  */
 function attachListenersToShadowRoots(rootNode: Document | ShadowRoot) {
   try {
@@ -203,19 +200,29 @@ function attachListenersToShadowRoots(rootNode: Document | ShadowRoot) {
 }
 
 async function initialize() {
-  await settingsReady
-  if (isPageBlacklisted(window.location.href, settings.value.blacklist)) return
-  rangy.init()
-  previewApplier = rangy.createClassApplier('webext-highlight-preview', {
-    elementTagName: 'span',
-    elementAttributes: { style: `${highlightDefaultStyle(settings.value.defaultHighlightColor)} ` },
-    normalize: false,
-  })
-  ensureUIMounted()
-  window.addEventListener('keydown', handleKeyDown)
-  attachListenersToShadowRoots(document)
-  setupGlobalObserver()
-  handleInitialLoadActions()
+  console.log('[ContentScript] Initializing WebMarker...');
+  try {
+    await settingsReady
+    console.log('[ContentScript] Settings ready.');
+    if (isPageBlacklisted(window.location.href, settings.value.blacklist)) {
+      console.log('[ContentScript] Page is blacklisted, skipping.');
+      return
+    }
+    rangy.init()
+    previewApplier = rangy.createClassApplier('webext-highlight-preview', {
+      elementTagName: 'span',
+      elementAttributes: { style: `${highlightDefaultStyle(settings.value.defaultHighlightColor)} ` },
+      normalize: false,
+    })
+    ensureUIMounted()
+    window.addEventListener('keydown', handleKeyDown)
+    attachListenersToShadowRoots(document)
+    setupGlobalObserver()
+    handleInitialLoadActions()
+    console.log('[ContentScript] Initialization complete.');
+  } catch (e) {
+    console.error('[ContentScript] Initialization failed:', e);
+  }
 }
 
 initialize()
@@ -228,19 +235,23 @@ function handleKeyDown(event: KeyboardEvent) {
 }
 
 function setupGlobalObserver() {
+  const commentContainer = querySelectorDeep('#comment, .comment-list, .comment-container') || document.body
+  
   const observer = new MutationObserver((mutations) => {
+    // 仅当新增节点在评论区域时才触发
     const hasAddedNodes = mutations.some(m => m.addedNodes.length > 0)
     if (hasAddedNodes) {
-      clearTimeout(globalObserverTimer)
-      globalObserverTimer = window.setTimeout(() => {
-        attachListenersToShadowRoots(document)
-      }, 500)
+      // 使用 requestIdleCallback，让浏览器在空闲时执行搜索，避免阻塞 UI
+      if ('requestIdleCallback' in window) {
+        (window as any).requestIdleCallback(() => debouncedRestore())
+      } else {
+        debouncedRestore()
+      }
     }
   })
-  observer.observe(document.body, { childList: true, subtree: true })
+  // 优化：针对 B 站这种巨型页面，减少 subtree 遍历深度
+  observer.observe(commentContainer, { childList: true, subtree: true })
 }
-
-let globalObserverTimer: number
 
 // #endregion
 
@@ -335,9 +346,8 @@ function handleCandidateLeave() {
 }
 
 async function handleDiscardMark(markId: string) {
-  if (confirm('确定要彻底丢弃此标记吗？因为它在当前页面已找不到对应内容。')) {
+  if (confirm('确定要彻底丢弃此标记吗？')) {
     await removeMarkById(markId)
-    // 从当前弹窗列表中移除该任务
     modalState.marks = modalState.marks.filter(m => m.originalMarkId !== markId)
     if (modalState.marks.length === 0)
       modalState.visible = false
@@ -406,7 +416,6 @@ async function handleConfirmResolution(selections: { originalMarkId: string, can
       }
     }
   }
-  // 清理歧义队列中已解决的项
   ambiguousMarksQueue.value = ambiguousMarksQueue.value.filter(
     m => !restoredMarkIds.has(m.originalMarkId)
   )
@@ -513,10 +522,8 @@ function handleMouseDown(event: MouseEvent) {
   if (path.some(el => el instanceof HTMLElement && el.classList.contains('tooltip-card')))
     return
 
-  // 如果点击在工具提示外部
   if (!target.closest('span[class*="webext-highlight-"]')) {
     tooltipApp?.hide()
-    // 核心修复：点击空白处隐藏弹窗时，必须同时清理预览高亮
     handleClearPreview()
   }
 }
@@ -809,8 +816,11 @@ async function restoreHighlights() {
 
   const now = Date.now()
   const marksToRestore = marks.filter((mark) => {
-    if (restoredMarkIds.has(mark.id))
-      return false
+    if (restoredMarkIds.has(mark.id)) {
+      if (querySelectorDeep(`.webext-highlight-${mark.id}`))
+        return false
+      restoredMarkIds.delete(mark.id)
+    }
     const cooldown = failedRestoreCooldowns.get(mark.id)
     if (cooldown && now < cooldown)
       return false
@@ -830,11 +840,21 @@ async function restoreHighlights() {
     debouncedRestore()
   })
   observer.observe(document.body, { childList: true, subtree: true })
+
+  // 监听 URL 变化 (针对 SPA)
+  window.addEventListener('popstate', debouncedRestore)
+  // 拦截 pushState/replaceState
+  const originalPushState = history.pushState
+  history.pushState = function (...args) {
+    originalPushState.apply(this, args)
+    debouncedRestore()
+  }
 }
 
 function debouncedRestore() {
   if (isRestoring)
     return
+  
   clearTimeout(restoreDebounceTimer)
   restoreDebounceTimer = window.setTimeout(async () => {
     const canonicalUrl = getCanonicalUrlForMark()
@@ -844,8 +864,11 @@ function debouncedRestore() {
 
     const now = Date.now()
     const marksToRestore = marks.filter((mark) => {
-      if (restoredMarkIds.has(mark.id))
-        return false
+      if (restoredMarkIds.has(mark.id)) {
+        if (querySelectorDeep(`.webext-highlight-${mark.id}`))
+          return false
+        restoredMarkIds.delete(mark.id)
+      }
       const cooldown = failedRestoreCooldowns.get(mark.id)
       if (cooldown && now < cooldown)
         return false
@@ -862,7 +885,7 @@ function debouncedRestore() {
       }
     }
     attachListenersToShadowRoots(document)
-  }, 1000) // 增加到 1秒，减少动态页面压力
+  }, 300) 
 }
 
 async function applyMarks(marks: Mark[]) {
@@ -892,7 +915,6 @@ async function applyMarks(marks: Mark[]) {
       else return
     }
     try {
-      console.log(`[WebMarker] Starting Level 1 Restore for mark: ${mark.id} ("${mark.text}")`)
       const range = rangy.deserializeRange(mark.rangySerialized, deserializationRoot, document)
       if (!range)
         throw new Error('Failed to deserialize range')
@@ -902,50 +924,37 @@ async function applyMarks(marks: Mark[]) {
       const contentSim = calculateSimilarity(rangeText, markText)
 
       if (contentSim < 95) {
-        console.warn(`[WebMarker] Level 1 Content Mismatch for ${mark.id}: ${contentSim}% (Expected: "${markText}", Got: "${rangeText}")`)
         throw new Error('Content mismatch at path')
       }
 
       if (mark.surroundingSnippet) {
         const currentContext = getHighlightContext(range)
         const contextSim = calculateSimilarity(currentContext.surroundingSnippet, mark.surroundingSnippet)
-        console.log(`[WebMarker] Level 1 Context Similarity for ${mark.id}: ${contextSim}%`)
 
-        // 降低阈值：从 100% 降至 80%，处理页面微小变动
         if (contextSim < 80) {
-          console.warn(`[WebMarker] Level 1 Context integrity too low (${contextSim}%)`)
           throw new Error('Context integrity mismatch')
         }
       }
       applier.applyToRange(range)
       restoredMarkIds.add(mark.id)
-      failedRestoreCooldowns.delete(mark.id) // 成功后清除冷却
-      console.log(`[WebMarker] Level 1 Restore SUCCESS for ${mark.id}`)
+      failedRestoreCooldowns.delete(mark.id) 
     }
     catch (e) {
-      console.warn(`[WebMarker] Level 1 Restore FAILED for ${mark.id}:`, (e as Error).message)
       const root = deserializationRoot || document.documentElement
-      console.log(`[WebMarker] Triggering scoped search for ${mark.id} in ${root.nodeName}`)
       
       let { ambiguityLevel, candidates } = findCandidateElements(mark, root, 10)
       
-      // 核心修复：如果局部搜索失败，且我们有限制范围，尝试全局搜索
       if (candidates.length === 0 && root !== document.documentElement) {
-        console.log(`[WebMarker] Scoped search failed for ${mark.id}, falling back to GLOBAL search.`)
         const globalResult = findCandidateElements(mark, document.documentElement, 10)
         ambiguityLevel = globalResult.ambiguityLevel
         candidates = globalResult.candidates
       }
 
-      console.log(`[WebMarker] Final Search Result for ${mark.id}: level=${ambiguityLevel}, count=${candidates.length}`)
-
       if (ambiguityLevel === 'unique' && candidates.length === 1) {
         const candidate = candidates[0]
         const similarity = mark.surroundingSnippet ? calculateSimilarity(candidate.displayContext, mark.surroundingSnippet) : 100
-        console.log(`[WebMarker] Candidate Similarity for unique match: ${similarity}%`)
 
         if (similarity >= 85) {
-          console.log(`[WebMarker] Auto-restoring unique candidate for ${mark.id} with text: "${candidate.displayTextSnippet}"`)
           const rangeResult = applyPreciseHighlight(candidate.candidateElement, candidate.displayTextSnippet, applier, candidate.matchIndex)
           if (rangeResult) {
             const { range } = rangeResult
@@ -955,7 +964,6 @@ async function applyMarks(marks: Mark[]) {
             const newSerialized = rangy.serializeRange(range, true, root instanceof ShadowRoot ? root : undefined)
             const { contextTitle, contextSelector, contextLevel, contextOrder, surroundingSnippet } = getHighlightContext(range)
 
-            // 核心修复：自动恢复时也要正确更新 shadowHostSelector
             let shadowHostSelector: string | undefined
             if (root instanceof ShadowRoot) {
               const chain: string[] = []
@@ -967,8 +975,8 @@ async function applyMarks(marks: Mark[]) {
               shadowHostSelector = chain.join('|>>>|')
             }
 
-            // 核心修复：自动恢复时也要正确更新 text 和 html，避免下次 L1 失败
             const content = range.cloneContents()
+            stripHighlights(content)
             const tempDiv = document.createElement('div')
             tempDiv.appendChild(content)
             const actualHtml = content.constructor === DocumentFragment ? tempDiv.innerHTML : range.toString()
@@ -979,7 +987,7 @@ async function applyMarks(marks: Mark[]) {
               text: candidate.displayTextSnippet,
               html: actualHtml,
               rangySerialized: newSerialized,
-              shadowHostSelector, // 使用新计算的
+              shadowHostSelector, 
               contextTitle,
               contextSelector,
               contextLevel,
@@ -989,19 +997,16 @@ async function applyMarks(marks: Mark[]) {
           }
         }
         else {
-          console.warn(`[WebMarker] Unique candidate similarity too low (${similarity}%). Forcing modal.`)
           const otherMarksInQueue = ambiguousMarksQueue.value.filter(m => m.originalMarkId !== mark.id)
           ambiguousMarksQueue.value = [...otherMarksInQueue, candidate]
         }
       }
       else if (ambiguityLevel === 'multiple') {
-        console.log(`[WebMarker] Multiple candidates found for ${mark.id}. Updating queue.`)
         const otherMarksInQueue = ambiguousMarksQueue.value.filter(m => m.originalMarkId !== mark.id)
         ambiguousMarksQueue.value = [...otherMarksInQueue, ...candidates]
       }
       else {
-        console.warn(`[WebMarker] No candidates found for ${mark.id} even after global search. Setting short cooldown.`)
-        failedRestoreCooldowns.set(mark.id, Date.now() + 3000) // 缩短至 3秒冷却
+        failedRestoreCooldowns.set(mark.id, Date.now() + 3000) 
       }
     }
   }

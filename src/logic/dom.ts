@@ -177,12 +177,24 @@ export function getElementSelector(el: Element): string {
 }
 
 /**
- * 获取当前页面的规范化 URL，移除哈希和尾部斜杠
+ * 获取当前页面的规范化 URL，移除哈希、尾部斜杠以及常见的追踪参数。
+ * 保留关键的内容识别参数（如 B站的 p, YouTube 的 v）。
  */
 export function getCanonicalUrlForMark(): string {
-  const { origin, pathname } = window.location
-  const cleanedPathname = pathname.length > 1 && pathname.endsWith('/') ? pathname.slice(0, -1) : pathname
-  return origin + cleanedPathname
+  const url = new URL(window.location.href)
+  url.hash = ''
+  
+  // 移除常见的追踪参数
+  const trackingParams = ['vd_source', 'spm_id_from', 'from_source', 'from', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content']
+  trackingParams.forEach(param => url.searchParams.delete(param))
+
+  let canonical = url.origin + url.pathname
+  if (canonical.length > 1 && canonical.endsWith('/')) {
+    canonical = canonical.slice(0, -1)
+  }
+
+  const search = url.search
+  return canonical + search
 }
 
 /**
