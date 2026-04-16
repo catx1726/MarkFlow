@@ -15,7 +15,7 @@
 **Files:**
 - Create: `src/logic/errorCollector.ts`
 
-- [ ] **Step 1: 定义数据结构与常量**
+- [x] **Step 1: 定义数据结构与常量**
 
 ```typescript
 // src/logic/errorCollector.ts
@@ -35,7 +35,7 @@ export const STORAGE_KEY = 'webmarker_error_logs';
 export const MAX_LOGS = 50;
 ```
 
-- [ ] **Step 2: 实现存取与格式化逻辑**
+- [x] **Step 2: 实现存取与格式化逻辑**
 
 ```typescript
 // src/logic/errorCollector.ts (续)
@@ -55,7 +55,7 @@ export async function collectError(error: Error | any, type: 'content' | 'backgr
       message,
       stack,
       context: {
-        url: window.location.href,
+        url: typeof window !== 'undefined' ? window.location.href : 'N/A',
         version: '1.0.0', // 后续可从 manifest 读取
         type
       },
@@ -73,7 +73,7 @@ export async function getLogs(): Promise<ErrorLog[]> {
 }
 ```
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add src/logic/errorCollector.ts
@@ -86,7 +86,7 @@ git commit -m "feat: implement ErrorCollector logic"
 - Modify: `src/background/main.ts`
 - Modify: `src/contentScripts/index.ts`
 
-- [ ] **Step 1: 修改 Background 入口**
+- [x] **Step 1: 修改 Background 入口**
 
 ```typescript
 // src/background/main.ts
@@ -96,7 +96,7 @@ window.addEventListener('error', (event) => collectError(event.error, 'backgroun
 window.addEventListener('unhandledrejection', (event) => collectError(event.reason, 'background'))
 ```
 
-- [ ] **Step 2: 修改 ContentScript 入口**
+- [x] **Step 2: 修改 ContentScript 入口**
 
 ```typescript
 // src/contentScripts/index.ts
@@ -106,7 +106,7 @@ window.addEventListener('error', (event) => collectError(event.error, 'content')
 window.addEventListener('unhandledrejection', (event) => collectError(event.reason, 'content'))
 ```
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add src/background/main.ts src/contentScripts/index.ts
@@ -118,7 +118,7 @@ git commit -m "feat: attach global error listeners"
 **Files:**
 - Modify: `src/options/Options.vue`
 
-- [ ] **Step 1: 添加导出按钮 UI**
+- [x] **Step 1: 添加导出按钮 UI**
 
 ```vue
 <!-- src/options/Options.vue -->
@@ -141,7 +141,7 @@ async function exportLogs() {
 </script>
 ```
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git add src/options/Options.vue
