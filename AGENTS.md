@@ -22,9 +22,13 @@ sequenceDiagram
     AI->>AI: activate_skill meta-safe-executor (安全审计)<br/><i>(若检测到风险，AI 报告给 Driver，等待指令)</i>
 
     Note over AI, D: 7-9. 质量与验证 (Test & Verify)
-    AI->>AI: activate_skill test-driven-development (TDD 循环)<br/><i>(遇歧义时，AI 进入"等待 Driver 问询/澄清"状态)</i>
-    AI->>AI: 语法检查 (node --check) + 冒烟测试<br/><i>(AI 向 Driver 呈现验证证据摘要)</i>
-    AI->>AI: activate_skill verification-before-completion (产出物证据)<br/><i>(AI 向 Driver 呈现证据摘要)</i>
+    AI->>AI: activate_skill test-driven-development (TDD 循环)
+    AI->>VCS: git push (触发 GitHub Actions AI CR)
+    AI->>VCS: gh run watch (等待 CI 运行结束)
+    VCS->>AI: 获取最新 AI 审查评论 (gh pr view --json comments)
+    AI->>AI: 分析并自动修复 Blocking 问题 (Nit 问题需询问 Driver)
+    AI->>AI: 语法检查 (node --check) + 冒烟测试
+    AI->>AI: activate_skill verification-before-completion (产出物证据)
 
     Note over AI, D: 10-13. 提纯与闭环 (Distill & Close)
     AI->>AI: activate_skill meta-distiller (资产提纯)<br/><i>(AI 暂存结果，等待 Driver 审查/Accept 提纯资产)</i>

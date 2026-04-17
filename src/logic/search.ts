@@ -14,8 +14,8 @@ import { calculateSimilarity, findCommonAncestor, getAllTextNodes } from './dom'
  */
 const SEARCH_CONFIG = {
   MIN_SIMILARITY_AUTO_RESTORE: 75, // 自动恢复的最低相似度门槛
-  AUTO_RESTORE_MIN_SCORE: 95, // “绝对胜出者”的最低分数 (原 CLEAR_WINNER_SCORE)
-  AUTO_RESTORE_SCORE_MARGIN: 20, // 胜出者领先第二名的最小分差 (原 WINNER_MARGIN)
+  AUTO_RESTORE_MIN_SCORE: 95, // “绝对胜出者”的最低分数
+  AUTO_RESTORE_SCORE_MARGIN: 20, // 胜出者领先第二名的最小分差
   DEFAULT_LOOK_RANGE: 80, // 模糊搜索时的默认探测范围
   MIN_REGEX_LENGTH: 5, // 启用正则匹配的最小文本长度
   ANCHOR_SIZE: 12, // 锚点指纹大小
@@ -52,6 +52,8 @@ export interface SearchContext {
   textNodes: Text[]
   fullText: string
   structureBoundaries: { index: number, end: number, text: string }[]
+  /** 累积偏移量索引：用于 O(log N) 快速定位 TextNode */
+  cumulativeOffsets: number[]
 }
 
 /**
@@ -72,12 +74,12 @@ class ExactMatchStrategy implements SearchStrategy {
   readonly name = 'ExactMatch'
 
   execute(mark: Mark, context: SearchContext): Candidate[] {
-    const { fullText, textNodes } = context
+    const { fullText } = context
     const candidates: Candidate[] = []
     let mIdx = fullText.indexOf(mark.text)
 
     while (mIdx !== -1) {
-      const candidate = createCandidate(mark, mIdx, textNodes, fullText, mark.text.length)
+      const candidate = createCandidate(mark, mIdx, mark.text.length, context)
       if (candidate) {
         candidate.similarityScore = 100
         candidates.push(candidate)
@@ -96,7 +98,7 @@ class RegexMatchStrategy implements SearchStrategy {
   readonly name = 'RegexMatch'
 
   execute(mark: Mark, context: SearchContext): Candidate[] {
-    const { fullText, textNodes } = context
+    const { fullText } = context
     const normalize = (s: string) => s.replace(/[\s\u200b]+/g, ' ').trim()
     const nMark = normalize(mark.text)
 
@@ -112,7 +114,7 @@ class RegexMatchStrategy implements SearchStrategy {
       let match
       // eslint-disable-next-line no-cond-assign
       while ((match = regex.exec(fullText)) !== null) {
-        const candidate = createCandidate(mark, match.index, textNodes, fullText, match[0].length)
+        const candidate = createCandidate(mark, match.index, match[0].length, context)
         if (candidate) {
           candidate.similarityScore = 98
           candidates.push(candidate)
@@ -152,7 +154,7 @@ class ConsensusMatchStrategy implements SearchStrategy {
 
     if (alignedRange.score > 40) {
       const actualText = context.fullText.substring(alignedRange.start, alignedRange.end)
-      const candidate = createCandidate(mark, alignedRange.start, context.textNodes, context.fullText, alignedRange.end - alignedRange.start)
+      const candidate = createCandidate(mark, alignedRange.start, alignedRange.end - alignedRange.start, context)
       if (candidate) {
         candidate.similarityScore = alignedRange.score
         candidate.displayTextSnippet = actualText
@@ -368,8 +370,17 @@ function resolveAmbiguity(candidates: Candidate[]): { ambiguityLevel: AmbiguityL
 function createSearchContext(searchRoot: Node): SearchContext {
   const textNodes = getAllTextNodes(searchRoot)
   const fullText = textNodes.map(n => n.textContent || '').join('')
-  const structureBoundaries: { index: number, end: number, text: string }[] = []
+  const cumulativeOffsets: number[] = []
+  let currentOffset = 0
+  
+  for (const node of textNodes) {
+    cumulativeOffsets.push(currentOffset)
+    currentOffset += (node.textContent || '').length
+  }
+  // 哨兵值
+  cumulativeOffsets.push(currentOffset)
 
+  const structureBoundaries: { index: number, end: number, text: string }[] = []
   if (searchRoot instanceof HTMLElement || searchRoot instanceof ShadowRoot) {
     const headers = (searchRoot as HTMLElement).querySelectorAll('h1, h2, h3, h4, h5, h6')
     headers.forEach((h) => {
@@ -381,7 +392,7 @@ function createSearchContext(searchRoot: Node): SearchContext {
       }
     })
   }
-  return { root: searchRoot, textNodes, fullText, structureBoundaries }
+  return { root: searchRoot, textNodes, fullText, structureBoundaries, cumulativeOffsets }
 }
 
 function findNearestBlockContainer(node: Node): HTMLElement | null {
@@ -396,32 +407,44 @@ function findNearestBlockContainer(node: Node): HTMLElement | null {
   return null
 }
 
-function createCandidate(mark: Mark, matchIndex: number, textNodes: Text[], fullText: string, matchLength: number): Candidate | null {
+/**
+ * 使用二分查找在 O(log N) 时间内定位索引所属的 TextNode 索引
+ */
+function findTextNodeIndex(charIndex: number, cumulativeOffsets: number[]): number {
+  let low = 0
+  let high = cumulativeOffsets.length - 2
+  while (low <= high) {
+    const mid = Math.floor((low + high) / 2)
+    if (charIndex >= cumulativeOffsets[mid] && charIndex < cumulativeOffsets[mid + 1])
+      return mid
+    if (charIndex < cumulativeOffsets[mid])
+      high = mid - 1
+    else
+      low = mid + 1
+  }
+  return -1
+}
+
+function createCandidate(mark: Mark, matchIndex: number, matchLength: number, context: SearchContext): Candidate | null {
   if (matchIndex < 0)
     return null
-  const involvedNodes: Text[] = []
-  let currentPos = 0
+    
+  const { textNodes, fullText, cumulativeOffsets } = context
   const matchEnd = matchIndex + matchLength
 
-  for (const node of textNodes) {
-    const len = (node.textContent || '').length
-    if (currentPos + len > matchIndex && currentPos < matchEnd)
-      involvedNodes.push(node)
-    currentPos += len
-    if (currentPos >= matchEnd)
-      break
-  }
+  // [性能优化] 使用二分查找定位起始和结束节点索引
+  const startNodeIdx = findTextNodeIndex(matchIndex, cumulativeOffsets)
+  const endNodeIdx = findTextNodeIndex(matchEnd - 1, cumulativeOffsets)
 
+  if (startNodeIdx === -1 || endNodeIdx === -1)
+    return null
+
+  const involvedNodes = textNodes.slice(startNodeIdx, endNodeIdx + 1)
   if (involvedNodes.length === 0)
     return null
-  const lca = findCommonAncestor(involvedNodes)
 
-  let lcaStartPos = 0
-  for (const node of textNodes) {
-    if (lca.contains(node))
-      break
-    lcaStartPos += (node.textContent || '').length
-  }
+  const lca = findCommonAncestor(involvedNodes)
+  const lcaStartPos = cumulativeOffsets[startNodeIdx] // 精确的 LCA 起始位置计算简化
 
   const contextLength = 25
   const start = Math.max(0, matchIndex - contextLength)
