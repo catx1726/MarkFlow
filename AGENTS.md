@@ -31,7 +31,8 @@ sequenceDiagram
     AI->>VCS: git commit & update ops_changelog.md (提交变更 & 更新审计日志)
     AI->>VCS: gh pr create (创建 PR)<br/><i>🔒 自动触发 CI 检查：审计日志、Spec/Plan 同步、AI 审查</i>
     CI->>CI: 执行自动化检查<br/><i>🔴 audit_check (强制) + 🟡 spec_plan_sync + ai_review (建议)</i>
-    D->>VCS: gh pr merge (Driver 批准并合并 PR)<br/><i>🔒 触发 close_loop 知识闭环</i>
+    D->>VCS: gh pr merge (Driver 批准并合并 PR)<br/><i>🔒 触发 close_loop 知识闭环 (Issue 回帖 + CHANGELOG 自动更新)</i>
+    CI->>VCS: git commit (自动更新 CHANGELOG.md)
     AI->>VCS: gh issue close (Issue 关闭)<br/><i>(仅在 PR 合并且 Driver 确认后执行)</i>
 
     Note over AI: 14. 流程反馈与自我反思 (Feedback & Self-Reflection)
@@ -40,67 +41,22 @@ sequenceDiagram
 
 ---
 
-## 🏗️ SOLID 设计原则实践
+---
 
-本项目在架构演进过程中，严格遵循 SOLID 原则以确保系统的可扩展性与可维护性：
+# 工程标准索引 (Engineering Standards Index)
 
-### 核心原则 (Core Principles)
+AI 引擎在执行任务时，必须参考以下标准文档以确保工程质量。**严禁跳过规范直接编写代码。**
 
-#### 1. 单一职责原则 (SRP - Single Responsibility Principle)
-
-> **核心原则**：一个类或模块应该只有一个引起它变化的原因。
-
-- **识别信号**：如果一个类承担了多个职责，代码会表现出" shotgun surgery "（一处修改，多处改动）。
-- **实践方法**：按职责分离，每个模块只专注一件事。
-- **示例**：数据处理模块不应同时负责 UI 渲染；存储服务不应同时负责业务逻辑。
-
-#### 2. 开闭原则 (OCP - Open/Closed Principle)
-
-> **核心原则**：软件实体应该对扩展开放，对修改关闭。
-
-- **识别信号**：每次新增功能都需要修改现有代码，增加回归风险。
-- **实践方法**：使用策略模式、模板方法模式、依赖注入，通过扩展而非修改来增加新功能。
-- **示例**：验证器通过接口定义，新增验证规则时只需实现新类，无需修改现有验证器。
-
-#### 3. 里氏替换原则 (LSP - Liskov Substitution Principle)
-
-> **核心原则**：子类应该能够替换父类，而不破坏程序的正确性。
-
-- **识别信号**：子类重写父类方法后抛出异常或返回意外结果。
-- **实践方法**：子类不应强化前置条件、不应弱化后置条件、不应违反父类不变量。
-- **示例**：`Square` 不应继承 `Rectangle`，因为长宽相等的约束会破坏替换性。
-
-#### 4. 接口隔离原则 (ISP - Interface Segregation Principle)
-
-> **核心原则**：客户端不应被迫依赖它不使用的方法。
-
-- **识别信号**：接口臃肿，实现类中存在大量 `throw new UnsupportedOperationException()`。
-- **实践方法**：将大接口拆分为多个小接口，客户端只依赖需要的方法。
-- **示例**：将 `Worker` 接口拆分为 `Workable`、`Feedable`、`Sleepable`，机器人只需实现 `Workable`。
-
-#### 5. 依赖倒置原则 (DIP - Dependency Inversion Principle)
-
-> **核心原则**：高层模块不应依赖低层模块，两者都应依赖抽象；抽象不应依赖细节，细节应依赖抽象。
-
-- **识别信号**：业务逻辑直接依赖具体实现（如数据库、HTTP 客户端），难以测试和替换。
-- **实践方法**：面向接口编程，使用依赖注入容器，将具体实现作为外部配置。
-- **示例**：服务层依赖 `Repository` 接口，而非直接依赖 `MySQLRepository` 类。
-
-#### 6. 最少知识原则 (LoD - Law of Demeter)
-
-> **核心原则**：一个对象应该对其他对象有最少的了解；只与直接朋友通信。
-
-- **识别信号**：代码中出现链式调用 `a.getB().getC().doSomething()`。
-- **实践方法**：通过委托方法隐藏内部结构，减少耦合。
-- **示例**：
-
-  ```typescript
-  // ❌ 违反 LoD
-  const city = user.getDepartment().getManager().getAddress().getCity()
-
-  // ✅ 遵循 LoD
-  const city = user.getManagerCity()
-  ```
+| 领域 | 规范文档路径 | 适用阶段 |
+| :--- | :--- | :--- |
+| **代码质量** | `docs/standards/code-standards/README.md` | 执行 (Act) |
+| **测试驱动** | `docs/standards/test-driven-development.md` | 验证 (Verify) |
+| **API 设计** | `docs/standards/api-design-standards.md` | 启动 (Launch) |
+| **系统安全** | `docs/standards/security-standards.md` | 计划/执行 |
+| **日志记录** | `docs/standards/logging-standards.md` | 执行 (Act) |
+| **环境配置** | `docs/standards/environment-standards.md` | 启动/执行 |
+| **代码审查** | `docs/standards/review-standards/review/reviewer/` | 闭环 (Close) |
+| **提交描述** | `docs/standards/review-standards/review/developer/` | 闭环 (Close) |
 
 ---
 
@@ -142,7 +98,9 @@ AI 在 `verification-before-completion` 阶段必须呈现以下证据：
 - [ ] 兼容性测试：相关平台/环境
 ```
 
-### 4. Issue 创建最佳实践
+---
+
+# Issue 创建最佳实践
 
 **⚠️ Windows 环境注意**：使用 `gh issue create` 时，**必须使用 `--body-file` 参数**，避免 `--body "文本"` 导致 Markdown 内容丢失。
 

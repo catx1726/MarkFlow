@@ -98,9 +98,10 @@ on:
 
 ---
 
-### 3. AI Code Review Assistant (`ai_review.yml`)
+#### 3. AI Code Review Assistant (`ai_review.yml`)
 
 **触发条件**：
+
 ```yaml
 on:
   pull_request:
@@ -109,6 +110,7 @@ on:
 ```
 
 **权限**：
+
 ```yaml
 permissions:
   contents: read
@@ -117,37 +119,25 @@ permissions:
 
 **执行逻辑**：
 
-#### Step 1: 生成变更统计
-```bash
-git diff origin/${{ github.base_ref }}...HEAD --stat
-```
+##### Step 1: 环境准备
+- 检出代码（包含子模块）
+- 配置 Python 环境并安装 `requests`
 
-#### Step 2: 核心变更分析
-提取除文档外的代码变更，生成表格：
-| 文件 | 类型 | 风险等级 |
-|------|------|----------|
-| `src/scrapers/linuxdo.js` | JavaScript | 🟢 Low |
-| `src/config/products/kimi.config.js` | Configuration | 🟡 Medium |
-| `src/utils/auth.js` | JavaScript | 🔴 High |
+##### Step 2: 深度审查分析
+- 执行 `python scripts/ai_reviewer.py`
+- 逻辑：获取变更，过滤小型变更（添加行数 < 20），读取审查标准，并将 PR 上下文信息（PR 内容、分支名）传入。调用 DeepSeek API 进行深度审查，**同时触发 SOP 合规性提示（检查 Issue 关联与 Spec/Plan 文档）**，生成 `review_result.md`。
 
-**风险评级规则**：
-- 🟢 Low：普通业务逻辑
-- 🟡 Medium：配置文件、服务层变更
-- 🔴 High：认证、安全、加密相关
+##### Step 3: 发表评论
+- 读取生成的 `review_result.md`，使用 `thollander/actions-comment-pull-request@v2` 在 PR 中发表评论。
 
-#### Step 3: 测试覆盖检查
-检查是否有测试文件变更（`test/`, `tests/`, `.test.`, `.spec.`）
+**审查标准与清单**：
+AI 根据以下文档进行审查：
+- `docs/standards/review-standards/review/reviewer/standard.md`
+- `docs/standards/review-standards/review/reviewer/looking-for.md`
 
-#### Step 4: SOP 合规检查
-- 提取 Issue ID（从 PR 描述或分支名）
-- 检查审计日志是否更新
-
-**输出**：
-自动在 PR 发表评论，包含：
-- 变更统计
-- 核心变更分析表格
-- 测试覆盖情况
-- SOP 合规状态
+**注意事项**：
+- 需在 GitHub Secrets 配置 `DEEPSEEK_API_KEY`
+- 变更过小时（添加行数 < 20），AI 会跳过深度审查，不生成报告。
 
 ---
 
