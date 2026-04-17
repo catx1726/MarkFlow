@@ -14,8 +14,8 @@ import { calculateSimilarity, findCommonAncestor, getAllTextNodes } from './dom'
  */
 const SEARCH_CONFIG = {
   MIN_SIMILARITY_AUTO_RESTORE: 75, // 自动恢复的最低相似度门槛
-  CLEAR_WINNER_SCORE: 95, // “绝对胜出者”的最低分数
-  WINNER_MARGIN: 20, // 胜出者领先第二名的最小分差
+  AUTO_RESTORE_MIN_SCORE: 95, // “绝对胜出者”的最低分数 (原 CLEAR_WINNER_SCORE)
+  AUTO_RESTORE_SCORE_MARGIN: 20, // 胜出者领先第二名的最小分差 (原 WINNER_MARGIN)
   DEFAULT_LOOK_RANGE: 80, // 模糊搜索时的默认探测范围
   MIN_REGEX_LENGTH: 5, // 启用正则匹配的最小文本长度
   ANCHOR_SIZE: 12, // 锚点指纹大小
@@ -354,7 +354,7 @@ function resolveAmbiguity(candidates: Candidate[]): { ambiguityLevel: AmbiguityL
   const secondScore = second.similarityScore || 0
   
   // 如果第一名远超第二名，且第一名置信度极高，则自动恢复
-  const hasClearWinner = bestScore >= SEARCH_CONFIG.CLEAR_WINNER_SCORE && (bestScore - secondScore) > SEARCH_CONFIG.WINNER_MARGIN
+  const hasClearWinner = bestScore >= SEARCH_CONFIG.AUTO_RESTORE_MIN_SCORE && (bestScore - secondScore) > SEARCH_CONFIG.AUTO_RESTORE_SCORE_MARGIN
 
   return {
     // [Trigger Level 4 if no clear winner]

@@ -73,26 +73,31 @@ def review():
     
     # 调用 DeepSeek
     api_key = os.getenv('DEEPSEEK_API_KEY')
-    if not api_key:
-        print("未配置 DEEPSEEK_API_KEY")
+    if not api_key or api_key.strip() == "":
+        print("❌ 错误: DEEPSEEK_API_KEY 未配置或为空。")
         sys.exit(1)
 
-    response = requests.post(
-        "https://api.deepseek.com/chat/completions",
-        headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
-        json={
-            "model": "deepseek-chat",
-            "messages": [{"role": "user", "content": prompt}],
-            "temperature": 0.5
-        }
-    )
-    
-    if response.status_code == 200:
-        with open('review_result.md', 'w', encoding='utf-8') as f:
-            f.write(response.json()['choices'][0]['message']['content'])
-    else:
-        print(f"API 请求失败: {response.text}")
+    try:
+        response = requests.post(
+            "https://api.deepseek.com/chat/completions",
+            headers={"Authorization": f"Bearer {api_key.strip()}", "Content-Type": "application/json"},
+            json={
+                "model": "deepseek-chat",
+                "messages": [{"role": "user", "content": prompt}],
+                "temperature": 0.5
+            },
+            timeout=90
+        )
+        response.raise_for_status()
+    except requests.exceptions.RequestException as e:
+        print(f"❌ API 请求失败: {e}")
+        if hasattr(e, 'response') and e.response:
+            print(f"响应详情: {e.response.text}")
         sys.exit(1)
+    
+    with open('review_result.md', 'w', encoding='utf-8') as f:
+        f.write(response.json()['choices'][0]['message']['content'])
+    print("✅ 代码审查报告已成功生成：review_result.md")
 
 if __name__ == "__main__":
     review()
