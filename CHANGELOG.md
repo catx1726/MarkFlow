@@ -1,5 +1,9 @@
 # Unreleased
 
+### [2026-04-21] Refactor content script into modular architecture (#25)
+Refactor content script into modular architecture
+
+
 ### [2026-04-21] [REFACTOR] Search & DOM Logic Optimization (#23)
 [REFACTOR] Search & DOM Logic Optimization
 
