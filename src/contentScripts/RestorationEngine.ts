@@ -1,17 +1,18 @@
 import { sendMessage } from 'webext-bridge/content-script'
 import rangy from 'rangy/lib/rangy-core'
+import 'rangy/lib/rangy-serializer'
 import type { AppState, IRestorationEngine } from './types'
 import type { Mark } from '~/logic/storage'
 import {
   getCanonicalUrlForMark,
-  highlightDefaultStyle,
   calculateSimilarity,
   getHighlightContext,
   stripHighlights,
   getElementSelector,
   querySelectorDeep,
-  applyPreciseHighlight
+  Highlighter
 } from '~/logic/dom'
+import { highlightDefaultStyle } from '~/logic/config'
 import { findCandidateElements } from '~/logic/search'
 
 export class RestorationEngine implements IRestorationEngine {
@@ -39,9 +40,6 @@ export class RestorationEngine implements IRestorationEngine {
     })
 
     if (marksToRestore.length > 0) await this.applyMarks(marksToRestore)
-
-    // Initial load might have ambiguity
-    // The ambiguity logic is handled inside applyMarks which populates state.ambiguousMarks
   }
 
   debouncedRestore() {
@@ -85,8 +83,8 @@ export class RestorationEngine implements IRestorationEngine {
 
     window.addEventListener('popstate', () => this.debouncedRestore())
     const originalPushState = history.pushState
-    history.pushState = (...args: any[]) => {
-      originalPushState.apply(history, args)
+    history.pushState = (data: any, unused: string, url?: string | URL | null) => {
+      originalPushState.call(history, data, unused, url)
       this.debouncedRestore()
     }
   }
@@ -118,7 +116,7 @@ export class RestorationEngine implements IRestorationEngine {
         else continue // host not found
       }
       try {
-        const range = rangy.deserializeRange(mark.rangySerialized, deserializationRoot, document)
+        const range = (rangy as any).deserializeRange(mark.rangySerialized, deserializationRoot, document)
         if (!range) throw new Error('Failed to deserialize range')
 
         const rangeText = range.toString().trim()
@@ -158,7 +156,7 @@ export class RestorationEngine implements IRestorationEngine {
             : 100
 
           if (similarity >= 75) {
-            const rangeResult = applyPreciseHighlight(
+            const rangeResult = Highlighter.applyPreciseHighlight(
               candidate.candidateElement,
               candidate.displayTextSnippet,
               applier,
@@ -169,7 +167,7 @@ export class RestorationEngine implements IRestorationEngine {
               this.restoredMarkIds.add(mark.id)
               this.failedRestoreCooldowns.delete(mark.id)
               const root = candidate.candidateElement.getRootNode()
-              const newSerialized = rangy.serializeRange(range, true, root instanceof ShadowRoot ? root : undefined)
+              const newSerialized = (rangy as any).serializeRange(range, true, root instanceof ShadowRoot ? root : undefined)
               const { contextTitle, contextSelector, contextLevel, contextOrder, surroundingSnippet } =
                 getHighlightContext(range)
 

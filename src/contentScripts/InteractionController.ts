@@ -1,11 +1,10 @@
 import rangy from 'rangy/lib/rangy-core'
+import 'rangy/lib/rangy-serializer'
 import type { AppState, IInteractionController, IUIPortal } from './types'
 import {
   getMarkIdFromElement,
-  querySelectorAllDeep,
-  getCanonicalUrlForMark
+  querySelectorAllDeep
 } from '~/logic/dom'
-import { sendMessage } from 'webext-bridge/content-script'
 
 export interface InteractionActions {
   clearPreviewHighlight: () => void
@@ -130,7 +129,7 @@ export class InteractionController implements IInteractionController {
         try {
           const root = range.commonAncestorContainer.getRootNode()
           const capturedRoot = root instanceof ShadowRoot ? root : undefined
-          this.state.serializedSelection = rangy.serializeRange(range, true, capturedRoot)
+          this.state.serializedSelection = (rangy as any).serializeRange(range, true, capturedRoot)
           this.state.currentSerializationRoot = capturedRoot
           this.state.currentMarkIdForColorChange = null
           this.actions.applyPreviewHighlight(range)
@@ -171,7 +170,7 @@ export class InteractionController implements IInteractionController {
     this.state.currentSerializationRoot = undefined
     const root = range.commonAncestorContainer.getRootNode()
     if (root instanceof ShadowRoot) this.state.currentSerializationRoot = root
-    this.state.serializedSelection = rangy.serializeSelection(tempSelection, true, this.state.currentSerializationRoot)
+    this.state.serializedSelection = (rangy as any).serializeSelection(tempSelection, true, this.state.currentSerializationRoot)
     this.actions.showTooltipForExistingMark(markId, x, y)
   }
 }

@@ -1,5 +1,6 @@
 import { onMessage, sendMessage } from 'webext-bridge/content-script'
 import rangy from 'rangy/lib/rangy-core'
+import 'rangy/lib/rangy-serializer'
 import {
   getCanonicalUrlForMark,
   querySelectorDeep,
@@ -7,8 +8,9 @@ import {
   getHighlightContext,
   stripHighlights,
   getElementSelector,
-  highlightDefaultStyle
+  Highlighter
 } from '~/logic/dom'
+import { highlightDefaultStyle } from '~/logic/config'
 import { isPageBlacklisted, settings, settingsReady } from '~/logic/settings'
 import type { AppState } from './types'
 import { UIPortal } from './UIPortal'
@@ -36,7 +38,7 @@ export class MarkerApp {
 
     this.interaction = new InteractionController(this.state, this.ui, {
       clearPreviewHighlight: this.clearPreviewHighlight.bind(this),
-      showTooltipForSelection: this.ui.showTooltip.bind(this),
+      showTooltipForSelection: (x, y, textToCopy) => this.ui.showTooltip(x, y, false, '', settings.value.defaultHighlightColor, textToCopy),
       showTooltipForExistingMark: this.showTooltipForExistingMark.bind(this),
       applyPreviewHighlight: (range) => this.previewApplier?.applyToRange(range)
     })
@@ -126,7 +128,7 @@ export class MarkerApp {
       if (!this.state.serializedSelection) return
       const root = this.state.currentSerializationRoot || document.documentElement
       const doc = root instanceof ShadowRoot ? root.ownerDocument : document
-      const range = rangy.deserializeRange(this.state.serializedSelection, root, doc)
+      const range = (rangy as any).deserializeRange(this.state.serializedSelection, root, doc)
       if (range && !range.collapsed) await this.createHighlight(range, note, color)
     }
     this.state.serializedSelection = null
@@ -159,8 +161,8 @@ export class MarkerApp {
         elementAttributes: { style: highlightDefaultStyle(color) }
       })
       const root = this.state.currentSerializationRoot || document.documentElement
-      const win = root instanceof ShadowRoot ? root.ownerDocument.defaultView : window
-      rangy.deserializeSelection(this.state.serializedSelection, root, win || window)
+      const win = (root instanceof ShadowRoot) ? root.ownerDocument.defaultView : window
+      ;(rangy as any).deserializeSelection(this.state.serializedSelection, root, win || window)
       this.previewApplier.applyToSelection()
       rangy.getSelection().removeAllRanges()
     }
@@ -186,15 +188,11 @@ export class MarkerApp {
           elementAttributes: { style: highlightDefaultStyle(mark.color) }
         })
 
-        const rangeResult = applyPreciseHighlight(candidateElement, actualText, applier, matchIndex)
+        const rangeResult = Highlighter.applyPreciseHighlight(candidateElement, actualText, applier, matchIndex)
         if (rangeResult) {
           const { range } = rangeResult
-          // We need to tell the engine that this mark is now restored
-          // Accessing private engine.restoredMarkIds is not ideal, but for now we'll assume it's handled or we expose a method.
-          // For simplicity, let's assume MarkerApp can coordinate this.
-
           const root = candidateElement.getRootNode()
-          const newSerialized = rangy.serializeRange(range, true, root instanceof ShadowRoot ? root : undefined)
+          const newSerialized = (rangy as any).serializeRange(range, true, root instanceof ShadowRoot ? root : undefined)
           const { contextTitle, contextSelector, contextLevel, contextOrder, surroundingSnippet } =
             getHighlightContext(range)
 
@@ -238,13 +236,20 @@ export class MarkerApp {
     this.state.ambiguousMarks = []
   }
 
+  private async handleDiscardMark(markId: string) {
+    if (confirm('确定要彻底丢弃此标记吗？')) {
+      await this.removeMarkById(markId)
+      this.state.ambiguousMarks = this.state.ambiguousMarks.filter(m => m.originalMarkId !== markId)
+    }
+  }
+
   private async handleCandidateHover(item: Candidate) {
     const applier = rangy.createClassApplier('webext-highlight-preview-ambiguous', {
       elementTagName: 'span',
       elementAttributes: { style: 'background-color: rgba(255, 165, 0, 0.4); border-bottom: 2px solid orange;' }
     })
 
-    const rangeResult = applyPreciseHighlight(item.candidateElement, item.displayTextSnippet, applier, item.matchIndex)
+    const rangeResult = Highlighter.applyPreciseHighlight(item.candidateElement, item.displayTextSnippet, applier, item.matchIndex)
     if (rangeResult) {
       rangeResult.range.commonAncestorContainer.parentElement?.scrollIntoView({ behavior: 'smooth', block: 'center' })
     }
@@ -305,7 +310,7 @@ export class MarkerApp {
       }
       shadowHostSelector = chain.join('|>>>|')
     }
-    const rangySerialized = rangy.serializeRange(range, true, root instanceof ShadowRoot ? root : undefined)
+    const rangySerialized = (rangy as any).serializeRange(range, true, root instanceof ShadowRoot ? root : undefined)
     const { contextTitle, contextSelector, contextLevel, contextOrder, surroundingSnippet } = getHighlightContext(range)
     
     const content = range.cloneContents()

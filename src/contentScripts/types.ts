@@ -8,7 +8,10 @@ export interface AppState {
     root: Node | undefined
     text: string
   } | null
+  serializedSelection: string | null
+  currentSerializationRoot: Node | undefined
   currentMarkIdForColorChange: string | null
+  settings: any
 }
 
 export interface IRestorationEngine {
