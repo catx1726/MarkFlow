@@ -1,0 +1,6 @@
+[submodule "docs/standards/code-standards"]
+	path = docs/standards/code-standards
+	url = https://github.com/ryanmcdermott/clean-code-javascript.git
+[submodule "docs/standards/review-standards"]
+	path = docs/standards/review-standards
+	url = https://github.com/google/eng-practices.git

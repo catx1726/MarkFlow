@@ -51,6 +51,16 @@ MarkFlow 放弃了脆弱的单点索引，采用了 **“多维锚点共识 (Con
 | **Level 3**   | **共识重构** | Consensus Search     | 唯一项且相似度 >= 75% | 内容微调场景（文字被增删）   |
 | **Level 4**   | **歧义消除** | Disambiguation UI    | 用户手动交互          | 最终兜底，由用户进行物理校准 |
 
+### 📐 工程标准 (Engineering Standards)
+
+本项目遵循严格的工程标准以确保代码质量与系统安全性：
+
+- [代码质量标准 (Clean Code)](docs/standards/code-standards/README.md)
+- [测试驱动开发 (TDD)](docs/standards/test-driven-development.md)
+- [API 设计规范](docs/standards/api-design-standards.md)
+- [安全与日志标准](docs/standards/security-standards.md)
+- [环境与配置标准](docs/standards/environment-standards.md)
+
 ### 极端环境适配 (Bilibili/Reddit/X)
 
 - **3s 恢复冷却**: 当全局搜索失败时，该标记进入 3 秒静默期，防止虚拟列表滚动时的循环重试。
