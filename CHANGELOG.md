@@ -1,5 +1,9 @@
 # Unreleased
 
+### [2026-04-21] [REFACTOR] Search & DOM Logic Optimization (#23)
+[REFACTOR] Search & DOM Logic Optimization
+
+
 # Released
 
 ### [2026-04-16] Error Collection & Export
