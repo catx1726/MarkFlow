@@ -9,6 +9,7 @@
 
 import rangy from 'rangy/lib/rangy-core'
 import 'rangy/lib/rangy-serializer'
+import 'rangy/lib/rangy-classapplier'
 import type { AppState, IInteractionController, IUIPortal } from './types'
 import {
   getMarkIdFromElement,
@@ -188,7 +189,7 @@ export class InteractionController implements IInteractionController {
         const capturedRoot = root instanceof ShadowRoot ? root : undefined
         
         // 序列化选区用于持久化
-        this.state.serializedSelection = (rangy as any).serializeRange(range, true, capturedRoot)
+        this.state.serializedSelection = rangy.serializeRange(range, true, capturedRoot)
         this.state.currentSerializationRoot = capturedRoot
         this.state.currentMarkIdForColorChange = null
         
@@ -213,7 +214,7 @@ export class InteractionController implements IInteractionController {
       if (clickedElement) {
         const blockElement = this.findContainingBlock(clickedElement)
         if (blockElement && blockElement.textContent?.trim()) {
-          const correctedRange = (rangy as any).createRange()
+          const correctedRange = rangy.createRange()
           correctedRange.selectNodeContents(blockElement)
           return correctedRange.collapsed ? null : correctedRange
         }
@@ -249,7 +250,7 @@ export class InteractionController implements IInteractionController {
     const allHighlightSpans = querySelectorAllDeep(`.webext-highlight-${markId}`)
     if (allHighlightSpans.length === 0) return
     
-    const range = (rangy as any).createRange()
+    const range = rangy.createRange()
     range.setStartBefore(allHighlightSpans[0])
     range.setEndAfter(allHighlightSpans[allHighlightSpans.length - 1])
     
@@ -261,7 +262,7 @@ export class InteractionController implements IInteractionController {
     const root = range.commonAncestorContainer.getRootNode()
     if (root instanceof ShadowRoot) this.state.currentSerializationRoot = root
     
-    this.state.serializedSelection = (rangy as any).serializeSelection(temporarySelection, true, this.state.currentSerializationRoot)
+    this.state.serializedSelection = rangy.serializeSelection(temporarySelection, true, this.state.currentSerializationRoot)
     this.actions.showTooltipForExistingMark(markId, x, y)
   }
 }

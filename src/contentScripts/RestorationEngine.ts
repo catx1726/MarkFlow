@@ -14,7 +14,7 @@ import { sendMessage } from 'webext-bridge/content-script'
 import rangy from 'rangy/lib/rangy-core'
 import 'rangy/lib/rangy-serializer'
 import 'rangy/lib/rangy-classapplier'
-import type { AppState, IRestorationEngine } from './types'
+import type { AppState } from './types'
 import type { Mark } from '~/logic/storage'
 import {
   getCanonicalUrlForMark,
@@ -28,7 +28,7 @@ import {
 import { highlightDefaultStyle } from '~/logic/config'
 import { findCandidateElements } from '~/logic/search'
 
-export class RestorationEngine implements IRestorationEngine {
+export class RestorationEngine {
   private restoredMarkIds = new Set<string>()
   private failedRestoreCooldowns = new Map<string, number>()
   private restoreDebounceTimer: number | undefined
@@ -120,7 +120,7 @@ export class RestorationEngine implements IRestorationEngine {
 
       try {
         // --- Level 1: 路径还原 ---
-        const range = (rangy as any).deserializeRange(mark.rangySerialized, deserializationRoot, document)
+        const range = rangy.deserializeRange(mark.rangySerialized, deserializationRoot, document)
         if (!range) throw new Error('Failed to deserialize range')
 
         // 校验：文本相似度需 > 95%
@@ -184,7 +184,7 @@ export class RestorationEngine implements IRestorationEngine {
       }
     } else if (ambiguityLevel === 'multiple') {
       // 存在多个候选项：推入歧义队列
-      this.state.ambiguousMarks = [...this.state.ambiguousMarks.filter(m => m.originalMarkId !== mark.id), ...candidates]
+      this.state.ambiguousMarks = [...this.state.ambiguousMarks.filter(markItem => markItem.originalMarkId !== mark.id), ...candidates]
     } else {
       // 彻底找不到：设置重试冷却
       this.failedRestoreCooldowns.set(mark.id, Date.now() + 3000)
@@ -196,7 +196,7 @@ export class RestorationEngine implements IRestorationEngine {
    */
   private async updateMarkDetailsAfterRelocation(mark: Mark, range: rangy.RangyRange, candidateElement: HTMLElement) {
     const root = candidateElement.getRootNode()
-    const newSerialized = (rangy as any).serializeRange(range, true, root instanceof ShadowRoot ? root : undefined)
+    const newSerialized = rangy.serializeRange(range, true, root instanceof ShadowRoot ? root : undefined)
     const context = getHighlightContext(range)
     
     // 生成新的宿主链选择器
@@ -253,7 +253,7 @@ export class RestorationEngine implements IRestorationEngine {
   }
 
   private pushToAmbiguityQueue(markId: string, candidate: any) {
-    this.state.ambiguousMarks = [...this.state.ambiguousMarks.filter(m => m.originalMarkId !== markId), candidate]
+    this.state.ambiguousMarks = [...this.state.ambiguousMarks.filter(markItem => markItem.originalMarkId !== markId), candidate]
   }
 
   clearRestoredMarkIds() {
