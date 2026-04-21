@@ -67,20 +67,22 @@ export class InteractionController implements IInteractionController {
    * 处理鼠标按下：清理当前预览和 UI
    */
   private handleMouseDown(event: MouseEvent) {
-    const target = event.target as HTMLElement
+    const composedPath = event.composedPath() as HTMLElement[]
+    const actualTarget = composedPath[0]
     
-    // 忽略 Shadow Host 点击，防止重复触发
-    if (target instanceof Element && target.shadowRoot) return
+    if (!actualTarget) return
+
+    // 忽略 Shadow Host 点击，由 Shadow Root 内的监听器处理具体逻辑
+    if (actualTarget.shadowRoot && event.currentTarget === document) return
     
     // 忽略输入框点击
-    if (this.isInputElement(target)) return
+    if (this.isInputElement(actualTarget)) return
     
     // 忽略点击扩展自身 UI (Tooltip)
-    const composedPath = event.composedPath() as HTMLElement[]
     if (composedPath.some((element) => element instanceof HTMLElement && element.classList.contains('tooltip-card'))) return
 
     // 如果点击非高亮区域，隐藏 Tooltip 并清理预览
-    if (!target.closest('span[class*="webext-highlight-"]')) {
+    if (!actualTarget.closest('span[class*="webext-highlight-"]')) {
       this.ui.hideTooltip()
       this.actions.clearPreviewHighlight()
     }
@@ -90,17 +92,18 @@ export class InteractionController implements IInteractionController {
    * 处理鼠标抬起：触发选区分析逻辑
    */
   private handleMouseUp(event: MouseEvent) {
-    const target = event.target as HTMLElement
-    if (this.isInputElement(target)) return
+    const composedPath = event.composedPath() as HTMLElement[]
+    const actualTarget = composedPath[0]
+
+    if (!actualTarget || this.isInputElement(actualTarget)) return
     
-    const composedPath = event.composedPath()
     // 忽略右键点击或点击 UI 内部
     if (event.button === 2 || composedPath.some((element) => element instanceof HTMLElement && element.classList.contains('tooltip-card')))
       return
 
     const eventSnapshot = {
-      target,
-      path: typeof event.composedPath === 'function' ? event.composedPath() : [target],
+      target: actualTarget,
+      path: composedPath,
       clientX: event.clientX,
       clientY: event.clientY,
       altKey: event.altKey,
