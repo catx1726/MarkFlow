@@ -25,6 +25,7 @@ import {
 } from '~/logic/dom'
 import { highlightDefaultStyle } from '~/logic/config'
 import { isPageBlacklisted, settings, settingsReady } from '~/logic/settings'
+import type { Mark } from '~/logic/storage'
 import type { AppState } from './types'
 import { UIPortal } from './UIPortal'
 import { InteractionController } from './InteractionController'
@@ -55,7 +56,9 @@ export class MarkerApp {
       clearPreviewHighlight: this.clearPreviewHighlight.bind(this),
       showTooltipForSelection: (x, y, textToCopy) => 
         this.ui.showTooltip(x, y, false, '', settings.value.defaultHighlightColor, textToCopy),
-      showTooltipForExistingMark: this.showTooltipForExistingMark.bind(this),
+      showTooltipForExistingMark: async (markId: string, x: number, y: number) => {
+        await this.showTooltipForExistingMark(markId, x, y);
+      },
       applyPreviewHighlight: (range) => this.previewApplier?.applyToRange(range)
     })
 
@@ -200,7 +203,7 @@ export class MarkerApp {
     
     const root = this.state.currentSerializationRoot || document.documentElement
     const doc = root instanceof ShadowRoot ? root.ownerDocument : document
-    const range = (rangy as any).deserializeRange(this.state.serializedSelection, root, doc)
+    const range = rangy.deserializeRange(this.state.serializedSelection, root, doc)
     
     if (range && !range.collapsed) {
       await this.persistNewHighlight(range, note, color)
@@ -252,8 +255,10 @@ export class MarkerApp {
     
     const root = this.state.currentSerializationRoot || document.documentElement
     const win = (root instanceof ShadowRoot) ? root.ownerDocument.defaultView : window
-    ;(rangy as any).deserializeSelection(this.state.serializedSelection, root, win || window)
-    this.previewApplier.applyToSelection()
+    rangy.deserializeSelection(this.state.serializedSelection, root, win || window)
+    if (this.previewApplier) {
+      this.previewApplier.applyToSelection()
+    }
     rangy.getSelection().removeAllRanges()
   }
 
@@ -269,7 +274,7 @@ export class MarkerApp {
     selections: { originalMarkId: string; candidateElement: HTMLElement; actualText: string; matchIndex: number }[]
   ) {
     for (const selection of selections) {
-      const mark = await sendMessage('get-mark-by-id', { id: selection.originalMarkId, url: getCanonicalUrlForMark() }, 'background') as any
+      const mark = await sendMessage('get-mark-by-id', { id: selection.originalMarkId, url: getCanonicalUrlForMark() }, 'background') as Mark | null
       if (!mark) continue
 
       const applier = rangy.createClassApplier(`webext-highlight-${mark.id}`, {
@@ -288,9 +293,9 @@ export class MarkerApp {
   /**
    * 位置修复后，将新的元数据与路径同步至 Background 数据库
    */
-  private async syncRelocatedMarkToDatabase(mark: any, range: rangy.RangyRange, actualText: string, candidateElement: HTMLElement) {
+  private async syncRelocatedMarkToDatabase(mark: Mark, range: rangy.RangyRange, actualText: string, candidateElement: HTMLElement) {
     const root = candidateElement.getRootNode()
-    const newSerialized = (rangy as any).serializeRange(range, true, root instanceof ShadowRoot ? root : undefined)
+    const newSerialized = rangy.serializeRange(range, true, root instanceof ShadowRoot ? root : undefined)
     const context = getHighlightContext(range)
 
     let shadowHostSelector: string | undefined
@@ -356,7 +361,7 @@ export class MarkerApp {
   }
 
   private async showTooltipForExistingMark(markId: string, x: number, y: number) {
-    const mark = await sendMessage('get-mark-by-id', { id: markId, url: getCanonicalUrlForMark() }, 'background') as any
+    const mark = await sendMessage('get-mark-by-id', { id: markId, url: getCanonicalUrlForMark() }, 'background') as Mark | null
     if (mark) {
       this.ui.showTooltip(x, y, true, mark.note, mark.color, mark.text)
     }
@@ -406,7 +411,7 @@ export class MarkerApp {
       shadowHostSelector = chain.join('|>>>|')
     }
     
-    const rangySerialized = (rangy as any).serializeRange(range, true, root instanceof ShadowRoot ? root : undefined)
+    const rangySerialized = rangy.serializeRange(range, true, root instanceof ShadowRoot ? root : undefined)
     const context = getHighlightContext(range)
     
     const contentFragment = range.cloneContents()
@@ -474,7 +479,7 @@ export class MarkerApp {
     const className = `webext-highlight-${markId}`
     const element = querySelectorDeep(`.${className}`)
     if (element instanceof HTMLElement) {
-      const mark = await sendMessage('get-mark-by-id', { id: markId, url: getCanonicalUrlForMark() }, 'background') as any
+      const mark = await sendMessage('get-mark-by-id', { id: markId, url: getCanonicalUrlForMark() }, 'background') as Mark | null
       if (!mark) return
       
       element.scrollIntoView({ behavior: 'auto', block: 'center' })
