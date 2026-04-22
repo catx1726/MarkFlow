@@ -23,7 +23,7 @@ export class DOMScanner {
     const allElements = root.querySelectorAll('*')
     for (const element of Array.from(allElements)) {
       if (element.shadowRoot) {
-        const foundInShadow = DOMScanner.querySelectorDeep(selector, element.shadowRoot)
+        const foundInShadow = this.querySelectorDeep(selector, element.shadowRoot)
         if (foundInShadow)
           return foundInShadow
       }
@@ -40,7 +40,7 @@ export class DOMScanner {
     const allElements = root.querySelectorAll('*')
     for (const element of Array.from(allElements)) {
       if (element.shadowRoot)
-        results = results.concat(DOMScanner.querySelectorAllDeep(selector, element.shadowRoot))
+        results = results.concat(this.querySelectorAllDeep(selector, element.shadowRoot))
     }
     return results
   }
@@ -335,7 +335,7 @@ export class URLNormalizer {
     const url = new URL(window.location.href)
     url.hash = ''
     
-    const paramsToRemove = [...URLNormalizer.DEFAULT_TRACKING_PARAMS, ...customParams]
+    const paramsToRemove = [...this.DEFAULT_TRACKING_PARAMS, ...customParams]
     paramsToRemove.forEach(param => url.searchParams.delete(param))
 
     let canonical = url.origin + url.pathname
