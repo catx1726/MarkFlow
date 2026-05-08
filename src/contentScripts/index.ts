@@ -127,29 +127,25 @@ import { onMessage, sendMessage } from 'webext-bridge/content-script'
 import rangy from 'rangy/lib/rangy-core'
 import 'rangy/lib/rangy-classapplier'
 import 'rangy/lib/rangy-serializer'
-import type { Mark } from '~/logic/storage'
 import { highlightDefaultStyle, shortcuts } from '~/logic/config'
 import { isPageBlacklisted, settings, settingsReady } from '~/logic/settings'
 import {
-  applyPreciseHighlight,
-  calculateSimilarity,
   getCanonicalUrlForMark,
-  getHighlightContext,
   getMarkIdFromElement,
   querySelectorAllDeep,
   querySelectorDeep,
-  getElementSelector,
-  stripHighlights
 } from '~/logic/dom'
-import { findCandidateElements } from '~/logic/search'
 import { HighlightStateManager } from './state'
 import { UIManager } from './ui'
+import { ContentChangeMonitor } from './monitor'
+import { HighlightRestorer } from './restorer'
 import '../styles'
 
 // #region --- State Management ---
 const state = new HighlightStateManager()
-const ui = new UIManager(state, restoreHighlights, scrollToMark)
-let restoreDebounceTimer: number
+const restorer = new HighlightRestorer(state)
+const ui = new UIManager(state, () => restorer.restoreHighlights(), (id) => restorer.scrollToMark(id))
+const monitor = new ContentChangeMonitor(state, () => restorer.restoreHighlights())
 let selectionTimer: number
 // #endregion
 
@@ -191,6 +187,9 @@ async function initialize() {
     window.addEventListener('keydown', handleKeyDown)
     attachListenersToShadowRoots(document)
     await ui.handleInitialLoadActions()
+    monitor.setupGlobalObserver()
+    monitor.setupBodyObserver()
+    monitor.setupSPAListener()
     console.log('[ContentScript] Initialization complete.')
   } catch (e) {
     console.error('[ContentScript] Initialization failed:', e)
@@ -362,282 +361,15 @@ async function showTooltipForExistingMark(markId: string, x: number, y: number) 
 
 // #endregion
 
-// #region --- Interaction ---
-
-async function scrollToMark(markId: string) {
-  clearTimeout(restoreDebounceTimer)
-  const className = `webext-highlight-${markId}`
-  const element = querySelectorDeep(`.${className}`)
-  if (element) {
-    const mark = await sendMessage('get-mark-by-id', { id: markId, url: getCanonicalUrlForMark() }, 'background')
-    if (!mark) return
-    element.scrollIntoView({ behavior: 'auto', block: 'center' })
-    querySelectorAllDeep(`.${className}`).forEach((el) => {
-      if (!(el instanceof HTMLElement)) return
-      el.style.transition = 'box-shadow 0.5s ease-in-out'
-      el.style.boxShadow = `inset 0 -5px 0 0 ${settings.value.highlightColors[1]}`
-      setTimeout(() => {
-        el.style.boxShadow = `inset 0 -5px 0 0 ${mark.color}`
-      }, 1000)
-    })
-  }
-}
-
-// #endregion
-
-// #region --- Highlight Restoration ---
-
-async function restoreHighlights() {
-  const canonicalUrl = getCanonicalUrlForMark()
-  const marks = await sendMessage('get-marks-for-url', { url: canonicalUrl }, 'background')
-  if (!marks || marks.length === 0) return
-  state.ambiguousMarksQueue.value = []
-
-  const now = Date.now()
-  const marksToRestore = marks.filter((mark) => {
-    if (state.restoredMarkIds.has(mark.id)) {
-      if (querySelectorDeep(`.webext-highlight-${mark.id}`)) return false
-      state.restoredMarkIds.delete(mark.id)
-    }
-    const cooldown = state.failedRestoreCooldowns.get(mark.id)
-    if (cooldown && now < cooldown) return false
-    return true
-  })
-
-  if (marksToRestore.length > 0) await applyMarks(marksToRestore)
-
-  if (state.ambiguousMarksQueue.value.length > 0) {
-    console.log(`[WebMarker] Showing modal with ${state.ambiguousMarksQueue.value.length} ambiguous marks`)
-    state.disambiguationModalApp?.show(state.ambiguousMarksQueue.value)
-  }
-  const observer = new MutationObserver((mutations) => {
-    const hasAddedNodes = mutations.some((m) => m.addedNodes.length > 0)
-    if (!hasAddedNodes) return
-    debouncedRestore()
-  })
-  observer.observe(document.body, { childList: true, subtree: true })
-
-  // 监听 URL 变化 (针对 SPA)
-  window.addEventListener('popstate', debouncedRestore)
-  // 拦截 pushState/replaceState
-  const originalPushState = history.pushState
-  history.pushState = function (...args) {
-    originalPushState.apply(this, args)
-    debouncedRestore()
-  }
-}
-
-function debouncedRestore() {
-  if (state.isRestoring) return
-
-  clearTimeout(restoreDebounceTimer)
-  restoreDebounceTimer = window.setTimeout(async () => {
-    const canonicalUrl = getCanonicalUrlForMark()
-    const marks = await sendMessage('get-marks-for-url', { url: canonicalUrl }, 'background')
-    if (!marks) return
-
-    const now = Date.now()
-    const marksToRestore = marks.filter((mark) => {
-      // 已恢复的跳过
-      if (state.restoredMarkIds.has(mark.id)) {
-        if (querySelectorDeep(`.webext-highlight-${mark.id}`)) return false
-        state.restoredMarkIds.delete(mark.id)
-      }
-      // 已在歧义队列中的跳过，避免重复搜索
-      if (state.ambiguousMarksQueue.value.some((m) => m.originalMarkId === mark.id)) return false
-
-      const cooldown = state.failedRestoreCooldowns.get(mark.id)
-      if (cooldown && now < cooldown) return false
-      return true
-    })
-
-    if (marksToRestore.length > 0) {
-      state.isRestoring = true
-      try {
-        await applyMarks(marksToRestore)
-        // 如果产生了新的歧义标记，更新/显示弹窗
-        if (state.ambiguousMarksQueue.value.length > 0) {
-          state.disambiguationModalApp?.show(state.ambiguousMarksQueue.value)
-        }
-      } finally {
-        state.isRestoring = false
-      }
-    }
-    attachListenersToShadowRoots(document)
-  }, 300)
-}
-
-async function applyMarks(marks: Mark[]) {
-  for (const mark of marks) {
-    const applier = rangy.createClassApplier(`webext-highlight-${mark.id}`, {
-      elementTagName: 'span',
-      elementAttributes: { style: highlightDefaultStyle(mark.color) }
-    })
-    let deserializationRoot: Node | undefined
-    if (mark.shadowHostSelector) {
-      let host: Element | null = null
-      if (mark.shadowHostSelector.includes('|>>>|')) {
-        const chain = mark.shadowHostSelector.split('|>>>|')
-        let currentRoot: Document | ShadowRoot = document
-        for (const selector of chain) {
-          host = currentRoot.querySelector(selector)
-          if (host && host.shadowRoot) currentRoot = host.shadowRoot
-          else {
-            host = null
-            break
-          }
-        }
-      } else {
-        host = querySelectorDeep(mark.shadowHostSelector)
-      }
-      if (host && host.shadowRoot) deserializationRoot = host.shadowRoot
-      else return
-    }
-    try {
-      const range = rangy.deserializeRange(mark.rangySerialized, deserializationRoot, document)
-      if (!range) throw new Error('Failed to deserialize range')
-
-      const rangeText = range.toString().trim()
-      const markText = mark.text.trim()
-      const contentSim = calculateSimilarity(rangeText, markText)
-
-      if (contentSim < 95) {
-        throw new Error('Content mismatch at path')
-      }
-
-      if (mark.surroundingSnippet) {
-        const currentContext = getHighlightContext(range)
-        const contextSim = calculateSimilarity(currentContext.surroundingSnippet, mark.surroundingSnippet)
-
-        if (contextSim < 80) {
-          throw new Error('Context integrity mismatch')
-        }
-      }
-      applier.applyToRange(range)
-      state.restoredMarkIds.add(mark.id)
-      state.failedRestoreCooldowns.delete(mark.id)
-    } catch (e) {
-      const root = deserializationRoot || document.documentElement
-
-      let { ambiguityLevel, candidates } = findCandidateElements(mark, root, 10)
-
-      if (candidates.length === 0 && root !== document.documentElement) {
-        const globalResult = findCandidateElements(mark, document.documentElement, 10)
-        ambiguityLevel = globalResult.ambiguityLevel
-        candidates = globalResult.candidates
-      }
-
-      if (ambiguityLevel === 'unique' && candidates.length === 1) {
-        const candidate = candidates[0]
-
-        // --- 核心改进: 使用精准 snippet 进行上下文校验 ---
-        // 之前使用 displayContext (可能是整个 Block)，容易因长度不匹配导致相似度计算过低。
-        const similarity = mark.surroundingSnippet
-          ? calculateSimilarity(candidate.surroundingSnippet, mark.surroundingSnippet)
-          : 100
-
-        if (similarity >= 75) {
-          const rangeResult = applyPreciseHighlight(
-            candidate.candidateElement,
-            candidate.displayTextSnippet,
-            applier,
-            candidate.matchIndex
-          )
-          if (rangeResult) {
-            const { range } = rangeResult
-            state.restoredMarkIds.add(mark.id)
-            state.failedRestoreCooldowns.delete(mark.id)
-            const root = candidate.candidateElement.getRootNode()
-            const newSerialized = rangy.serializeRange(range, true, root instanceof ShadowRoot ? root : undefined)
-            const { contextTitle, contextSelector, contextLevel, contextOrder, surroundingSnippet } =
-              getHighlightContext(range)
-
-            let shadowHostSelector: string | undefined
-            if (root instanceof ShadowRoot) {
-              const chain: string[] = []
-              let currRoot: Node = root
-              while (currRoot instanceof ShadowRoot) {
-                chain.unshift(getElementSelector(currRoot.host))
-                currRoot = currRoot.host.getRootNode()
-              }
-              shadowHostSelector = chain.join('|>>>|')
-            }
-
-            const content = range.cloneContents()
-            stripHighlights(content)
-            const tempDiv = document.createElement('div')
-            tempDiv.appendChild(content)
-            const actualHtml = content.constructor === DocumentFragment ? tempDiv.innerHTML : range.toString()
-
-            // --- 策略改进: 仅在相似度极高时才更新数据库中的序列化路径 ---
-            // 避免因临时的文档漂移导致"错位"被永久记录
-            if (similarity >= 90) {
-              await sendMessage(
-                'update-mark-details',
-                {
-                  id: mark.id,
-                  url: mark.url,
-                  text: candidate.displayTextSnippet,
-                  html: actualHtml,
-                  rangySerialized: newSerialized,
-                  shadowHostSelector: shadowHostSelector || null,
-                  contextTitle,
-                  contextSelector,
-                  contextLevel,
-                  contextOrder,
-                  surroundingSnippet
-                } as any,
-                'background'
-              )
-            }
-          } else {
-            console.warn(`[WebMarker] applyPreciseHighlight failed for ${mark.id}, forcing modal.`)
-            const otherMarksInQueue = state.ambiguousMarksQueue.value.filter((m) => m.originalMarkId !== mark.id)
-            state.ambiguousMarksQueue.value = [...otherMarksInQueue, candidate]
-          }
-        } else {
-          console.warn(`[WebMarker] Unique candidate context similarity (${similarity}%) low, forcing modal for ${mark.id}`)
-          const otherMarksInQueue = state.ambiguousMarksQueue.value.filter((m) => m.originalMarkId !== mark.id)
-          state.ambiguousMarksQueue.value = [...otherMarksInQueue, candidate]
-        }
-      } else if (ambiguityLevel === 'multiple') {
-        const otherMarksInQueue = state.ambiguousMarksQueue.value.filter((m) => m.originalMarkId !== mark.id)
-        state.ambiguousMarksQueue.value = [...otherMarksInQueue, ...candidates]
-      } else {
-        state.failedRestoreCooldowns.set(mark.id, Date.now() + 3000)
-      }
-    }
-  }
-}
-
-async function refreshHighlights() {
-  const highlights = querySelectorAllDeep('span[class*="webext-highlight-"]')
-  const parentsToNormalize = new Set<Node>()
-  highlights.forEach((el) => {
-    if (el.classList.contains('webext-highlight-preview')) return
-    const parent = el.parentNode
-    if (parent) {
-      parentsToNormalize.add(parent)
-      while (el.firstChild) parent.insertBefore(el.firstChild, el)
-      parent.removeChild(el)
-    }
-  })
-  parentsToNormalize.forEach((parent) => parent.normalize())
-  state.restoredMarkIds.clear()
-  await restoreHighlights()
-}
-
-// #endregion
-
 // #region --- WebExtension Message Listeners ---
 onMessage('refresh-highlights', async () => {
-  await refreshHighlights()
+  await restorer.refreshHighlights()
 })
 onMessage('tab-prev', ({ data }) => {
   console.log(`[web-marker-extension] Navigate from page "${data.title}"`)
 })
 onMessage('goto-mark', ({ data }) => {
-  scrollToMark(data.markId)
+  restorer.scrollToMark(data.markId)
 })
 onMessage('remove-mark', async ({ data: markToRemove }) => {
   if (!markToRemove || !markToRemove.id) return
