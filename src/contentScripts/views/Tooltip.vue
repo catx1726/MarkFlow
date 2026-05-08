@@ -263,7 +263,7 @@ function show(
 }
 
 function hide() {
-  if (visible.value && !isHighlighted.value) {
+  if (visible.value) {
     emit('clear-preview')
   }
   visible.value = false

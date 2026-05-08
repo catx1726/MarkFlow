@@ -188,6 +188,7 @@ let disambiguationModalApp: DisambiguationModalInstance | null = null
 let currentSerializationRoot: Node | undefined
 let serializedSelection: string | null = null
 let currentMarkIdForColorChange: string | null = null
+let originalColorForChange: string | null = null
 let previewApplier: rangy.RangyClassApplier | null = null
 let isRestoring = false
 // #endregion
@@ -229,7 +230,6 @@ async function initialize() {
     ensureUIMounted()
     window.addEventListener('keydown', handleKeyDown)
     attachListenersToShadowRoots(document)
-    setupGlobalObserver()
     handleInitialLoadActions()
     console.log('[ContentScript] Initialization complete.')
   } catch (e) {
@@ -244,25 +244,6 @@ function handleKeyDown(event: KeyboardEvent) {
   if (event.altKey && mod.toLowerCase() === 'alt' && event.key.toLowerCase() === key.toLowerCase()) {
     event.preventDefault()
   }
-}
-
-function setupGlobalObserver() {
-  const commentContainer = querySelectorDeep('#comment, .comment-list, .comment-container') || document.body
-
-  const observer = new MutationObserver((mutations) => {
-    // 仅当新增节点在评论区域时才触发
-    const hasAddedNodes = mutations.some((m) => m.addedNodes.length > 0)
-    if (hasAddedNodes) {
-      // 使用 requestIdleCallback，让浏览器在空闲时执行搜索，避免阻塞 UI
-      if ('requestIdleCallback' in window) {
-        ;(window as any).requestIdleCallback(() => debouncedRestore())
-      } else {
-        debouncedRestore()
-      }
-    }
-  })
-  // 优化：针对 B 站这种巨型页面，减少 subtree 遍历深度
-  observer.observe(commentContainer, { childList: true, subtree: true })
 }
 
 // #endregion
@@ -491,8 +472,14 @@ function handleColorChange(color: string, isExisting: boolean) {
 }
 
 function handleClearPreview() {
+  if (currentMarkIdForColorChange && originalColorForChange) {
+    querySelectorAllDeep(`.webext-highlight-${currentMarkIdForColorChange}`).forEach((el) => {
+      if (el instanceof HTMLElement) el.style.boxShadow = `inset 0 -5px 0 0 ${originalColorForChange}`
+    })
+  }
   clearPreviewHighlight()
   rangy.getSelection().removeAllRanges()
+  originalColorForChange = null
 }
 
 // #endregion
@@ -591,9 +578,13 @@ function processSelection(event: {
       try {
         const root = range.commonAncestorContainer.getRootNode()
         const capturedRoot = root instanceof ShadowRoot ? root : undefined
+
+        // --- 核心修复: 先序列化，再应用预览 ---
+        // 这样序列化的是干净的 DOM 结构，而在 handleSaveAction 中反序列化之前也会先 clearPreviewHighlight
         serializedSelection = rangy.serializeRange(range, true, capturedRoot)
         currentSerializationRoot = capturedRoot
         currentMarkIdForColorChange = null
+
         previewApplier?.applyToRange(range)
         showTooltipForSelection(event.clientX, event.clientY, capturedText)
       } catch (e) {
@@ -641,6 +632,7 @@ async function showTooltipForExistingMark(markId: string, x: number, y: number) 
   const mark = await sendMessage('get-mark-by-id', { id: markId, url: getCanonicalUrlForMark() }, 'background')
   const note = mark ? mark.note : ''
   const color = mark ? mark.color : settings.value.defaultHighlightColor
+  originalColorForChange = color
   tooltipApp?.show(x, y, true, note, color, mark?.text ?? '')
 }
 
@@ -706,6 +698,7 @@ async function handleSaveAction(note: string, color: string) {
   currentSerializationRoot = undefined
   serializedSelection = null
   currentMarkIdForColorChange = null
+  originalColorForChange = null
   rangy.getSelection().removeAllRanges()
 }
 
@@ -719,6 +712,7 @@ async function handleDeleteAction() {
     currentSerializationRoot = undefined
     serializedSelection = null
     currentMarkIdForColorChange = null
+    originalColorForChange = null
     rangy.getSelection().removeAllRanges()
   }
 }
@@ -768,7 +762,7 @@ async function createHighlight(
   stripHighlights(content)
   const tempDiv = document.createElement('div')
   tempDiv.appendChild(content)
-  const selectedHtml = content.constructor === DocumentFragment ? tempDiv.innerHTML : selectedText
+  const selectedHtml = tempDiv.innerHTML
   applier.applyToRange(rangyRange)
   const markData: Mark = {
     id: uniqueId,
@@ -834,9 +828,10 @@ async function restoreHighlights() {
     return true
   })
 
-  if (marksToRestore.length > 0) applyMarks(marksToRestore)
+  if (marksToRestore.length > 0) await applyMarks(marksToRestore)
 
   if (ambiguousMarksQueue.value.length > 0) {
+    console.log(`[WebMarker] Showing modal with ${ambiguousMarksQueue.value.length} ambiguous marks`)
     disambiguationModalApp?.show(ambiguousMarksQueue.value)
   }
   const observer = new MutationObserver((mutations) => {
@@ -867,10 +862,14 @@ function debouncedRestore() {
 
     const now = Date.now()
     const marksToRestore = marks.filter((mark) => {
+      // 已恢复的跳过
       if (restoredMarkIds.has(mark.id)) {
         if (querySelectorDeep(`.webext-highlight-${mark.id}`)) return false
         restoredMarkIds.delete(mark.id)
       }
+      // 已在歧义队列中的跳过，避免重复搜索
+      if (ambiguousMarksQueue.value.some((m) => m.originalMarkId === mark.id)) return false
+
       const cooldown = failedRestoreCooldowns.get(mark.id)
       if (cooldown && now < cooldown) return false
       return true
@@ -880,6 +879,10 @@ function debouncedRestore() {
       isRestoring = true
       try {
         await applyMarks(marksToRestore)
+        // 如果产生了新的歧义标记，更新/显示弹窗
+        if (ambiguousMarksQueue.value.length > 0) {
+          disambiguationModalApp?.show(ambiguousMarksQueue.value)
+        }
       } finally {
         isRestoring = false
       }
@@ -950,8 +953,11 @@ async function applyMarks(marks: Mark[]) {
 
       if (ambiguityLevel === 'unique' && candidates.length === 1) {
         const candidate = candidates[0]
+        
+        // --- 核心改进: 使用精准 snippet 进行上下文校验 ---
+        // 之前使用 displayContext (可能是整个 Block)，容易因长度不匹配导致相似度计算过低。
         const similarity = mark.surroundingSnippet
-          ? calculateSimilarity(candidate.displayContext, mark.surroundingSnippet)
+          ? calculateSimilarity(candidate.surroundingSnippet, mark.surroundingSnippet)
           : 100
 
         if (similarity >= 75) {
@@ -987,30 +993,34 @@ async function applyMarks(marks: Mark[]) {
             tempDiv.appendChild(content)
             const actualHtml = content.constructor === DocumentFragment ? tempDiv.innerHTML : range.toString()
 
-            await sendMessage(
-              'update-mark-details',
-              {
-                id: mark.id,
-                url: mark.url,
-                text: candidate.displayTextSnippet,
-                html: actualHtml,
-                rangySerialized: newSerialized,
-                shadowHostSelector: shadowHostSelector || null,
-                contextTitle,
-                contextSelector,
-                contextLevel,
-                contextOrder,
-                surroundingSnippet
-              } as any,
-              'background'
-            )
+            // --- 策略改进: 仅在相似度极高时才更新数据库中的序列化路径 ---
+            // 避免因临时的文档漂移导致“错位”被永久记录
+            if (similarity >= 90) {
+              await sendMessage(
+                'update-mark-details',
+                {
+                  id: mark.id,
+                  url: mark.url,
+                  text: candidate.displayTextSnippet,
+                  html: actualHtml,
+                  rangySerialized: newSerialized,
+                  shadowHostSelector: shadowHostSelector || null,
+                  contextTitle,
+                  contextSelector,
+                  contextLevel,
+                  contextOrder,
+                  surroundingSnippet
+                } as any,
+                'background'
+              )
+            }
           } else {
             console.warn(`[WebMarker] applyPreciseHighlight failed for ${mark.id}, forcing modal.`)
             const otherMarksInQueue = ambiguousMarksQueue.value.filter((m) => m.originalMarkId !== mark.id)
             ambiguousMarksQueue.value = [...otherMarksInQueue, candidate]
           }
         } else {
-          console.warn(`[WebMarker] Unique candidate similarity (${similarity}%) low, forcing modal for ${mark.id}`)
+          console.warn(`[WebMarker] Unique candidate context similarity (${similarity}%) low, forcing modal for ${mark.id}`)
           const otherMarksInQueue = ambiguousMarksQueue.value.filter((m) => m.originalMarkId !== mark.id)
           ambiguousMarksQueue.value = [...otherMarksInQueue, candidate]
         }

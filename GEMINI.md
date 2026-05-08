@@ -47,16 +47,16 @@ sequenceDiagram
 
 AI 引擎在执行任务时，必须参考以下标准文档以确保工程质量。**严禁跳过规范直接编写代码。**
 
-| 领域 | 规范文档路径 | 适用阶段 |
-| :--- | :--- | :--- |
-| **代码质量** | `docs/standards/code-standards/README.md` | 执行 (Act) |
-| **测试驱动** | `docs/standards/test-driven-development.md` | 验证 (Verify) |
-| **API 设计** | `docs/standards/api-design-standards.md` | 启动 (Launch) |
-| **系统安全** | `docs/standards/security-standards.md` | 计划/执行 |
-| **日志记录** | `docs/standards/logging-standards.md` | 执行 (Act) |
-| **环境配置** | `docs/standards/environment-standards.md` | 启动/执行 |
-| **代码审查** | `docs/standards/review-standards/review/reviewer/` | 闭环 (Close) |
-| **提交描述** | `docs/standards/review-standards/review/developer/` | 闭环 (Close) |
+| 领域         | 规范文档路径                                        | 适用阶段      |
+| :----------- | :-------------------------------------------------- | :------------ |
+| **代码质量** | `docs/standards/code-standards/README.md`           | 执行 (Act)    |
+| **测试驱动** | `docs/standards/test-driven-development.md`         | 验证 (Verify) |
+| **API 设计** | `docs/standards/api-design-standards.md`            | 启动 (Launch) |
+| **系统安全** | `docs/standards/security-standards.md`              | 计划/执行     |
+| **日志记录** | `docs/standards/logging-standards.md`               | 执行 (Act)    |
+| **环境配置** | `docs/standards/environment-standards.md`           | 启动/执行     |
+| **代码审查** | `docs/standards/review-standards/review/reviewer/`  | 闭环 (Close)  |
+| **提交描述** | `docs/standards/review-standards/review/developer/` | 闭环 (Close)  |
 
 ---
 
