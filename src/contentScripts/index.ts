@@ -145,7 +145,10 @@ import '../styles'
 const state = new HighlightStateManager()
 const restorer = new HighlightRestorer(state)
 const ui = new UIManager(state)
-const monitor = new ContentChangeMonitor(() => restorer.restoreHighlights())
+const monitor = new ContentChangeMonitor(async () => {
+  if (state.modalState.visible) return
+  await restorer.restoreHighlights()
+})
 let selectionTimer: number
 // #endregion
 
