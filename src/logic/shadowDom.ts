@@ -1,4 +1,4 @@
-import { DOMSelector } from './dom'
+import { DOMSelector, querySelectorDeep } from './dom'
 
 export const SHADOW_HOST_SEPARATOR = '|>>>|'
 
@@ -56,7 +56,7 @@ export class ShadowDOMManager {
       }
     }
     else {
-      host = document.querySelector(selector)
+      host = querySelectorDeep(selector)
     }
     if (host && host.shadowRoot)
       return host.shadowRoot

@@ -1,7 +1,26 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
 import { ShadowDOMManager } from '../logic/shadowDom'
 
 describe('ShadowDOMManager', () => {
+  beforeEach(() => {
+    Object.defineProperty(window, 'matchMedia', {
+      writable: true,
+      value: vi.fn().mockImplementation(query => ({
+        matches: false,
+        media: query,
+        onchange: null,
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      })),
+    })
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
   describe('createContainer', () => {
     it('should create a container with correct id, position, and zIndex', () => {
       const container = ShadowDOMManager.createContainer('test-container', 9999)
@@ -31,6 +50,28 @@ describe('ShadowDOMManager', () => {
       const result = ShadowDOMManager.buildShadowHostSelector(innerDiv)
       expect(result).toBe('#shadow-host')
       document.body.removeChild(host)
+    })
+  })
+
+  describe('attachStylesheet', () => {
+    it('should create a link element with correct rel and href inside shadowRoot', () => {
+      const host = document.createElement('div')
+      const shadowRoot = host.attachShadow({ mode: 'open' })
+      ShadowDOMManager.attachStylesheet(shadowRoot, 'https://example.com/styles.css')
+      const linkEl = shadowRoot.querySelector('link')
+      expect(linkEl).not.toBeNull()
+      expect(linkEl!.getAttribute('rel')).toBe('stylesheet')
+      expect(linkEl!.getAttribute('href')).toBe('https://example.com/styles.css')
+    })
+  })
+
+  describe('createDarkModeClass', () => {
+    it('should create a div inside the shadowRoot', () => {
+      const host = document.createElement('div')
+      const shadowRoot = host.attachShadow({ mode: 'open' })
+      ShadowDOMManager.createDarkModeClass(shadowRoot)
+      const div = shadowRoot.querySelector('div')
+      expect(div).not.toBeNull()
     })
   })
 
