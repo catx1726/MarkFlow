@@ -79,7 +79,7 @@
  * │    └─────────────────────────────────────────────────────┘    │
  * │  }                                                             │
  * │                                                                │
- * └────────────────────────────────────────────────────────────────┘
+ * │ └─────────────────────────────────────────────────────────────┘
  * ```
  *
  * ## Shadow DOM 双层策略
@@ -94,7 +94,7 @@
  *
  * ### 2. 扩展自身 Shadow DOM（UI 隔离）
  * 扩展的 UI（Tooltip、歧义弹窗）运行在**独立的 Shadow DOM** 中，避免与页面 CSS 冲突。
- * 实现：`setupShadowDOMAndUI()` 创建 `#vitesse-webext` 容器并 attachShadow。
+ * 实现：`UIManager.ensureMounted()` 创建 `#vitesse-webext` 容器并 attachShadow。
  *
  * ## 标记生命周期
  *
@@ -124,73 +124,33 @@ window.addEventListener('unhandledrejection', (event) => collectError(event.reas
 /* eslint-disable no-console */
 console.log('[WebMarker] CONTENT SCRIPT LOADED AT TOP LEVEL')
 import { onMessage, sendMessage } from 'webext-bridge/content-script'
-import { createApp, h, reactive, ref } from 'vue'
 import rangy from 'rangy/lib/rangy-core'
 import 'rangy/lib/rangy-classapplier'
 import 'rangy/lib/rangy-serializer'
-import Tooltip from './views/Tooltip.vue'
-import DisambiguationModal from './views/DisambiguationModal.vue'
 import type { Mark } from '~/logic/storage'
 import { highlightDefaultStyle, shortcuts } from '~/logic/config'
 import { isPageBlacklisted, settings, settingsReady } from '~/logic/settings'
 import {
   applyPreciseHighlight,
   calculateSimilarity,
-  getAllTextNodes,
   getCanonicalUrlForMark,
   getHighlightContext,
   getMarkIdFromElement,
-  getMaxZIndex,
   querySelectorAllDeep,
   querySelectorDeep,
   getElementSelector,
   stripHighlights
 } from '~/logic/dom'
-import { type Candidate, findCandidateElements } from '~/logic/search'
+import { findCandidateElements } from '~/logic/search'
+import { HighlightStateManager } from './state'
+import { UIManager } from './ui'
 import '../styles'
 
-// #region --- Type Definitions ---
-
-interface TooltipInstance {
-  show: (
-    x: number,
-    y: number,
-    isHighlighted: boolean,
-    note: string,
-    color: string | undefined,
-    textToCopy: string
-  ) => void
-  hide: () => void
-}
-
-interface DisambiguationModalInstance {
-  show: (marks: Candidate[]) => void
-  hide: () => void
-}
-
-// #endregion
-
 // #region --- State Management ---
-const restoredMarkIds = new Set<string>()
-const failedRestoreCooldowns = new Map<string, number>() // markId -> nextAllowedRetryTimestamp
-const ambiguousMarksQueue = ref<Candidate[]>([])
-
-const modalState = reactive({
-  marks: [] as Candidate[],
-  visible: false
-})
-
-let tooltipDebounceTimer: number
+const state = new HighlightStateManager()
+const ui = new UIManager(state, restoreHighlights, scrollToMark)
 let restoreDebounceTimer: number
 let selectionTimer: number
-let tooltipApp: TooltipInstance | null
-let disambiguationModalApp: DisambiguationModalInstance | null = null
-let currentSerializationRoot: Node | undefined
-let serializedSelection: string | null = null
-let currentMarkIdForColorChange: string | null = null
-let originalColorForChange: string | null = null
-let previewApplier: rangy.RangyClassApplier | null = null
-let isRestoring = false
 // #endregion
 
 /**
@@ -222,15 +182,15 @@ async function initialize() {
       return
     }
     rangy.init()
-    previewApplier = rangy.createClassApplier('webext-highlight-preview', {
+    state.previewApplier = rangy.createClassApplier('webext-highlight-preview', {
       elementTagName: 'span',
       elementAttributes: { style: `${highlightDefaultStyle(settings.value.defaultHighlightColor)} ` },
       normalize: false
     })
-    ensureUIMounted()
+    ui.ensureMounted()
     window.addEventListener('keydown', handleKeyDown)
     attachListenersToShadowRoots(document)
-    handleInitialLoadActions()
+    await ui.handleInitialLoadActions()
     console.log('[ContentScript] Initialization complete.')
   } catch (e) {
     console.error('[ContentScript] Initialization failed:', e)
@@ -248,246 +208,10 @@ function handleKeyDown(event: KeyboardEvent) {
 
 // #endregion
 
-// #region --- DOM & UI Setup ---
-
-function setupShadowDOMAndUI(): { tooltip: TooltipInstance; modal: DisambiguationModalInstance } {
-  const container = document.createElement('div')
-  container.id = __NAME__
-  container.style.position = 'fixed'
-  container.style.zIndex = `${getMaxZIndex() + 1}`
-  container.style.fontSize = '16px'
-
-  const shadowDOM = container.attachShadow?.({ mode: 'open' }) || container
-  const styleEl = document.createElement('link')
-  styleEl.setAttribute('rel', 'stylesheet')
-  styleEl.setAttribute('href', browser.runtime.getURL('dist/contentScripts/style.css'))
-  shadowDOM.appendChild(styleEl)
-
-  const uiRoot = document.createElement('div')
-  const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches
-  if (isDark) uiRoot.classList.add('dark')
-  shadowDOM.appendChild(uiRoot)
-
-  // 1. 挂载 Tooltip
-  const tooltipRoot = document.createElement('div')
-  uiRoot.appendChild(tooltipRoot)
-  const tooltipAppInstance = createApp(Tooltip, {
-    onSave: handleSaveAction,
-    onDelete: handleDeleteAction,
-    onColorChange: handleColorChange,
-    onClearPreview: handleClearPreview
-  }).mount(tooltipRoot) as unknown as TooltipInstance
-
-  // 2. 挂载 DisambiguationModal (使用 render 函数绑定状态和删除事件)
-  const modalRoot = document.createElement('div')
-  uiRoot.appendChild(modalRoot)
-  const modalApp = createApp({
-    render: () =>
-      h(DisambiguationModal, {
-        ambiguousMarksData: modalState.marks,
-        modelValue: modalState.visible,
-        'onUpdate:modelValue': (val: boolean) => {
-          modalState.visible = val
-        },
-        onConfirmResolution: handleConfirmResolution,
-        onDiscardMark: handleDiscardMark, // 物理删除
-        onCancel: () => {
-          modalState.visible = false
-        },
-        'onHover-list-item': handleCandidateHover,
-        'onLeave-list-item': handleCandidateLeave
-      })
-  })
-  modalApp.mount(modalRoot)
-
-  document.body.appendChild(container)
-
-  return {
-    tooltip: tooltipAppInstance,
-    modal: {
-      show: (marks: Candidate[]) => {
-        modalState.marks = marks
-        modalState.visible = true
-      },
-      hide: () => {
-        modalState.visible = false
-      }
-    }
-  }
-}
-
-async function handleCandidateHover(item: Candidate) {
-  const applier = rangy.createClassApplier('webext-highlight-preview-ambiguous', {
-    elementTagName: 'span',
-    elementAttributes: { style: 'background-color: rgba(255, 165, 0, 0.4); border-bottom: 2px solid orange;' }
-  })
-
-  const rangeResult = applyPreciseHighlight(item.candidateElement, item.displayTextSnippet, applier, item.matchIndex)
-  if (rangeResult) {
-    rangeResult.range.commonAncestorContainer.parentElement?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-  }
-}
-
-function handleCandidateLeave() {
-  const previewElements = querySelectorAllDeep('.webext-highlight-preview-ambiguous')
-  const parentsToNormalize = new Set<Node>()
-  previewElements.forEach((el) => {
-    if (!(el instanceof HTMLElement)) return
-    const parent = el.parentNode
-    if (parent) {
-      parentsToNormalize.add(parent)
-      while (el.firstChild) parent.insertBefore(el.firstChild, el)
-      parent.removeChild(el)
-    }
-  })
-  parentsToNormalize.forEach((parent) => parent.normalize())
-}
-
-async function handleDiscardMark(markId: string) {
-  if (confirm('确定要彻底丢弃此标记吗？')) {
-    await removeMarkById(markId)
-    modalState.marks = modalState.marks.filter((m) => m.originalMarkId !== markId)
-    if (modalState.marks.length === 0) modalState.visible = false
-  }
-}
-
-function ensureUIMounted() {
-  const container = document.getElementById(__NAME__)
-  if (!container) {
-    const { tooltip, modal } = setupShadowDOMAndUI()
-    tooltipApp = tooltip
-    disambiguationModalApp = modal
-  } else {
-    container.style.zIndex = `${getMaxZIndex() + 1}`
-  }
-}
-
-async function handleConfirmResolution(
-  selections: { originalMarkId: string; candidateElement: HTMLElement; actualText: string; matchIndex: number }[]
-) {
-  for (const { originalMarkId, candidateElement, actualText, matchIndex } of selections) {
-    const mark = await sendMessage(
-      'get-mark-by-id',
-      { id: originalMarkId, url: getCanonicalUrlForMark() },
-      'background'
-    )
-    if (mark) {
-      const applier = rangy.createClassApplier(`webext-highlight-${mark.id}`, {
-        elementTagName: 'span',
-        elementAttributes: { style: highlightDefaultStyle(mark.color) }
-      })
-
-      const rangeResult = applyPreciseHighlight(candidateElement, actualText, applier, matchIndex)
-      if (rangeResult) {
-        const { range } = rangeResult
-        restoredMarkIds.add(mark.id)
-
-        const root = candidateElement.getRootNode()
-        const newSerialized = rangy.serializeRange(range, true, root instanceof ShadowRoot ? root : undefined)
-        const { contextTitle, contextSelector, contextLevel, contextOrder, surroundingSnippet } =
-          getHighlightContext(range)
-
-        let shadowHostSelector: string | undefined
-        if (root instanceof ShadowRoot) {
-          const chain: string[] = []
-          let currRoot: Node = root
-          while (currRoot instanceof ShadowRoot) {
-            chain.unshift(getElementSelector(currRoot.host))
-            currRoot = currRoot.host.getRootNode()
-          }
-          shadowHostSelector = chain.join('|>>>|')
-        }
-
-        const content = range.cloneContents()
-        stripHighlights(content)
-        const tempDiv = document.createElement('div')
-        tempDiv.appendChild(content)
-        const actualHtml = content.constructor === DocumentFragment ? tempDiv.innerHTML : range.toString()
-
-        await sendMessage(
-          'update-mark-details',
-          {
-            id: mark.id,
-            url: mark.url,
-            text: actualText,
-            html: actualHtml,
-            rangySerialized: newSerialized,
-            shadowHostSelector: shadowHostSelector || null,
-            contextTitle,
-            contextSelector,
-            contextLevel,
-            contextOrder,
-            surroundingSnippet
-          } as any,
-          'background'
-        )
-      }
-    }
-  }
-  ambiguousMarksQueue.value = ambiguousMarksQueue.value.filter((m) => !restoredMarkIds.has(m.originalMarkId))
-}
-
-async function handleInitialLoadActions() {
-  try {
-    await restoreHighlights()
-    const hash = window.location.hash
-    if (!hash.startsWith('#__highlight-mark__')) return
-    const markId = hash.substring('#__highlight-mark__'.length)
-    if (!markId) return
-    setTimeout(() => {
-      scrollToMark(markId)
-      history.replaceState(null, '', window.location.pathname + window.location.search)
-    }, 100)
-  } catch (error) {
-    console.error('Error during initial load actions:', error)
-  }
-}
-
-function handleColorChange(color: string, isExisting: boolean) {
-  if (isExisting) {
-    if (currentMarkIdForColorChange) {
-      querySelectorAllDeep(`.webext-highlight-${currentMarkIdForColorChange}`).forEach((el) => {
-        if (el instanceof HTMLElement) el.style.boxShadow = `inset 0 -5px 0 0 ${color}`
-      })
-    }
-  } else {
-    if (serializedSelection) {
-      clearPreviewHighlight()
-      previewApplier = rangy.createClassApplier('webext-highlight-preview', {
-        elementTagName: 'span',
-        elementAttributes: { style: `${highlightDefaultStyle(color)}` }
-      })
-      try {
-        const root = currentSerializationRoot || document.documentElement
-        const win = root instanceof ShadowRoot ? root.ownerDocument.defaultView : window
-        rangy.deserializeSelection(serializedSelection, root, win || window)
-        previewApplier.applyToSelection()
-      } catch (_e) {
-        console.error('应用预览高亮失败:', _e)
-      } finally {
-        rangy.getSelection().removeAllRanges()
-      }
-    }
-  }
-}
-
-function handleClearPreview() {
-  if (currentMarkIdForColorChange && originalColorForChange) {
-    querySelectorAllDeep(`.webext-highlight-${currentMarkIdForColorChange}`).forEach((el) => {
-      if (el instanceof HTMLElement) el.style.boxShadow = `inset 0 -5px 0 0 ${originalColorForChange}`
-    })
-  }
-  clearPreviewHighlight()
-  rangy.getSelection().removeAllRanges()
-  originalColorForChange = null
-}
-
-// #endregion
-
 // #region --- Event Listeners & Handlers ---
 
 function handleMouseDown(event: MouseEvent) {
-  clearTimeout(tooltipDebounceTimer)
+  ui.cancelTooltipDebounce()
   const target = event.target as HTMLElement
   if (target instanceof Element && target.shadowRoot) return
   if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return
@@ -495,8 +219,8 @@ function handleMouseDown(event: MouseEvent) {
   if (path.some((el) => el instanceof HTMLElement && el.classList.contains('tooltip-card'))) return
 
   if (!target.closest('span[class*="webext-highlight-"]')) {
-    tooltipApp?.hide()
-    handleClearPreview()
+    state.tooltipApp?.hide()
+    ui.clearPreviewWithColorRestore()
   }
 }
 
@@ -552,7 +276,7 @@ function processSelection(event: {
   const isNewSelectionAction = event.altKey && !initialSelection.isCollapsed
 
   if (isNewSelectionAction) {
-    clearPreviewHighlight()
+    ui.clearPreviewHighlight()
     let range: rangy.RangyRange | null = null
     if (event.detail >= 3) {
       const shadowRoot = event.path.find((node) => node instanceof ShadowRoot) as ShadowRoot | undefined
@@ -580,20 +304,20 @@ function processSelection(event: {
         const capturedRoot = root instanceof ShadowRoot ? root : undefined
 
         // --- 核心修复: 先序列化，再应用预览 ---
-        // 这样序列化的是干净的 DOM 结构，而在 handleSaveAction 中反序列化之前也会先 clearPreviewHighlight
-        serializedSelection = rangy.serializeRange(range, true, capturedRoot)
-        currentSerializationRoot = capturedRoot
-        currentMarkIdForColorChange = null
+        // 这样序列化的是干净的 DOM 结构，而在 handleSave 中反序列化之前也会先 clearPreviewHighlight
+        state.serializedSelection = rangy.serializeRange(range, true, capturedRoot)
+        state.currentSerializationRoot = capturedRoot
+        state.currentMarkIdForColorChange = null
 
-        previewApplier?.applyToRange(range)
-        showTooltipForSelection(event.clientX, event.clientY, capturedText)
+        state.previewApplier?.applyToRange(range)
+        ui.showTooltip(event.clientX, event.clientY, false, '', settings.value.defaultHighlightColor, capturedText)
       } catch (e) {
         console.error('[WebMarker] Error during selection processing:', e)
-        tooltipApp?.hide()
+        state.tooltipApp?.hide()
       }
       return
     }
-    tooltipApp?.hide()
+    state.tooltipApp?.hide()
     return
   }
 
@@ -602,16 +326,16 @@ function processSelection(event: {
     handleExistingMarkClick(markElement, event.clientX, event.clientY)
     return
   }
-  tooltipApp?.hide()
-  currentMarkIdForColorChange = null
-  serializedSelection = null
-  currentSerializationRoot = undefined
+  state.tooltipApp?.hide()
+  state.currentMarkIdForColorChange = null
+  state.serializedSelection = null
+  state.currentSerializationRoot = undefined
 }
 
 function handleExistingMarkClick(markElement: HTMLElement, x: number, y: number) {
   const markId = getMarkIdFromElement(markElement)
   if (!markId) return
-  currentMarkIdForColorChange = markId
+  state.currentMarkIdForColorChange = markId
   const allSpans = querySelectorAllDeep(`.webext-highlight-${markId}`)
   if (allSpans.length === 0) return
   const range = rangy.createRange()
@@ -620,168 +344,20 @@ function handleExistingMarkClick(markElement: HTMLElement, x: number, y: number)
   const tempSelection = rangy.getSelection()
   tempSelection.removeAllRanges()
   tempSelection.addRange(range)
-  currentSerializationRoot = undefined
+  state.currentSerializationRoot = undefined
   const root = range.commonAncestorContainer.getRootNode()
-  if (root instanceof ShadowRoot) currentSerializationRoot = root
-  serializedSelection = rangy.serializeSelection(tempSelection, true, currentSerializationRoot)
+  if (root instanceof ShadowRoot) state.currentSerializationRoot = root
+  state.serializedSelection = rangy.serializeSelection(tempSelection, true, state.currentSerializationRoot)
   showTooltipForExistingMark(markId, x, y)
 }
 
 async function showTooltipForExistingMark(markId: string, x: number, y: number) {
-  ensureUIMounted()
+  ui.ensureMounted()
   const mark = await sendMessage('get-mark-by-id', { id: markId, url: getCanonicalUrlForMark() }, 'background')
   const note = mark ? mark.note : ''
   const color = mark ? mark.color : settings.value.defaultHighlightColor
-  originalColorForChange = color
-  tooltipApp?.show(x, y, true, note, color, mark?.text ?? '')
-}
-
-function showTooltipForSelection(x: number, y: number, textToCopy: string) {
-  clearTimeout(tooltipDebounceTimer)
-  tooltipDebounceTimer = window.setTimeout(() => {
-    ensureUIMounted()
-    tooltipApp?.show(x, y, false, '', settings.value.defaultHighlightColor, textToCopy)
-  }, 50)
-}
-
-function clearPreviewHighlight() {
-  const previewElements = querySelectorAllDeep('.webext-highlight-preview')
-  const parentsToNormalize = new Set<Node>()
-  previewElements.forEach((el) => {
-    if (!(el instanceof HTMLElement)) return
-    if (
-      el.className.split(' ').some((cls) => cls.startsWith('webext-highlight-') && cls !== 'webext-highlight-preview')
-    ) {
-      el.classList.remove('webext-highlight-preview')
-    } else {
-      const parent = el.parentNode
-      if (parent) {
-        parentsToNormalize.add(parent)
-        while (el.firstChild) parent.insertBefore(el.firstChild, el)
-        parent.removeChild(el)
-      }
-    }
-  })
-  parentsToNormalize.forEach((parent) => parent.normalize())
-}
-
-// #endregion
-
-// #region --- Mark & Highlight CRUD ---
-
-async function handleSaveAction(note: string, color: string) {
-  if (currentMarkIdForColorChange) {
-    try {
-      await sendMessage(
-        'update-mark-details',
-        { id: currentMarkIdForColorChange, url: getCanonicalUrlForMark(), note, color },
-        'background'
-      )
-      document.querySelectorAll(`.webext-highlight-${currentMarkIdForColorChange}`).forEach((el) => {
-        if (el instanceof HTMLElement) el.style.boxShadow = `inset 0 -5px 0 0 ${color}`
-      })
-    } catch (e) {
-      console.error('Error during mark update:', e)
-    }
-  } else {
-    clearPreviewHighlight()
-    if (!serializedSelection) return
-    try {
-      const root = currentSerializationRoot || document.documentElement
-      const doc = root instanceof ShadowRoot ? root.ownerDocument : document
-      const range = rangy.deserializeRange(serializedSelection, root, doc)
-      if (range && !range.collapsed) await createHighlight(range, note, color)
-    } catch (e) {
-      console.error('Error during save action (create):', e)
-    }
-  }
-  currentSerializationRoot = undefined
-  serializedSelection = null
-  currentMarkIdForColorChange = null
-  originalColorForChange = null
-  rangy.getSelection().removeAllRanges()
-}
-
-async function handleDeleteAction() {
-  if (!serializedSelection) return
-  try {
-    if (currentMarkIdForColorChange) await removeMarkById(currentMarkIdForColorChange)
-  } catch (e) {
-    console.error('Error during delete action:', e)
-  } finally {
-    currentSerializationRoot = undefined
-    serializedSelection = null
-    currentMarkIdForColorChange = null
-    originalColorForChange = null
-    rangy.getSelection().removeAllRanges()
-  }
-}
-
-async function removeMarkById(markId: string) {
-  const className = `webext-highlight-${markId}`
-  const parentsToNormalize = new Set<Node>()
-  querySelectorAllDeep(`.${className}`).forEach((el) => {
-    const parent = el.parentNode
-    if (parent) {
-      parentsToNormalize.add(parent)
-      while (el.firstChild) parent.insertBefore(el.firstChild, el)
-      parent.removeChild(el)
-    }
-  })
-  parentsToNormalize.forEach((parent) => parent.normalize())
-  await sendMessage('remove-mark-by-id', { id: markId, url: getCanonicalUrlForMark() }, 'background')
-}
-
-async function createHighlight(
-  rangyRange: rangy.RangyRange,
-  note?: string,
-  color: string = settings.value.defaultHighlightColor
-) {
-  const uniqueId = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`
-  const className = `webext-highlight-${uniqueId}`
-  const applier = rangy.createClassApplier(className, {
-    elementTagName: 'span',
-    elementAttributes: { style: highlightDefaultStyle(color) }
-  })
-  const root = rangyRange.commonAncestorContainer.getRootNode()
-  let shadowHostSelector: string | undefined
-  if (root instanceof ShadowRoot) {
-    const chain: string[] = []
-    let currRoot: Node = root
-    while (currRoot instanceof ShadowRoot) {
-      chain.unshift(getElementSelector(currRoot.host))
-      currRoot = currRoot.host.getRootNode()
-    }
-    shadowHostSelector = chain.join('|>>>|')
-  }
-  const rangySerialized = rangy.serializeRange(rangyRange, true, root instanceof ShadowRoot ? root : undefined)
-  const selectedText = rangyRange.toString()
-  const { contextTitle, contextSelector, contextLevel, contextOrder, surroundingSnippet } =
-    getHighlightContext(rangyRange)
-  const content = rangyRange.cloneContents()
-  stripHighlights(content)
-  const tempDiv = document.createElement('div')
-  tempDiv.appendChild(content)
-  const selectedHtml = tempDiv.innerHTML
-  applier.applyToRange(rangyRange)
-  const markData: Mark = {
-    id: uniqueId,
-    url: getCanonicalUrlForMark(),
-    text: selectedText,
-    html: selectedHtml,
-    note: note || '',
-    color,
-    rangySerialized,
-    shadowHostSelector,
-    createdAt: Date.now(),
-    title: document.title,
-    contextTitle,
-    contextSelector,
-    contextLevel,
-    contextOrder,
-    surroundingSnippet
-  }
-  await sendMessage('add-mark', markData, 'background')
+  ui.setOriginalColorForChange(color)
+  state.tooltipApp?.show(x, y, true, note, color, mark?.text ?? '')
 }
 
 // #endregion
@@ -815,24 +391,24 @@ async function restoreHighlights() {
   const canonicalUrl = getCanonicalUrlForMark()
   const marks = await sendMessage('get-marks-for-url', { url: canonicalUrl }, 'background')
   if (!marks || marks.length === 0) return
-  ambiguousMarksQueue.value = []
+  state.ambiguousMarksQueue.value = []
 
   const now = Date.now()
   const marksToRestore = marks.filter((mark) => {
-    if (restoredMarkIds.has(mark.id)) {
+    if (state.restoredMarkIds.has(mark.id)) {
       if (querySelectorDeep(`.webext-highlight-${mark.id}`)) return false
-      restoredMarkIds.delete(mark.id)
+      state.restoredMarkIds.delete(mark.id)
     }
-    const cooldown = failedRestoreCooldowns.get(mark.id)
+    const cooldown = state.failedRestoreCooldowns.get(mark.id)
     if (cooldown && now < cooldown) return false
     return true
   })
 
   if (marksToRestore.length > 0) await applyMarks(marksToRestore)
 
-  if (ambiguousMarksQueue.value.length > 0) {
-    console.log(`[WebMarker] Showing modal with ${ambiguousMarksQueue.value.length} ambiguous marks`)
-    disambiguationModalApp?.show(ambiguousMarksQueue.value)
+  if (state.ambiguousMarksQueue.value.length > 0) {
+    console.log(`[WebMarker] Showing modal with ${state.ambiguousMarksQueue.value.length} ambiguous marks`)
+    state.disambiguationModalApp?.show(state.ambiguousMarksQueue.value)
   }
   const observer = new MutationObserver((mutations) => {
     const hasAddedNodes = mutations.some((m) => m.addedNodes.length > 0)
@@ -852,7 +428,7 @@ async function restoreHighlights() {
 }
 
 function debouncedRestore() {
-  if (isRestoring) return
+  if (state.isRestoring) return
 
   clearTimeout(restoreDebounceTimer)
   restoreDebounceTimer = window.setTimeout(async () => {
@@ -863,28 +439,28 @@ function debouncedRestore() {
     const now = Date.now()
     const marksToRestore = marks.filter((mark) => {
       // 已恢复的跳过
-      if (restoredMarkIds.has(mark.id)) {
+      if (state.restoredMarkIds.has(mark.id)) {
         if (querySelectorDeep(`.webext-highlight-${mark.id}`)) return false
-        restoredMarkIds.delete(mark.id)
+        state.restoredMarkIds.delete(mark.id)
       }
       // 已在歧义队列中的跳过，避免重复搜索
-      if (ambiguousMarksQueue.value.some((m) => m.originalMarkId === mark.id)) return false
+      if (state.ambiguousMarksQueue.value.some((m) => m.originalMarkId === mark.id)) return false
 
-      const cooldown = failedRestoreCooldowns.get(mark.id)
+      const cooldown = state.failedRestoreCooldowns.get(mark.id)
       if (cooldown && now < cooldown) return false
       return true
     })
 
     if (marksToRestore.length > 0) {
-      isRestoring = true
+      state.isRestoring = true
       try {
         await applyMarks(marksToRestore)
         // 如果产生了新的歧义标记，更新/显示弹窗
-        if (ambiguousMarksQueue.value.length > 0) {
-          disambiguationModalApp?.show(ambiguousMarksQueue.value)
+        if (state.ambiguousMarksQueue.value.length > 0) {
+          state.disambiguationModalApp?.show(state.ambiguousMarksQueue.value)
         }
       } finally {
-        isRestoring = false
+        state.isRestoring = false
       }
     }
     attachListenersToShadowRoots(document)
@@ -938,8 +514,8 @@ async function applyMarks(marks: Mark[]) {
         }
       }
       applier.applyToRange(range)
-      restoredMarkIds.add(mark.id)
-      failedRestoreCooldowns.delete(mark.id)
+      state.restoredMarkIds.add(mark.id)
+      state.failedRestoreCooldowns.delete(mark.id)
     } catch (e) {
       const root = deserializationRoot || document.documentElement
 
@@ -953,7 +529,7 @@ async function applyMarks(marks: Mark[]) {
 
       if (ambiguityLevel === 'unique' && candidates.length === 1) {
         const candidate = candidates[0]
-        
+
         // --- 核心改进: 使用精准 snippet 进行上下文校验 ---
         // 之前使用 displayContext (可能是整个 Block)，容易因长度不匹配导致相似度计算过低。
         const similarity = mark.surroundingSnippet
@@ -969,8 +545,8 @@ async function applyMarks(marks: Mark[]) {
           )
           if (rangeResult) {
             const { range } = rangeResult
-            restoredMarkIds.add(mark.id)
-            failedRestoreCooldowns.delete(mark.id)
+            state.restoredMarkIds.add(mark.id)
+            state.failedRestoreCooldowns.delete(mark.id)
             const root = candidate.candidateElement.getRootNode()
             const newSerialized = rangy.serializeRange(range, true, root instanceof ShadowRoot ? root : undefined)
             const { contextTitle, contextSelector, contextLevel, contextOrder, surroundingSnippet } =
@@ -994,7 +570,7 @@ async function applyMarks(marks: Mark[]) {
             const actualHtml = content.constructor === DocumentFragment ? tempDiv.innerHTML : range.toString()
 
             // --- 策略改进: 仅在相似度极高时才更新数据库中的序列化路径 ---
-            // 避免因临时的文档漂移导致“错位”被永久记录
+            // 避免因临时的文档漂移导致"错位"被永久记录
             if (similarity >= 90) {
               await sendMessage(
                 'update-mark-details',
@@ -1016,19 +592,19 @@ async function applyMarks(marks: Mark[]) {
             }
           } else {
             console.warn(`[WebMarker] applyPreciseHighlight failed for ${mark.id}, forcing modal.`)
-            const otherMarksInQueue = ambiguousMarksQueue.value.filter((m) => m.originalMarkId !== mark.id)
-            ambiguousMarksQueue.value = [...otherMarksInQueue, candidate]
+            const otherMarksInQueue = state.ambiguousMarksQueue.value.filter((m) => m.originalMarkId !== mark.id)
+            state.ambiguousMarksQueue.value = [...otherMarksInQueue, candidate]
           }
         } else {
           console.warn(`[WebMarker] Unique candidate context similarity (${similarity}%) low, forcing modal for ${mark.id}`)
-          const otherMarksInQueue = ambiguousMarksQueue.value.filter((m) => m.originalMarkId !== mark.id)
-          ambiguousMarksQueue.value = [...otherMarksInQueue, candidate]
+          const otherMarksInQueue = state.ambiguousMarksQueue.value.filter((m) => m.originalMarkId !== mark.id)
+          state.ambiguousMarksQueue.value = [...otherMarksInQueue, candidate]
         }
       } else if (ambiguityLevel === 'multiple') {
-        const otherMarksInQueue = ambiguousMarksQueue.value.filter((m) => m.originalMarkId !== mark.id)
-        ambiguousMarksQueue.value = [...otherMarksInQueue, ...candidates]
+        const otherMarksInQueue = state.ambiguousMarksQueue.value.filter((m) => m.originalMarkId !== mark.id)
+        state.ambiguousMarksQueue.value = [...otherMarksInQueue, ...candidates]
       } else {
-        failedRestoreCooldowns.set(mark.id, Date.now() + 3000)
+        state.failedRestoreCooldowns.set(mark.id, Date.now() + 3000)
       }
     }
   }
@@ -1047,7 +623,7 @@ async function refreshHighlights() {
     }
   })
   parentsToNormalize.forEach((parent) => parent.normalize())
-  restoredMarkIds.clear()
+  state.restoredMarkIds.clear()
   await restoreHighlights()
 }
 
@@ -1065,7 +641,7 @@ onMessage('goto-mark', ({ data }) => {
 })
 onMessage('remove-mark', async ({ data: markToRemove }) => {
   if (!markToRemove || !markToRemove.id) return
-  await removeMarkById(markToRemove.id)
+  await ui.removeMarkById(markToRemove.id)
 })
 onMessage('goto-chapter', ({ data }) => {
   const element = querySelectorDeep(data.selector)

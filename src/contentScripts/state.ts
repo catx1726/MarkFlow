@@ -25,6 +25,7 @@ export class HighlightStateManager {
   serializedSelection: string | null = null
   currentMarkIdForColorChange: string | null = null
   originalColorForChange: string | null = null
+  previewApplier: any = null
 
   isRestored(id: string): boolean {
     return this.restoredMarkIds.has(id)
@@ -82,5 +83,6 @@ export class HighlightStateManager {
     this.serializedSelection = null
     this.currentMarkIdForColorChange = null
     this.originalColorForChange = null
+    this.previewApplier = null
   }
 }
