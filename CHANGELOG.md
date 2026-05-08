@@ -1,5 +1,9 @@
 # Unreleased
 
+### [2026-05-08] [REFACTOR] Content Script 架构重构：类封装与职责分离 (Issue #26) (#30)
+[REFACTOR] Content Script 架构重构：类封装与职责分离 (Issue #26)
+
+
 ### [2026-04-21] Refactor content script into modular architecture (#25)
 Refactor content script into modular architecture
 
