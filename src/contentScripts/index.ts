@@ -193,8 +193,12 @@ async function initialize() {
         const markId = hash.substring('#__highlight-mark__'.length)
         if (markId) {
           setTimeout(() => {
-            restorer.scrollToMark(markId)
-            history.replaceState(null, '', window.location.pathname + window.location.search)
+            try {
+              restorer.scrollToMark(markId)
+              history.replaceState(null, '', window.location.pathname + window.location.search)
+            } catch (error) {
+              console.error('Error during scroll to mark:', error)
+            }
           }, 100)
         }
       }
