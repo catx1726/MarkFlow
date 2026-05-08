@@ -1,7 +1,7 @@
 # Design Spec: Content Script 架构重构 — 类封装与职责分离
 
-- **Date**: 2026-04-28
-- **Status**: Draft
+- **Date**: 2026-05-08 (Revised)
+- **Status**: Approved
 - **Related Issue**: #26
 - **Topic**: 将 `src/contentScripts/index.ts` 从过程式代码重构为类架构，与 `src/logic/dom.ts` 和 `src/logic/search.ts` 的设计标准对齐
 
@@ -143,6 +143,15 @@ export class HighlightRestorer {
 | 75 | `L3_SIMILARITY_THRESHOLD` | 75 |
 | 50 | `TOOLTIP_DEBOUNCE` | 50ms |
 | 300 | `RESTORE_DEBOUNCE` | 300ms |
+
+## 5.1 执行约束：逐行对比提取
+
+本次重构采用 **Zero Behavioral Change (ZBC)** 策略：
+
+1. **禁止使用 Plan 模板代码**：Plan 仅描述「从哪行移到哪」，不提供新文件的具体代码
+2. **以 `git show main:src/contentScripts/index.ts` 为唯一真实来源**：提取时逐行对比，确保新文件代码与原始行为一致
+3. **提取后立即对比**：用 `git diff` 确认 `index.ts` 删除了正确的内容，新文件包含了正确的内容
+4. **常量下沉原则**：仅在首次使用时将魔法数字提取为命名常量，不预定义未使用的常量
 
 ## 6. 设计原则
 
