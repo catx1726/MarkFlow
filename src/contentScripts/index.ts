@@ -144,8 +144,8 @@ import '../styles'
 // #region --- State Management ---
 const state = new HighlightStateManager()
 const restorer = new HighlightRestorer(state)
-const ui = new UIManager(state, () => restorer.restoreHighlights(), (id) => restorer.scrollToMark(id))
-const monitor = new ContentChangeMonitor(state, () => restorer.restoreHighlights())
+const ui = new UIManager(state)
+const monitor = new ContentChangeMonitor(() => restorer.restoreHighlights())
 let selectionTimer: number
 // #endregion
 
@@ -186,7 +186,19 @@ async function initialize() {
     ui.ensureMounted()
     window.addEventListener('keydown', handleKeyDown)
     attachListenersToShadowRoots(document)
-    await ui.handleInitialLoadActions()
+    await restorer.restoreHighlights()
+    {
+      const hash = window.location.hash
+      if (hash.startsWith('#__highlight-mark__')) {
+        const markId = hash.substring('#__highlight-mark__'.length)
+        if (markId) {
+          setTimeout(() => {
+            restorer.scrollToMark(markId)
+            history.replaceState(null, '', window.location.pathname + window.location.search)
+          }, 100)
+        }
+      }
+    }
     monitor.setupGlobalObserver()
     monitor.setupBodyObserver()
     monitor.setupSPAListener()

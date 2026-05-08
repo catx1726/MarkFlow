@@ -15,52 +15,24 @@ import {
 } from '~/logic/dom'
 import { findCandidateElements } from '~/logic/search'
 import type { HighlightStateManager } from './state'
-import type { UIManager } from './ui'
 
 const L1_SIMILARITY_THRESHOLD = 95
 const CONTEXT_SIMILARITY_THRESHOLD = 80
 const L3_SIMILARITY_THRESHOLD = 75
 
 export class HighlightRestorer {
-  private restoreDebounceTimer: number = 0
-
   constructor(
     private state: HighlightStateManager,
-    _ui?: UIManager,
   ) {}
 
   async restoreHighlights() {
-    const canonicalUrl = getCanonicalUrlForMark()
-    const marks = await sendMessage('get-marks-for-url', { url: canonicalUrl }, 'background')
-    if (!marks || marks.length === 0) return
-    this.state.ambiguousMarksQueue.value = []
-
-    const now = Date.now()
-    const marksToRestore = marks.filter((mark) => {
-      if (this.state.restoredMarkIds.has(mark.id)) {
-        if (querySelectorDeep(`.webext-highlight-${mark.id}`)) return false
-        this.state.restoredMarkIds.delete(mark.id)
-      }
-      const cooldown = this.state.failedRestoreCooldowns.get(mark.id)
-      if (cooldown && now < cooldown) return false
-      return true
-    })
-
-    if (marksToRestore.length > 0) await this.applyMarks(marksToRestore)
-
-    if (this.state.ambiguousMarksQueue.value.length > 0) {
-      console.log(`[WebMarker] Showing modal with ${this.state.ambiguousMarksQueue.value.length} ambiguous marks`)
-      this.state.disambiguationModalApp?.show(this.state.ambiguousMarksQueue.value)
-    }
-  }
-
-  debouncedRestore() {
     if (this.state.isRestoring) return
-    clearTimeout(this.restoreDebounceTimer)
-    this.restoreDebounceTimer = window.setTimeout(async () => {
+    this.state.isRestoring = true
+    try {
       const canonicalUrl = getCanonicalUrlForMark()
       const marks = await sendMessage('get-marks-for-url', { url: canonicalUrl }, 'background')
-      if (!marks) return
+      if (!marks || marks.length === 0) return
+      this.state.ambiguousMarksQueue.value = []
 
       const now = Date.now()
       const marksToRestore = marks.filter((mark) => {
@@ -68,24 +40,20 @@ export class HighlightRestorer {
           if (querySelectorDeep(`.webext-highlight-${mark.id}`)) return false
           this.state.restoredMarkIds.delete(mark.id)
         }
-        if (this.state.ambiguousMarksQueue.value.some((m) => m.originalMarkId === mark.id)) return false
         const cooldown = this.state.failedRestoreCooldowns.get(mark.id)
         if (cooldown && now < cooldown) return false
         return true
       })
 
-      if (marksToRestore.length > 0) {
-        this.state.isRestoring = true
-        try {
-          await this.applyMarks(marksToRestore)
-          if (this.state.ambiguousMarksQueue.value.length > 0) {
-            this.state.disambiguationModalApp?.show(this.state.ambiguousMarksQueue.value)
-          }
-        } finally {
-          this.state.isRestoring = false
-        }
+      if (marksToRestore.length > 0) await this.applyMarks(marksToRestore)
+
+      if (this.state.ambiguousMarksQueue.value.length > 0) {
+        console.log(`[WebMarker] Showing modal with ${this.state.ambiguousMarksQueue.value.length} ambiguous marks`)
+        this.state.disambiguationModalApp?.show(this.state.ambiguousMarksQueue.value)
       }
-    }, 300) as unknown as number
+    } finally {
+      this.state.isRestoring = false
+    }
   }
 
   async applyMarks(marks: Mark[]) {
@@ -245,7 +213,6 @@ export class HighlightRestorer {
   }
 
   async scrollToMark(markId: string) {
-    clearTimeout(this.restoreDebounceTimer)
     const className = `webext-highlight-${markId}`
     const element = querySelectorDeep(`.${className}`)
     if (element) {

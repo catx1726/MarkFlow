@@ -26,8 +26,6 @@ export class UIManager {
 
   constructor(
     private state: HighlightStateManager,
-    private _restoreHighlights?: () => Promise<void>,
-    private _scrollToMark?: (markId: string) => Promise<void>,
   ) {}
 
   ensureMounted(): void {
@@ -183,22 +181,6 @@ export class UIManager {
     this.state.ambiguousMarksQueue.value = this.state.ambiguousMarksQueue.value.filter(
       (m) => !this.state.restoredMarkIds.has(m.originalMarkId),
     )
-  }
-
-  async handleInitialLoadActions(): Promise<void> {
-    try {
-      await this._restoreHighlights?.()
-      const hash = window.location.hash
-      if (!hash.startsWith('#__highlight-mark__')) return
-      const markId = hash.substring('#__highlight-mark__'.length)
-      if (!markId) return
-      setTimeout(() => {
-        this._scrollToMark?.(markId)
-        history.replaceState(null, '', window.location.pathname + window.location.search)
-      }, 100)
-    } catch (error) {
-      console.error('Error during initial load actions:', error)
-    }
   }
 
   private handleColorChange(color: string, isExisting: boolean) {

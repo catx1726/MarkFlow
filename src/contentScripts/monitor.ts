@@ -1,5 +1,3 @@
-import type { HighlightStateManager } from './state'
-
 export class ContentChangeMonitor {
   private debounceTimer: number = 0
   private observer: MutationObserver | null = null
@@ -7,7 +5,6 @@ export class ContentChangeMonitor {
   private boundSPAChange: () => void
 
   constructor(
-    private state: HighlightStateManager,
     private restoreCallback: () => Promise<void>,
   ) {
     this.boundSPAChange = () => this.debouncedRestore()
@@ -36,15 +33,9 @@ export class ContentChangeMonitor {
   }
 
   private debouncedRestore() {
-    if (this.state.isRestoring) return
     clearTimeout(this.debounceTimer)
     this.debounceTimer = window.setTimeout(async () => {
-      this.state.isRestoring = true
-      try {
-        await this.restoreCallback()
-      } finally {
-        this.state.isRestoring = false
-      }
+      await this.restoreCallback()
     }, 300) as unknown as number
   }
 

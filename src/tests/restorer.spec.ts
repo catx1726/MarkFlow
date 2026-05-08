@@ -1,8 +1,7 @@
-import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
+import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { ref } from 'vue'
 import { HighlightRestorer } from '../contentScripts/restorer'
 import { HighlightStateManager } from '../contentScripts/state'
-import { UIManager } from '../contentScripts/ui'
 
 vi.mock('webextension-polyfill', () => ({
   default: {
@@ -29,20 +28,11 @@ vi.mock('~/logic/settings', () => ({
 
 describe('HighlightRestorer', () => {
   let state: HighlightStateManager
-  let ui: UIManager
   let restorer: HighlightRestorer
 
   beforeEach(() => {
-    vi.stubGlobal('__NAME__', 'test-extension')
-    vi.useFakeTimers()
     state = new HighlightStateManager()
-    ui = new UIManager(state)
-    restorer = new HighlightRestorer(state, ui)
-  })
-
-  afterEach(() => {
-    vi.unstubAllGlobals()
-    vi.useRealTimers()
+    restorer = new HighlightRestorer(state)
   })
 
   it('should initialize with default values', () => {
@@ -63,21 +53,5 @@ describe('HighlightRestorer', () => {
     const { sendMessage } = await import('webext-bridge/content-script')
     vi.mocked(sendMessage).mockResolvedValue(null)
     await expect(restorer.scrollToMark('nonexistent')).resolves.toBeUndefined()
-  })
-
-  it('debouncedRestore should not call restore when already restoring', () => {
-    state.isRestoring = true
-    restorer.debouncedRestore()
-    vi.advanceTimersByTime(500)
-    expect(state.isRestoring).toBe(true)
-  })
-
-  it('debouncedRestore should debounce calls', () => {
-    state.isRestoring = false
-    restorer.debouncedRestore()
-    vi.advanceTimersByTime(100)
-    restorer.debouncedRestore()
-    vi.advanceTimersByTime(300)
-    expect(restorer).toBeDefined()
   })
 })
