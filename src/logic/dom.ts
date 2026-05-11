@@ -57,13 +57,23 @@ export class DOMScanner {
       if (node.nodeType === Node.TEXT_NODE) {
         nodes.push(node as Text)
       }
-      else {
-        if (node.nodeType === Node.ELEMENT_NODE && (node as HTMLElement).shadowRoot) {
+      else if (node.nodeType === Node.ELEMENT_NODE) {
+        const tagName = (node as Element).tagName
+        if (['SCRIPT', 'STYLE', 'NOSCRIPT', 'TEMPLATE'].includes(tagName))
+          continue
+
+        if ((node as HTMLElement).shadowRoot) {
           const shadowNodes = (node as HTMLElement).shadowRoot!.childNodes
           for (let i = shadowNodes.length - 1; i >= 0; i--) {
             stack.push(shadowNodes[i])
           }
         }
+        const childNodes = node.childNodes
+        for (let i = childNodes.length - 1; i >= 0; i--) {
+          stack.push(childNodes[i])
+        }
+      }
+      else {
         const childNodes = node.childNodes
         for (let i = childNodes.length - 1; i >= 0; i--) {
           stack.push(childNodes[i])
@@ -351,11 +361,23 @@ export class URLNormalizer {
  */
 export class TextAnalyzer {
   /**
+   * 极度清洗文本，移除所有不可见字符、控制字符及零宽字符
+   */
+  static cleanText(str: string): string {
+    return str
+      .replace(/[\u200B-\u200D\uFEFF]/g, '') // 移除零宽字符
+      .replace(/[\x00-\x1F\x7F-\x9F]/g, '')  // 移除控制字符
+      .replace(/\s+/g, '')                   // 移除所有空白
+      .toLowerCase()
+  }
+
+  /**
    * 计算两个字符串的相似度 (0-100)
    */
   static calculateSimilarity(str1: string, str2: string): number {
-    const s1 = str1.replace(/\s+/g, '').toLowerCase()
-    const s2 = str2.replace(/\s+/g, '').toLowerCase()
+    const s1 = TextAnalyzer.cleanText(str1)
+    const s2 = TextAnalyzer.cleanText(str2)
+    
     if (s1 === s2)
       return 100
     if (!s1 || !s2)

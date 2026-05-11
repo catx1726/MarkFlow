@@ -91,6 +91,7 @@ export class HighlightRestorer {
         else return
       }
       try {
+        console.log(`[HighlightRestorer] Restoring mark ${mark.id} (domIndex: ${mark.domIndex})`)
         const range = rangy.deserializeRange(mark.rangySerialized, deserializationRoot, document)
         if (!range) throw new Error('Failed to deserialize range')
 
@@ -99,6 +100,7 @@ export class HighlightRestorer {
         const contentSim = calculateSimilarity(rangeText, markText)
 
         if (contentSim < L1_SIMILARITY_THRESHOLD) {
+          console.warn(`[HighlightRestorer] L1 Content Mismatch for ${mark.id}: Expected "${markText.substring(0, 20)}", got "${rangeText.substring(0, 20)}" (Sim: ${contentSim}%)`)
           throw new Error('Content mismatch at path')
         }
 
@@ -107,13 +109,16 @@ export class HighlightRestorer {
           const contextSim = calculateSimilarity(currentContext.surroundingSnippet, mark.surroundingSnippet)
 
           if (contextSim < CONTEXT_SIMILARITY_THRESHOLD) {
+            console.warn(`[HighlightRestorer] Context Mismatch for ${mark.id}: Sim ${contextSim}% < ${CONTEXT_SIMILARITY_THRESHOLD}%`)
             throw new Error('Context integrity mismatch')
           }
         }
         applier.applyToRange(range)
+        console.log(`[HighlightRestorer] Successfully restored ${mark.id} via Rangy path`)
         this.state.restoredMarkIds.add(mark.id)
         this.state.failedRestoreCooldowns.delete(mark.id)
       } catch (e) {
+        console.warn(`[HighlightRestorer] Path restoration failed for ${mark.id}, falling back to search. Reason: ${e instanceof Error ? e.message : 'Unknown'}`)
         const root = deserializationRoot || document.documentElement
 
         let { ambiguityLevel, candidates } = findCandidateElements(mark, root, 10)
@@ -194,6 +199,7 @@ export class HighlightRestorer {
             this.state.ambiguousMarksQueue.value = [...otherMarksInQueue, candidate]
           }
         } else if (ambiguityLevel === 'multiple') {
+          // 优化：避免重复添加同一个标记的歧义项到队列中
           const otherMarksInQueue = this.state.ambiguousMarksQueue.value.filter((m) => m.originalMarkId !== mark.id)
           this.state.ambiguousMarksQueue.value = [...otherMarksInQueue, ...candidates]
         } else {
