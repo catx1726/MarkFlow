@@ -363,6 +363,8 @@ export class UIManager {
     tempDiv.appendChild(content)
     const selectedHtml = tempDiv.innerHTML
     applier.applyToRange(rangyRange)
+    this.state.restoredMarkIds.add(uniqueId) // 标记为已恢复，防止 restorer 重复处理触发歧义
+
     const markData: Mark = {
       id: uniqueId,
       url: getCanonicalUrlForMark(),
