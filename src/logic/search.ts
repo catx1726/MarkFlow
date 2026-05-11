@@ -254,8 +254,13 @@ export function findCandidateElements(mark: Mark, searchRoot: Node, _extLen: num
   for (const strategy of strategies) {
     const results = strategy.execute(mark, context)
     if (results.length > 0) {
-      candidates = results
-      break // 核心优化：一旦找到结果（不论是精确还是模糊），立即停止，避免多策略重叠导致条目爆炸
+      if (strategy.name === 'ExactMatch') {
+        // ExactMatch 结果可直接信任，提前终止
+        candidates = results
+        break
+      }
+      // 非精确匹配策略累积结果，后续统一去重和排序选择最佳
+      candidates.push(...results)
     }
   }
   const uniqueCandidates = Array.from(new Map(candidates.map(c => [`${c.candidateElement.innerHTML}-${c.matchIndex}`, c])).values())

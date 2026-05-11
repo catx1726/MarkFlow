@@ -112,8 +112,13 @@ export class HighlightRestorer {
 
     // 第二阶段：回退路径 (Search Fallback) - 处理失效的标记
     // 异步执行，且通过 requestAnimationFrame 避免长任务阻塞 UI
-    for (let i = 0; i < failedMarks.length; i++) {
-      const mark = failedMarks[i]
+    // 快照当前已恢复的 ID，避免循环过程中状态变化导致重复处理
+    const restoredSnapshot = new Set(this.state.restoredMarkIds)
+    const marksToSearch = failedMarks.filter(m => !restoredSnapshot.has(m.id))
+
+    for (let i = 0; i < marksToSearch.length; i++) {
+      const mark = marksToSearch[i]
+      // 双重检查：循环过程中可能被其他路径恢复
       if (this.state.restoredMarkIds.has(mark.id)) continue
 
       const result = await this.restoreBySearch(mark)
@@ -164,6 +169,10 @@ export class HighlightRestorer {
       elementAttributes: { style: highlightDefaultStyle(mark.color) },
     })
     const deserializationRoot = this.getDeserializationRoot(mark)
+    if (mark.shadowHostSelector && !deserializationRoot) {
+      console.warn(`[HighlightRestorer] Shadow host not found for ${mark.id}, skipping search fallback.`)
+      return { success: false }
+    }
     const root = deserializationRoot || document.documentElement
 
     console.warn(`[HighlightRestorer] Path failed for ${mark.id}, falling back to search.`)
