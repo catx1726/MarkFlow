@@ -1,5 +1,5 @@
 /**
- * # 标记搜索算法 (Mark Search Algorithm)
+ * # 标记搜索 algorithm (Mark Search Algorithm)
  *
  * 本模块实现了网页标记的模糊搜索与恢复机制。
  */
@@ -14,6 +14,7 @@ const SEARCH_CONFIG = {
   MIN_SIMILARITY_AUTO_RESTORE: 85, // 提高自动恢复门槛
   AUTO_RESTORE_MIN_SCORE: 95,
   AUTO_RESTORE_SCORE_MARGIN: 20,
+  MIN_DISAMBIGUATION_SCORE: 45, // 相似度低于此值的候选者将被忽略，防止“幽灵弹窗”
   DEFAULT_LOOK_RANGE: 150,
   MIN_REGEX_LENGTH: 5,
   ANCHOR_SIZE: 8, 
@@ -31,6 +32,7 @@ export interface Candidate {
   displayContext: string
   surroundingSnippet: string
   similarityScore?: number
+  contextScore?: number // 新增：上下文匹配得分，用于区分重复文字
   matchIndex: number
   matchLength: number
 }
@@ -100,8 +102,13 @@ class ConsensusMatchStrategy implements SearchStrategy {
     const aligner = new LocalAligner(mark.text, context)
     const alignedRange = aligner.refineBoundary(suggestedRange.start, suggestedRange.end)
 
-    // 允许任何评分较高的匹配，确保能进入歧义选择
+    // 核心优化：如果模糊匹配分数过低，直接放弃该候选者，避免干扰歧义判断
     const actualText = context.fullText.substring(alignedRange.start, alignedRange.end)
+    if (alignedRange.score < SEARCH_CONFIG.MIN_DISAMBIGUATION_SCORE) {
+      console.log(`[WebMarker-Search] L3 Match rejected: score too low (${alignedRange.score.toFixed(1)}%)`)
+      return []
+    }
+
     const candidate = createCandidate(mark, alignedRange.start, alignedRange.end - alignedRange.start, context)
     if (candidate) {
       candidate.similarityScore = alignedRange.score
@@ -246,7 +253,15 @@ export function findCandidateElements(mark: Mark, searchRoot: Node, _extLen: num
   let candidates: Candidate[] = []
   for (const strategy of strategies) {
     const results = strategy.execute(mark, context)
-    if (results.length > 0) { candidates = results; if (strategy.name === 'ExactMatch') break }
+    if (results.length > 0) {
+      if (strategy.name === 'ExactMatch') {
+        // ExactMatch 结果可直接信任，提前终止
+        candidates = results
+        break
+      }
+      // 非精确匹配策略累积结果，后续统一去重和排序选择最佳
+      candidates.push(...results)
+    }
   }
   const uniqueCandidates = Array.from(new Map(candidates.map(c => [`${c.candidateElement.innerHTML}-${c.matchIndex}`, c])).values())
   uniqueCandidates.sort((a, b) => (b.similarityScore || 0) - (a.similarityScore || 0))
@@ -254,15 +269,33 @@ export function findCandidateElements(mark: Mark, searchRoot: Node, _extLen: num
 }
 
 function resolveAmbiguity(candidates: Candidate[]): { ambiguityLevel: AmbiguityLevel, candidates: Candidate[] } {
-  if (candidates.length === 0) return { ambiguityLevel: 'none', candidates: [] }
-  if (candidates.length === 1) {
-    const isHighConf = (candidates[0].similarityScore || 0) >= SEARCH_CONFIG.MIN_SIMILARITY_AUTO_RESTORE
-    return { ambiguityLevel: isHighConf ? 'unique' : 'multiple', candidates }
+  // 核心修复：过滤掉相似度过低的“垃圾匹配”，避免在内容未加载时弹出确认框
+  const validCandidates = candidates.filter(c => (c.similarityScore || 0) >= SEARCH_CONFIG.MIN_DISAMBIGUATION_SCORE)
+
+  if (validCandidates.length === 0) return { ambiguityLevel: 'none', candidates: [] }
+
+  // [上下文优选逻辑] 即使有多个文本相同的项，通过上下文匹配度来打破僵局
+  if (validCandidates.length > 1) {
+    const sortedByContext = [...validCandidates].sort((a, b) => (b.contextScore || 0) - (a.contextScore || 0))
+    const best = sortedByContext[0]
+    const second = sortedByContext[1]
+
+    // 如果第一名的上下文匹配度极高（>85%），且显著高于第二名（领先20分以上），则自动胜出
+    if ((best.contextScore || 0) > 85 && ((best.contextScore || 0) - (second.contextScore || 0) > 20)) {
+       console.log(`[WebMarker-Search] Context-based tie-break success. Winner Score: ${best.contextScore}%`)
+       return { ambiguityLevel: 'unique', candidates: [best] }
+    }
   }
-  const [best, second] = candidates
+  
+  if (validCandidates.length === 1) {
+    const isHighConf = (validCandidates[0].similarityScore || 0) >= SEARCH_CONFIG.MIN_SIMILARITY_AUTO_RESTORE
+    return { ambiguityLevel: isHighConf ? 'unique' : 'multiple', candidates: validCandidates }
+  }
+
+  const [best, second] = validCandidates
   const bestScore = best.similarityScore || 0, secondScore = second.similarityScore || 0
   const hasClearWinner = bestScore >= SEARCH_CONFIG.AUTO_RESTORE_MIN_SCORE && (bestScore - secondScore) > SEARCH_CONFIG.AUTO_RESTORE_SCORE_MARGIN
-  return { ambiguityLevel: hasClearWinner ? 'unique' : 'multiple', candidates }
+  return { ambiguityLevel: hasClearWinner ? 'unique' : 'multiple', candidates: validCandidates }
 }
 
 function createSearchContext(searchRoot: Node): SearchContext {
@@ -323,9 +356,17 @@ function createCandidate(mark: Mark, matchIndex: number, matchLength: number, co
   const firstTextNodeIdxInGlobal = textNodes.indexOf(firstTextNodeOfLca)
   if (firstTextNodeIdxInGlobal === -1) return null
   const lcaStartPos = cumulativeOffsets[firstTextNodeIdxInGlobal]
+  
+  // 精准提取当前候选位置的物理上下文
   const contextLength = 25
   const start = Math.max(0, clampedIdx - contextLength), end = Math.min(fullText.length, matchEnd + contextLength)
   const surroundingSnippet = fullText.substring(start, end)
+  
+  // [核心修复] 计算此候选位置的上下文匹配得分
+  const contextScore = mark.surroundingSnippet 
+    ? calculateSimilarity(surroundingSnippet, mark.surroundingSnippet)
+    : 0
+
   const blockContainer = findNearestBlockContainer(involvedNodes[0])
   let richContext = blockContainer ? (blockContainer.textContent?.trim() || '') : surroundingSnippet
   if (richContext.length < matchLength) richContext = surroundingSnippet
@@ -334,5 +375,6 @@ function createCandidate(mark: Mark, matchIndex: number, matchLength: number, co
     originalMarkId: mark.id, originalMarkText: mark.text, candidateElement: lca,
     displayTitle: mark.contextTitle, displayTextSnippet: fullText.substring(clampedIdx, matchEnd),
     displayContext: richContext, surroundingSnippet, matchIndex: clampedIdx - lcaStartPos, matchLength,
+    contextScore,
   }
 }

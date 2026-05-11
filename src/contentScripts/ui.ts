@@ -8,6 +8,7 @@ import type { Mark } from '~/logic/storage'
 import { highlightDefaultStyle } from '~/logic/config'
 import { settings } from '~/logic/settings'
 import {
+  DOMScanner,
   applyPreciseHighlight,
   getCanonicalUrlForMark,
   getHighlightContext,
@@ -140,6 +141,7 @@ export class UIManager {
           const root = candidateElement.getRootNode()
           const newSerialized = rangy.serializeRange(range, true, root instanceof ShadowRoot ? root : undefined)
           const { contextTitle, contextSelector, contextLevel, contextOrder, surroundingSnippet } = getHighlightContext(range)
+          const domIndex = DOMScanner.calculatePreciseOffset(range, root instanceof ShadowRoot ? root : document.body)
 
           let shadowHostSelector: string | undefined
           if (root instanceof ShadowRoot) {
@@ -167,6 +169,7 @@ export class UIManager {
               html: actualHtml,
               rangySerialized: newSerialized,
               shadowHostSelector: shadowHostSelector || null,
+              domIndex,
               contextTitle,
               contextSelector,
               contextLevel,
@@ -351,12 +354,19 @@ export class UIManager {
     const rangySerialized = rangy.serializeRange(rangyRange, true, root instanceof ShadowRoot ? root : undefined)
     const selectedText = rangyRange.toString()
     const { contextTitle, contextSelector, contextLevel, contextOrder, surroundingSnippet } = getHighlightContext(rangyRange)
+    
+    // 计算物理位置索引
+    const container = (root instanceof ShadowRoot) ? root : document.body
+    const domIndex = DOMScanner.calculatePreciseOffset(rangyRange, container)
+
     const content = rangyRange.cloneContents()
     stripHighlights(content)
     const tempDiv = document.createElement('div')
     tempDiv.appendChild(content)
     const selectedHtml = tempDiv.innerHTML
     applier.applyToRange(rangyRange)
+    this.state.restoredMarkIds.add(uniqueId) // 标记为已恢复，防止 restorer 重复处理触发歧义
+
     const markData: Mark = {
       id: uniqueId,
       url: getCanonicalUrlForMark(),
@@ -368,6 +378,7 @@ export class UIManager {
       shadowHostSelector,
       createdAt: Date.now(),
       title: document.title,
+      domIndex,
       contextTitle,
       contextSelector,
       contextLevel,

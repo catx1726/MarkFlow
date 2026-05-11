@@ -16,6 +16,7 @@ export interface Mark {
   shadowHostSelector?: string // 新增：如果高亮在 Shadow DOM 中，则存储其宿主元素的选择器
   createdAt: number // 创建时间戳
   title?: string // 网页 tab 名称
+  domIndex?: number // 新增：用于物理位置排序
   // 结构化回顾新增字段
   contextTitle?: string // 最近的上级标题文本
   contextSelector?: string // 最近的上级标题的 CSS 选择器
