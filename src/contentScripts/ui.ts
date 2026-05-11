@@ -8,6 +8,7 @@ import type { Mark } from '~/logic/storage'
 import { highlightDefaultStyle } from '~/logic/config'
 import { settings } from '~/logic/settings'
 import {
+  DOMScanner,
   applyPreciseHighlight,
   getCanonicalUrlForMark,
   getHighlightContext,
