@@ -34,9 +34,10 @@ export class ContentChangeMonitor {
 
   private debouncedRestore() {
     clearTimeout(this.debounceTimer)
+    const delay = document.readyState === 'complete' ? 300 : 100
     this.debounceTimer = window.setTimeout(async () => {
       await this.restoreCallback()
-    }, 300) as unknown as number
+    }, delay) as unknown as number
   }
 
   destroy() {

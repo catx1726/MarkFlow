@@ -1,5 +1,9 @@
 # Unreleased
 
+### [2026-05-11] feat: sidebar sorting optimizations & Zhihu restoration fixes (#35)
+feat: sidebar sorting optimizations & Zhihu restoration fixes
+
+
 ### [2026-05-08] [REFACTOR] Content Script 架构重构：类封装与职责分离 (Issue #26) (#30)
 [REFACTOR] Content Script 架构重构：类封装与职责分离 (Issue #26)
 

@@ -63,6 +63,14 @@ export class HighlightStateManager {
     this.ambiguousMarksQueue.value = [...this.ambiguousMarksQueue.value, ...newCandidates]
   }
 
+  removeFromAmbiguousQueue(markId: string): void {
+    this.ambiguousMarksQueue.value = this.ambiguousMarksQueue.value.filter(m => m.originalMarkId !== markId)
+    // 如果队列清空且弹窗已显示，自动关闭弹窗
+    if (this.ambiguousMarksQueue.value.length === 0 && this.modalState.visible) {
+      this.modalState.visible = false
+    }
+  }
+
   clearSelectionState(): void {
     this.currentSerializationRoot = undefined
     this.serializedSelection = null
