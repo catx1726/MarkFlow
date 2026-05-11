@@ -6,6 +6,7 @@ import { settings } from '~/logic/settings'
 import {
   applyPreciseHighlight,
   calculateSimilarity,
+  DOMScanner,
   getCanonicalUrlForMark,
   getHighlightContext,
   getElementSelector,
@@ -26,19 +27,17 @@ interface SearchRestoreResult {
 }
 
 export class HighlightRestorer {
-  private modalDebounceTimer: number = 0
-
   constructor(
     private state: HighlightStateManager,
   ) {}
 
-  async restoreHighlights() {
-    if (this.state.isRestoring) return
+  async restoreHighlights(): Promise<Candidate[]> {
+    if (this.state.isRestoring) return this.state.ambiguousMarksQueue.value
     this.state.isRestoring = true
     try {
       const canonicalUrl = getCanonicalUrlForMark()
       const marks = await sendMessage('get-marks-for-url', { url: canonicalUrl }, 'background')
-      if (!marks || marks.length === 0) return
+      if (!marks || marks.length === 0) return this.state.ambiguousMarksQueue.value
 
       const now = Date.now()
       const marksToRestore = marks.filter((mark) => {
@@ -61,23 +60,10 @@ export class HighlightRestorer {
 
       if (marksToRestore.length > 0) await this.applyMarksTwoPhases(marksToRestore)
 
-      if (this.state.ambiguousMarksQueue.value.length > 0) {
-        this.debouncedShowModal()
-      }
+      return this.state.ambiguousMarksQueue.value
     } finally {
       this.state.isRestoring = false
     }
-  }
-
-  private debouncedShowModal() {
-    if (this.state.modalState.visible) return
-    clearTimeout(this.modalDebounceTimer)
-    this.modalDebounceTimer = window.setTimeout(() => {
-      if (this.state.ambiguousMarksQueue.value.length > 0 && !this.state.modalState.visible) {
-        console.log(`[WebMarker] Showing modal with ${this.state.ambiguousMarksQueue.value.length} ambiguous marks after debounce`)
-        this.state.disambiguationModalApp?.show(this.state.ambiguousMarksQueue.value)
-      }
-    }, 1000) as unknown as number
   }
 
   private async applyMarksTwoPhases(marks: Mark[]) {
@@ -224,11 +210,13 @@ export class HighlightRestorer {
           const actualHtml = content.constructor === DocumentFragment ? tempDiv.innerHTML : range.toString()
 
           if (similarity >= 90) {
+            const newDomIndex = DOMScanner.calculatePreciseOffset(range, root instanceof ShadowRoot ? root : document.body)
             await sendMessage('update-mark-details', {
               id: mark.id, url: mark.url, text: candidate.displayTextSnippet,
               html: actualHtml, rangySerialized: newSerialized,
               shadowHostSelector: shadowHostSelector || null,
               contextTitle, contextSelector, contextLevel, contextOrder, surroundingSnippet,
+              domIndex: newDomIndex,
             } as any, 'background')
           }
           return { success: true }

@@ -66,7 +66,14 @@ async function initialize() {
     ui.ensureMounted()
     window.addEventListener('keydown', handleKeyDown)
     attachListenersToShadowRoots(document)
-    await restorer.restoreHighlights()
+    const ambiguous = await restorer.restoreHighlights()
+    if (ambiguous.length > 0 && !state.modalState.visible) {
+      setTimeout(() => {
+        if (state.ambiguousMarksQueue.value.length > 0 && !state.modalState.visible) {
+          state.disambiguationModalApp?.show(state.ambiguousMarksQueue.value)
+        }
+      }, 1000)
+    }
     {
       const hash = window.location.hash
       if (hash.startsWith('#__highlight-mark__')) {
