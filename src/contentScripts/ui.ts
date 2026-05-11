@@ -141,6 +141,7 @@ export class UIManager {
           const root = candidateElement.getRootNode()
           const newSerialized = rangy.serializeRange(range, true, root instanceof ShadowRoot ? root : undefined)
           const { contextTitle, contextSelector, contextLevel, contextOrder, surroundingSnippet } = getHighlightContext(range)
+          const domIndex = DOMScanner.calculatePreciseOffset(range, root instanceof ShadowRoot ? root : document.body)
 
           let shadowHostSelector: string | undefined
           if (root instanceof ShadowRoot) {
@@ -168,6 +169,7 @@ export class UIManager {
               html: actualHtml,
               rangySerialized: newSerialized,
               shadowHostSelector: shadowHostSelector || null,
+              domIndex,
               contextTitle,
               contextSelector,
               contextLevel,

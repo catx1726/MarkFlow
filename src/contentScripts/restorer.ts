@@ -45,6 +45,14 @@ export class HighlightRestorer {
         return true
       })
 
+      // 核心修复：按 domIndex 降序排列（从文档末尾向开头恢复）
+      // 这样前面的节点分裂不会影响后面节点的 Rangy 路径偏移
+      marksToRestore.sort((a, b) => {
+        if (a.domIndex !== undefined && b.domIndex !== undefined)
+          return b.domIndex - a.domIndex
+        return b.createdAt - a.createdAt // 降序作为次选
+      })
+
       if (marksToRestore.length > 0) await this.applyMarks(marksToRestore)
 
       if (this.state.ambiguousMarksQueue.value.length > 0) {
