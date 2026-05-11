@@ -81,9 +81,18 @@ const collapsedStates = ref<Record<string, Record<string, boolean>>>({}),
   collapsedUrls = ref<Record<string, boolean>>({}),
   structuredMarks = computed(() => {
     const result: Record<string, { pageTitle: string; groups: MarkGroup[]; totalMarks: number }> = {}
-    for (const [url, marks] of Object.entries(marksByUrl.value)) {
-      if (!marks || marks.length === 0) continue
 
+    // 1. 提取所有 URL 及其最新活跃时间
+    const sortedUrls = Object.entries(marksByUrl.value)
+      .filter(([_, marks]) => marks && marks.length > 0)
+      .map(([url, marks]) => ({
+        url,
+        lastActive: Math.max(...marks.map(m => m.createdAt))
+      }))
+      .sort((a, b) => b.lastActive - a.lastActive) // 网页按活跃度降序
+
+    for (const { url } of sortedUrls) {
+      const marks = marksByUrl.value[url]
       const pageTitle = getPageTitle(marks)
       const groups: Record<string, MarkGroup> = {}
 
@@ -106,9 +115,13 @@ const collapsedStates = ref<Record<string, Record<string, boolean>>>({}),
         groups[contextTitle].marks.push(mark)
       }
 
-      // 按创建时间排序每个分组内的笔记
+      // 按位置排序每个分组内的笔记
       for (const group of Object.values(groups)) {
-        group.marks.sort((a, b) => a.createdAt - b.createdAt)
+        group.marks.sort((a, b) => {
+          if (a.domIndex !== undefined && b.domIndex !== undefined)
+            return a.domIndex - b.domIndex
+          return a.createdAt - b.createdAt // 旧数据兼容
+        })
         group.count = group.marks.length
       }
 
