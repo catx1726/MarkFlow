@@ -13,12 +13,17 @@ import {
   querySelectorDeep,
   stripHighlights,
 } from '~/logic/dom'
-import { findCandidateElements } from '~/logic/search'
+import { findCandidateElements, type Candidate } from '~/logic/search'
 import type { HighlightStateManager } from './state'
 
 const L1_SIMILARITY_THRESHOLD = 95
 const CONTEXT_SIMILARITY_THRESHOLD = 80
 const L3_SIMILARITY_THRESHOLD = 75
+
+interface SearchRestoreResult {
+  success: boolean
+  candidates?: Candidate[]
+}
 
 export class HighlightRestorer {
   private modalDebounceTimer: number = 0
@@ -111,7 +116,10 @@ export class HighlightRestorer {
       const mark = failedMarks[i]
       if (this.state.restoredMarkIds.has(mark.id)) continue
 
-      await this.restoreBySearch(mark)
+      const result = await this.restoreBySearch(mark)
+      if (!result.success && result.candidates) {
+        this.state.addToAmbiguousQueue(result.candidates)
+      }
 
       // 每处理两个标记让出一次主线程，确保页面交互流畅
       if (i % 2 === 0) await new Promise((resolve) => requestAnimationFrame(resolve))
@@ -150,7 +158,7 @@ export class HighlightRestorer {
     return (host && host.shadowRoot) ? host.shadowRoot : undefined
   }
 
-  private async restoreBySearch(mark: Mark) {
+  private async restoreBySearch(mark: Mark): Promise<SearchRestoreResult> {
     const applier = rangy.createClassApplier(`webext-highlight-${mark.id}`, {
       elementTagName: 'span',
       elementAttributes: { style: highlightDefaultStyle(mark.color) },
@@ -214,19 +222,24 @@ export class HighlightRestorer {
               contextTitle, contextSelector, contextLevel, contextOrder, surroundingSnippet,
             } as any, 'background')
           }
-        } else {
-          this.state.addToAmbiguousQueue([candidate])
+          return { success: true }
         }
-      } else {
-        this.state.addToAmbiguousQueue([candidate])
+        // applyPreciseHighlight 失败，返回候选者供调用方加入歧义队列
+        return { success: false, candidates: [candidate] }
       }
+      // similarity 不足，返回候选者供调用方加入歧义队列
+      return { success: false, candidates: [candidate] }
     } else if (ambiguityLevel === 'multiple') {
-      this.state.addToAmbiguousQueue(candidates)
+      return { success: false, candidates }
     } else {
       this.state.failedRestoreCooldowns.set(mark.id, Date.now() + 3000)
+      return { success: false }
     }
   }
 
+  /**
+   * @deprecated Use applyMarksTwoPhases instead.
+   */
   async applyMarks(marks: Mark[]) {
     // 此方法已废弃，保留用于向后兼容，内部重定向到两阶段逻辑
     await this.applyMarksTwoPhases(marks)
