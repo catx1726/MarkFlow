@@ -351,6 +351,11 @@ export class UIManager {
     const rangySerialized = rangy.serializeRange(rangyRange, true, root instanceof ShadowRoot ? root : undefined)
     const selectedText = rangyRange.toString()
     const { contextTitle, contextSelector, contextLevel, contextOrder, surroundingSnippet } = getHighlightContext(rangyRange)
+    
+    // 计算物理位置索引
+    const container = (root instanceof ShadowRoot) ? root : document.body
+    const domIndex = DOMScanner.calculatePreciseOffset(rangyRange, container)
+
     const content = rangyRange.cloneContents()
     stripHighlights(content)
     const tempDiv = document.createElement('div')
@@ -368,6 +373,7 @@ export class UIManager {
       shadowHostSelector,
       createdAt: Date.now(),
       title: document.title,
+      domIndex,
       contextTitle,
       contextSelector,
       contextLevel,
