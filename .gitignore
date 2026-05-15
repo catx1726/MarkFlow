@@ -28,3 +28,6 @@ src/components.d.ts
 # GEMINI.md
 
 TEMP_REQUIREMENT.md
+
+# Git worktrees
+.worktrees/
