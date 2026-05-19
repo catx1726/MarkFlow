@@ -48,4 +48,23 @@ describe('errorCollector filtering', () => {
     
     expect(chrome.storage.local.set).toHaveBeenCalled()
   })
+
+  it('应该支持 ErrorEvent 对象', async () => {
+    // 模拟 ErrorEvent
+    const errorObj = new Error('Inner Error')
+    errorObj.stack = 'at chrome-extension://test-id/content.js:1:1'
+    
+    const event = {
+      message: 'Event Error',
+      filename: 'chrome-extension://test-id/content.js',
+      error: errorObj
+    }
+    // 注意：在测试环境下可能需要手动模拟 instanceof 如果环境不支持真正的 ErrorEvent
+    
+    await collectError(event, 'content')
+    
+    expect(chrome.storage.local.set).toHaveBeenCalled()
+    const callArgs = (chrome.storage.local.set as any).mock.calls[0][0]
+    expect(callArgs[STORAGE_KEY][0].message).toBe('Event Error')
+  })
 })
