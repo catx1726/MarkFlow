@@ -18,6 +18,8 @@ import {
   getMaxZIndex,
 } from '~/logic/dom'
 import { ShadowDOMManager } from '~/logic/shadowDom'
+import { extractKeywords } from '~/logic/association'
+import { tagsMetadata } from '~/logic/storage'
 import type { Candidate } from '~/logic/search'
 import type { HighlightStateManager } from './state'
 
@@ -367,6 +369,16 @@ export class UIManager {
     applier.applyToRange(rangyRange)
     this.state.restoredMarkIds.add(uniqueId) // 标记为已恢复，防止 restorer 重复处理触发歧义
 
+    // --- 核心逻辑：自动关联标签 ---
+    const tags: string[] = []
+    if (settings.value.autoAssociation) {
+      const keywords = extractKeywords(`${document.title} ${selectedText}`)
+      Object.values(tagsMetadata.value).forEach((tag) => {
+        if (keywords.some(k => k.toLowerCase() === tag.name.toLowerCase()))
+          tags.push(tag.id)
+      })
+    }
+
     const markData: Mark = {
       id: uniqueId,
       url: getCanonicalUrlForMark(),
@@ -379,6 +391,7 @@ export class UIManager {
       createdAt: Date.now(),
       title: document.title,
       domIndex,
+      tags,
       contextTitle,
       contextSelector,
       contextLevel,
