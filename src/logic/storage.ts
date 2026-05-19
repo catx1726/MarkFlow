@@ -18,6 +18,16 @@ export const { data: tagsMetadata, dataReady: tagsReady } = useWebExtensionStora
   {}
 )
 
+export interface KeywordStat {
+  count: number
+  domains: string[]
+}
+
+export const { data: keywordStats, dataReady: keywordReady } = useWebExtensionStorage<Record<string, KeywordStat>>(
+  'webmarker-keyword-stats',
+  {}
+)
+
 export interface Mark {
   id: string // 唯一ID
   url: string // 标记所在的页面URL

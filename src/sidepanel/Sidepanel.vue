@@ -512,7 +512,6 @@ function exportToMarkdown(urlData: { pageTitle: string; groups: MarkGroup[] }) {
         <!-- 顶级文件夹层 (Tags / Inbox) -->
         <div v-for="[tagId, folder] in Object.entries(structuredMarks)" :key="tagId" class="mb-6">
           <div 
-            v-if="Object.keys(folder.pages).length > 0"
             class="flex items-center gap-2 p-2 bg-gray-200 dark:bg-gray-700 rounded-t-lg cursor-pointer hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors shadow-sm"
             @click="toggleFolder(tagId)"
           >
