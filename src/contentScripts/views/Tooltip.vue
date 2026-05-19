@@ -1,8 +1,9 @@
+<!-- src/contentScripts/views/Tooltip.vue -->
 <template>
   <div
     v-if="visible"
     class="tooltip-card fixed z-1 w-[300px] rounded-lg bg-white p-[12px] font-sans shadow-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200"
-    :style="{ top: `${position.y}px`, left: `${position.x}px` }"
+    :style="{ top: `${position.y}px`, left: `${position.x}px`, zIndex: zIndex }"
     @mousedown.stop
   >
     <div class="tooltip-content flex flex-col gap-[12px]">
@@ -16,6 +17,18 @@
           @click="selectedColor = color"
         />
       </div>
+
+      <!-- 新增：已关联标签展示 -->
+      <div v-if="selectedTags.length > 0" class="flex flex-wrap gap-1 mb-1">
+        <span 
+          v-for="tagId in selectedTags" 
+          :key="tagId"
+          class="text-[10px] px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-800"
+        >
+          # {{ getTagName(tagId) }}
+        </span>
+      </div>
+
       <textarea
         ref="textareaRef"
         v-model="noteValue"
@@ -76,25 +89,30 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { settings } from '~/logic/settings'
+import { tagsMetadata } from '~/logic/storage'
 import { getMaxZIndex } from '../../logic/dom'
 
 const visible = ref(false)
 const position = reactive({ x: 0, y: 0 })
 const isHighlighted = ref(false)
 const noteValue = ref('')
+const selectedTags = ref<string[]>([])
 const selectedColor = ref(settings.value.defaultHighlightColor)
 const highlightColors = computed(() => settings.value.highlightColors)
 const defaultHighlightColor = computed(() => settings.value.defaultHighlightColor)
 const textareaRef = ref<HTMLTextAreaElement | null>(null)
 const textToCopy = ref('')
 const copySuccess = ref(false)
-const zIndex = ref(0) // 将 zIndex 声明为响应式 ref
+const zIndex = ref(0)
+
+const getTagName = (id: string) => tagsMetadata.value[id]?.name || id
+
 const formatShortcutForDisplay = (shortcut: string) => {
   let text = shortcut
   if (isMac) {
     text = text
-      .replace(/meta|cmd|command/gi, '⌘') // Command on Mac
-      .replace(/ctrl|control/gi, '⌃') // Control on Mac
+      .replace(/meta|cmd|command/gi, '⌘')
+      .replace(/ctrl|control/gi, '⌃')
       .replace(/alt/gi, '⌥')
       .replace(/shift/gi, '⇧')
   }
@@ -112,9 +130,6 @@ const emit = defineEmits<{
 }>()
 
 watch(selectedColor, (newColor) => {
-  // 当在工具提示中选择新颜色时，发出一个事件。
-  // 对于新选区，这将触发预览更新。
-  // 对于已有的高亮，这将触发直接的样式更新。
   emit('color-change', newColor, isHighlighted.value)
 })
 
@@ -129,8 +144,6 @@ const handleKeydown = (event: KeyboardEvent) => {
     return
   }
 
-  // Handle Ctrl+C / Cmd+C for copying original text
-  // This should not override the default copy behavior inside the textarea.
   const isPrimaryModifierOnly =
     (isMac ? event.metaKey : event.ctrlKey) &&
     !event.altKey &&
@@ -138,18 +151,13 @@ const handleKeydown = (event: KeyboardEvent) => {
     (isMac ? !event.ctrlKey : !event.metaKey)
 
   if (event.key.toLowerCase() === 'c' && isPrimaryModifierOnly) {
-    // If the focus is on the textarea, let the default browser behavior handle the copy.
     if (event.target === textareaRef.value) return
-
-    // Otherwise, copy the original highlighted text.
     event.preventDefault()
     event.stopPropagation()
     onCopyClick()
-    // If it's a new selection (not an existing highlight), also clear the preview highlight.
     if (!isHighlighted.value) emit('clear-preview')
-
     hide()
-    return // Prevent fall-through
+    return
   }
 
   const formatShortcut = (shortcut: string) => {
@@ -166,9 +174,6 @@ const handleKeydown = (event: KeyboardEvent) => {
   }
 
   const match = (shortcut: ReturnType<typeof formatShortcut>) => {
-    // On Mac, the Option (Alt) key often changes event.key to a special character.
-    // For single-letter shortcuts, it's more reliable to check event.code.
-    // For example, Option+S on Mac produces event.key: 'ß', but event.code: 'KeyS'.
     const keyMatches =
       isMac && shortcut.alt && shortcut.key.length === 1 && shortcut.key >= 'a' && shortcut.key <= 'z'
         ? event.code.toLowerCase() === `key${shortcut.key}`
@@ -177,9 +182,6 @@ const handleKeydown = (event: KeyboardEvent) => {
     if (!keyMatches) return false
     if (event.altKey !== shortcut.alt) return false
     if (event.shiftKey !== shortcut.shift) return false
-
-    // - 'meta' in settings maps to Command key (event.metaKey) on Mac.
-    // - 'ctrl' in settings maps to Control key (event.ctrlKey) on all platforms.
     if (shortcut.meta !== event.metaKey) return false
     if (shortcut.ctrl !== event.ctrlKey) return false
 
@@ -220,43 +222,31 @@ function onDeleteClick() {
   hide()
 }
 
-/**
- * 显示工具提示，并根据屏幕边界自动调整位置。
- */
 function show(
   x: number,
   y: number,
   highlighted: boolean,
   initialNote = '',
   initialColor: string | undefined,
-  initialTextToCopy = ''
+  initialTextToCopy = '',
+  initialTags: string[] = []
 ) {
   zIndex.value = getMaxZIndex()
-
-  // 工具提示的预估尺寸，用于边界检测
   const tooltipWidth = 300
   const tooltipHeight = 160
   const margin = 10
-
-  // 确保工具提示不会超出窗口右侧
   if (x + tooltipWidth > window.innerWidth) x = window.innerWidth - tooltipWidth - margin
-
-  // 确保工具提示不会超出窗口底部
   if (y + tooltipHeight > window.innerHeight) y = window.innerHeight - tooltipHeight - margin
-
-  // 确保工具提示不会超出窗口左侧或顶部
   if (x < margin) x = margin
   if (y < margin) y = margin
-
   position.x = x
   position.y = y
   isHighlighted.value = highlighted
   noteValue.value = initialNote
+  selectedTags.value = initialTags
   selectedColor.value = initialColor || defaultHighlightColor.value
   textToCopy.value = initialTextToCopy
-
   visible.value = true
-
   nextTick(() => {
     textareaRef.value?.focus()
   })
@@ -277,7 +267,6 @@ onUnmounted(() => {
   window.removeEventListener('keydown', handleKeydown, true)
 })
 
-// Expose functions to the parent component
 defineExpose({ show, hide })
 </script>
 

@@ -12,6 +12,8 @@ import 'rangy/lib/rangy-serializer'
 import { highlightDefaultStyle, shortcuts } from '~/logic/config'
 import { isPageBlacklisted, settings, settingsReady } from '~/logic/settings'
 import { getCanonicalUrlForMark, getMarkIdFromElement, querySelectorAllDeep, querySelectorDeep } from '~/logic/dom'
+import { extractKeywords } from '~/logic/association'
+import { tagsMetadata } from '~/logic/storage'
 import { HighlightStateManager } from './state'
 import { UIManager } from './ui'
 import { ContentChangeMonitor } from './monitor'
@@ -212,7 +214,16 @@ function processSelection(event: {
         state.currentMarkIdForColorChange = null
 
         state.previewApplier?.applyToRange(range)
-        ui.showTooltip(event.clientX, event.clientY, false, '', settings.value.defaultHighlightColor, capturedText)
+        // 自动计算潜在标签
+        const tags: string[] = []
+        if (settings.value.autoAssociation) {
+          const keywords = extractKeywords(`${document.title} ${capturedText}`)
+          Object.values(tagsMetadata.value).forEach((tag) => {
+            if (keywords.some(k => k.toLowerCase() === tag.name.toLowerCase()))
+              tags.push(tag.id)
+          })
+        }
+        ui.showTooltip(event.clientX, event.clientY, false, '', settings.value.defaultHighlightColor, capturedText, tags)
       } catch (e) {
         console.error('[WebMarker] Error during selection processing:', e)
         state.tooltipApp?.hide()
@@ -256,10 +267,11 @@ function handleExistingMarkClick(markElement: HTMLElement, x: number, y: number)
 async function showTooltipForExistingMark(markId: string, x: number, y: number) {
   ui.ensureMounted()
   const mark = await sendMessage('get-mark-by-id', { id: markId, url: getCanonicalUrlForMark() }, 'background')
-  const note = mark ? mark.note : ''
+  const note = mark ? (mark.note || '') : ''
   const color = mark ? mark.color : settings.value.defaultHighlightColor
+  const tags = mark ? (mark.tags || []) : []
   ui.setOriginalColorForChange(color)
-  state.tooltipApp?.show(x, y, true, note, color, mark?.text ?? '')
+  ui.showTooltip(x, y, true, note, color, mark?.text ?? '', tags)
 }
 
 // #endregion
