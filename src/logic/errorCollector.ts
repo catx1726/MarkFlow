@@ -14,9 +14,19 @@ export const STORAGE_KEY = 'webmarker_error_logs';
 export const MAX_LOGS = 50;
 
 export async function collectError(error: Error | any, type: 'content' | 'background') {
+  const extensionOrigin = chrome.runtime.getURL('')
+  const stack = error instanceof Error ? error.stack : undefined
+  const filename = error?.filename || ''
+
+  // 核心过滤逻辑：只记录来自插件源的错误
+  const isFromExtension = (stack && stack.includes(extensionOrigin)) || 
+                          (filename && filename.includes(extensionOrigin))
+
+  if (!isFromExtension)
+    return
+
   const logs: ErrorLog[] = await getLogs();
   const message = error instanceof Error ? error.message : String(error);
-  const stack = error instanceof Error ? error.stack : undefined;
   
   const existingIndex = logs.findIndex(log => log.message === message && log.stack === stack);
   
