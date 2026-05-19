@@ -1,5 +1,9 @@
 # Unreleased
 
+### [2026-05-19] [BUG] 错误捕获范围过滤优化 (#34) (#36)
+[BUG] 错误捕获范围过滤优化 (#34)
+
+
 ### [2026-05-11] feat: sidebar sorting optimizations & Zhihu restoration fixes (#35)
 feat: sidebar sorting optimizations & Zhihu restoration fixes
 
