@@ -79,12 +79,8 @@ onMounted(() => {
 async function refreshAllMarks() {
   const allMarks = await sendMessage('get-all-marks', {}, 'background')
   if (allMarks) {
-    // 逐 URL 合并更新，避免直接替换整个响应式对象导致依赖失效
-    Object.keys(marksByUrl.value).forEach((key) => delete marksByUrl.value[key])
-    Object.entries(allMarks).forEach(([url, marks]) => {
-      marksByUrl.value[url] = marks
-    })
-    marksByUrl.value = { ...marksByUrl.value }
+    // 直接替换整个响应式对象，Vue ref 会正确处理依赖更新
+    marksByUrl.value = allMarks
   }
 }
 
@@ -312,16 +308,21 @@ async function gotoMark(mark: Mark) {
 async function removeMark(mark: Mark) {
   if (!confirm('确定要删除此标记吗？')) return
   const rawMark = toRaw(mark)
-  await sendMessage('remove-mark', rawMark, 'background')
+  const result = await sendMessage('remove-mark', rawMark, 'background')
 
-  // 乐观更新本地状态，避免全量刷新
-  const urlMarks = marksByUrl.value[rawMark.url]
-  if (urlMarks) {
-    marksByUrl.value[rawMark.url] = urlMarks.filter((m) => m.id !== rawMark.id)
-    if (marksByUrl.value[rawMark.url].length === 0) {
-      delete marksByUrl.value[rawMark.url]
+  // 等待后台确认成功后再更新本地状态，避免乐观更新导致的不一致
+  if (result && (result as any).success !== false) {
+    const urlMarks = marksByUrl.value[rawMark.url]
+    if (urlMarks) {
+      marksByUrl.value[rawMark.url] = urlMarks.filter((m) => m.id !== rawMark.id)
+      if (marksByUrl.value[rawMark.url].length === 0) {
+        delete marksByUrl.value[rawMark.url]
+      }
+      marksByUrl.value = { ...marksByUrl.value }
     }
-    marksByUrl.value = { ...marksByUrl.value }
+  }
+  else {
+    console.error('Failed to remove mark:', (result as any)?.error)
   }
 
   const allTabs = await browser.tabs.query({ currentWindow: true }),

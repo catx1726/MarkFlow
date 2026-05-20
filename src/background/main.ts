@@ -47,7 +47,8 @@ let previousTabId = 0
 let writeQueue: Promise<unknown> = Promise.resolve()
 
 function enqueueWrite<T>(writeFn: () => Promise<T>): Promise<T> {
-  const result = writeQueue.then(() => writeFn())
+  // 即使前一个写操作失败，当前写操作也要继续排队执行，确保序列化不被破坏
+  const result = writeQueue.then(() => writeFn(), () => writeFn())
   writeQueue = result.catch(() => {})
   return result
 }
@@ -352,21 +353,15 @@ onMessage<{ tagId: string }>('delete-tag', async ({ data }) => {
         tagsMetadata.value = { ...tagsMetadata.value }
 
         // 优化：先构建新对象再一次性赋值，减少响应式触发次数
+        // 注意：如果标记数量极大，此操作可能阻塞写队列。当前假设正常使用场景下数据量在可控范围。
         const updatedMarksByUrl = { ...marksByUrl.value }
-        const entries = Object.entries(updatedMarksByUrl)
-        const updatedEntries = await Promise.all(
-          entries.map(async ([url, marks]) => {
-            const updatedMarks = marks.map(m => {
-              if (m.tags?.includes(tagId)) {
-                return { ...m, tags: m.tags.filter(t => t !== tagId) }
-              }
-              return m
-            })
-            return [url, updatedMarks] as const
+        Object.entries(updatedMarksByUrl).forEach(([url, marks]) => {
+          updatedMarksByUrl[url] = marks.map(m => {
+            if (m.tags?.includes(tagId)) {
+              return { ...m, tags: m.tags.filter(t => t !== tagId) }
+            }
+            return m
           })
-        )
-        updatedEntries.forEach(([url, marks]) => {
-          updatedMarksByUrl[url] = marks
         })
         marksByUrl.value = updatedMarksByUrl
       }
