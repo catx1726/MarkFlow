@@ -18,8 +18,6 @@ import {
   getMaxZIndex,
 } from '~/logic/dom'
 import { ShadowDOMManager } from '~/logic/shadowDom'
-import { extractKeywords } from '~/logic/association'
-import { tagsMetadata } from '~/logic/storage'
 import type { Candidate } from '~/logic/search'
 import type { HighlightStateManager } from './state'
 
@@ -88,7 +86,6 @@ export class UIManager {
         this.state.modalState.visible = false
       },
     }
-
   }
 
   private async handleCandidateHover(item: Candidate) {
@@ -371,15 +368,8 @@ export class UIManager {
     applier.applyToRange(rangyRange)
     this.state.restoredMarkIds.add(uniqueId) // 标记为已恢复，防止 restorer 重复处理触发歧义
 
-    // --- 核心逻辑：自动关联标签 + 手动关联标签 ---
+    // 仅使用手动选择的标签
     const tags: string[] = [...manualTags]
-    if (settings.value.autoAssociation) {
-      const keywords = extractKeywords(`${document.title} ${selectedText}`)
-      Object.values(tagsMetadata.value).forEach((tag) => {
-        if (!tags.includes(tag.id) && keywords.some(k => k.toLowerCase() === tag.name.toLowerCase()))
-          tags.push(tag.id)
-      })
-    }
 
     const markData: Mark = {
       id: uniqueId,

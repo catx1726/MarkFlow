@@ -12,8 +12,6 @@ import 'rangy/lib/rangy-serializer'
 import { highlightDefaultStyle, shortcuts } from '~/logic/config'
 import { isPageBlacklisted, settings, settingsReady } from '~/logic/settings'
 import { getCanonicalUrlForMark, getMarkIdFromElement, querySelectorAllDeep, querySelectorDeep } from '~/logic/dom'
-import { extractKeywords } from '~/logic/association'
-import { tagsMetadata } from '~/logic/storage'
 import { HighlightStateManager } from './state'
 import { UIManager } from './ui'
 import { ContentChangeMonitor } from './monitor'
@@ -228,16 +226,7 @@ function processSelection(event: {
         state.currentMarkIdForColorChange = null
 
         state.previewApplier?.applyToRange(range)
-        // 自动计算潜在标签
-        const tags: string[] = []
-        if (settings.value.autoAssociation) {
-          const keywords = extractKeywords(`${document.title} ${capturedText}`)
-          Object.values(tagsMetadata.value).forEach((tag) => {
-            if (keywords.some(k => k.toLowerCase() === tag.name.toLowerCase()))
-              tags.push(tag.id)
-          })
-        }
-        ui.showTooltip(event.clientX, event.clientY, false, '', settings.value.defaultHighlightColor, capturedText, tags)
+        ui.showTooltip(event.clientX, event.clientY, false, '', settings.value.defaultHighlightColor, capturedText, [])
       } catch (e) {
         console.error('[WebMarker] Error during selection processing:', e)
         state.tooltipApp?.hide()

@@ -121,7 +121,7 @@
 import { computed, nextTick, onMounted, onUnmounted, reactive, ref, toRaw, watch } from 'vue'
 import { sendMessage } from 'webext-bridge/content-script'
 import { settings } from '~/logic/settings'
-import { tagsMetadata } from '~/logic/storage'
+import type { Tag } from '~/logic/storage'
 import { getMaxZIndex } from '../../logic/dom'
 
 const visible = ref(false)
@@ -138,13 +138,15 @@ const copySuccess = ref(false)
 const zIndex = ref(0)
 
 const newTagInput = ref('')
-const allTags = computed(() => Object.values(tagsMetadata.value).sort((a, b) => b.createdAt - a.createdAt))
+const fetchedTags = ref<Record<string, Tag>>({})
+const allTags = computed(() => Object.values(fetchedTags.value).sort((a, b) => b.createdAt - a.createdAt))
 
 async function handleCreateTag() {
   const name = newTagInput.value.trim()
   if (!name) return
   const newTag = await sendMessage('create-tag', { name }, 'background')
   if (newTag) {
+    fetchedTags.value[newTag.id] = newTag
     selectedTags.value.push(newTag.id)
   }
   newTagInput.value = ''
@@ -157,10 +159,6 @@ function toggleTag(tagId: string) {
   } else {
     selectedTags.value.push(tagId)
   }
-}
-
-function openOptions() {
-  sendMessage('open-options-page', {}, 'background')
 }
 
 const emit = defineEmits<{
@@ -187,58 +185,10 @@ const handleKeydown = (event: KeyboardEvent) => {
     return
   }
 
-  const isPrimaryModifierOnly =
-    (isMac ? event.metaKey : event.ctrlKey) &&
-    !event.altKey &&
-    !event.shiftKey &&
-    (isMac ? !event.ctrlKey : !event.metaKey)
-
-  if (event.key.toLowerCase() === 'c' && isPrimaryModifierOnly) {
-    if (event.target === textareaRef.value) return
-    event.preventDefault()
-    event.stopPropagation()
-    onCopyClick()
-    if (!isHighlighted.value) emit('clear-preview')
-    hide()
-    return
-  }
-
-  const formatShortcut = (shortcut: string) => {
-    const parts = shortcut
-      .toLowerCase()
-      .split('+')
-      .map((p) => p.trim())
-    const key = parts.pop() || ''
-    return {
-      key,
-      alt: parts.includes('alt'),
-      ctrl: parts.includes('ctrl') || parts.includes('control'),
-      meta: parts.includes('meta') || parts.includes('cmd') || parts.includes('command'),
-      shift: parts.includes('shift')
-    }
-  }
-
-  const match = (shortcut: ReturnType<typeof formatShortcut>) => {
-    const keyMatches =
-      isMac && shortcut.alt && shortcut.key.length === 1 && shortcut.key >= 'a' && shortcut.key <= 'z'
-        ? event.code.toLowerCase() === `key${shortcut.key}`
-        : event.key.toLowerCase() === shortcut.key
-    if (!keyMatches) return false
-    if (event.altKey !== shortcut.alt) return false
-    if (event.shiftKey !== shortcut.shift) return false
-    if (shortcut.meta !== event.metaKey) return false
-    if (shortcut.ctrl !== event.ctrlKey) return false
-    return true
-  }
-
-  if (match(formatShortcut(settings.value.shortcutSave))) {
-    event.preventDefault()
-    event.stopPropagation()
+  // Ctrl+Enter to save
+  if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
     onSaveClick()
-  } else if (isHighlighted.value && match(formatShortcut(settings.value.shortcutDelete))) {
-    event.preventDefault()
-    event.stopPropagation()
-    onDeleteClick()
+    return
   }
 }
 
@@ -265,7 +215,7 @@ function onDeleteClick() {
   hide()
 }
 
-function show(
+async function show(
   x: number,
   y: number,
   highlighted: boolean,
@@ -274,6 +224,9 @@ function show(
   initialTextToCopy = '',
   initialTags: string[] = []
 ) {
+  // 异步获取最新标签，遵循 SSOT
+  fetchedTags.value = await sendMessage('get-all-tags', {}, 'background')
+  
   zIndex.value = getMaxZIndex() + 100
   const tooltipWidth = 320
   const tooltipHeight = 340

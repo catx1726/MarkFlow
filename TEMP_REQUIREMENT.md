@@ -5,22 +5,12 @@
 # BUG
 
 - [x] 仍然存在，PR ACTION ERROR:Audit Log Integrity Guard / audit-check (pull_request) Error: Process completed with exit code 1.
-  - **修复**: 更新了 `.gemini/ops_changelog.md` 中的 `Commit_ID` 为真实哈希值 `c0dbf81`。
+  - **修复**: 更新了 `.gemini/ops_changelog.md` 中的 `Commit_ID` 为真实哈希值 `e7d13b0`。
 
-- [x] AR CR V2 & V3:
-
-  ```markdown
-  已解决 (Resolved)
-
-  1. 依赖清理: 移除了 pnpm-lock.yaml 中的 npm, install, @tailwindcss/typography 等无关生产依赖。
-  2. 自动标签引擎优化 (V3):
-     - 防抖机制: 增加 1.5s 防抖，避免快速操作触发高频扫描。
-     - 内存镜像扫描: 仅在晋升时对内存中的 marksByUrl 镜像进行扫描，最后一次性更新，极大减少了响应式触发和性能损耗。
-     - 准确统计: cleanupKeywordStats 现在会严格重新验证域名相关性，确保阈值判断准确。
-  3. 统一 SSOT 路径:
-     - Tooltip 新建标签已改为发送 `create-tag` 消息至 Background。
-     - Sidepanel 的批量关联和删除逻辑已完全改为消息同步，消除本地直接状态修改。
-  4. 刷新逻辑修复: refreshAllMarks 改为一次性获取完整最新数据，完美解决空数据丢失问题。
-  5. 中文支持增强: extractKeywords 引入了基础的中文词簇识别逻辑 (2+ 汉字)，不再依赖空格。
-  6. 阈值对齐: 晋升阈值恢复为 Spec 定义的 >= 2 域名, >= 3 标记。
-  ```
+- [x] 移除自动逻辑与架构重构 (根据最新反馈):
+  - **移除自动逻辑**: 已完全移除“自动生成标签”和“自动关联标签”的相关统计、晋升及后台扫描逻辑（删除 `association.ts`）。
+  - **统一 SSOT 路径**: 
+    - 侧边栏的标签创建、重命名、删除操作现在全部通过 `sendMessage` 由 Background 统一处理并触发持久化。
+    - Tooltip 的标签创建也改为消息驱动，并改为从后台动态获取最新标签列表（`get-all-tags`）。
+  - **修复数据一致性**: Sidepanel 的批量管理逻辑现已完全采用消息同步，消除本地直接修改 `marksByUrl` 的隐患。
+  - **性能优化**: 彻底移除了高开销的全量扫描逻辑。
