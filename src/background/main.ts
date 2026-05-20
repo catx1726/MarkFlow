@@ -322,6 +322,10 @@ onMessage('refresh-sidepanel-data', async () => {
   })
 })
 
+onMessage('open-options-page', async () => {
+  browser.runtime.openOptionsPage()
+})
+
 /**
  * 当扩展首次安装时，自动打开配置页面。
  */

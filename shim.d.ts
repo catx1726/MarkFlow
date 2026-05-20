@@ -13,7 +13,7 @@ declare module 'webext-bridge' {
     'get-mark-by-id': ProtocolWithReturn<{ id: string; url: string }, Mark>
     'remove-mark-by-id': { id: string; url: string }
     'update-mark-note': { id: string; url: string; note: string }
-    'update-mark-details': { id: string; url: string; note?: string; color?: string }
+    'update-mark-details': { id: string; url: string; note?: string; color?: string; tags?: string[]; [key: string]: any }
     'add-mark': Mark
     'remove-mark': Mark
     'goto-mark': { markId: string }
@@ -21,5 +21,6 @@ declare module 'webext-bridge' {
     'cleanup-old-marks': { days: number }
     'cleanup-useless-marks'
     'goto-chapter': ProtocolWithReturn<{ selector: string }>
+    'open-options-page'
   }
 }

@@ -2,92 +2,124 @@
 <template>
   <div
     v-if="visible"
-    class="tooltip-card fixed z-1 w-[300px] rounded-lg bg-white p-[12px] font-sans shadow-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200"
+    class="tooltip-card fixed z-[9999] w-[320px] rounded-lg bg-white p-[12px] font-sans shadow-xl border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200"
     :style="{ top: `${position.y}px`, left: `${position.x}px`, zIndex: zIndex }"
     @mousedown.stop
   >
     <div class="tooltip-content flex flex-col gap-[12px]">
-      <div class="tooltip-colors flex gap-[4px] items-center">
-        <button
-          v-for="color in highlightColors"
-          :key="color"
-          class="color-swatch h-[20px] w-[20px] cursor-pointer rounded-full border-[2px] border-transparent p-0 transition-all duration-200 ease-in-out transform hover:scale-110 hover:translate-y-[-0.25rem] hover:z-20 relative dark:border-gray-800"
-          :style="{ backgroundColor: color }"
-          :class="{ 'is-selected !border-brand-blue dark:!border-blue-400': selectedColor === color }"
-          @click="selectedColor = color"
-        />
+      <div class="tooltip-header flex justify-between items-center mb-[-4px]">
+        <div class="tooltip-colors flex gap-[4px] items-center">
+          <button
+            v-for="color in highlightColors"
+            :key="color"
+            class="color-swatch h-[18px] w-[18px] cursor-pointer rounded-full border-[2px] border-transparent p-0 transition-all duration-200 ease-in-out transform hover:scale-110 relative dark:border-gray-800"
+            :style="{ backgroundColor: color }"
+            :class="{ 'is-selected !border-blue-500 dark:!border-blue-400': selectedColor === color }"
+            @click="selectedColor = color"
+          />
+        </div>
+        <div class="text-[10px] text-gray-400 font-medium">MarkFlow</div>
       </div>
 
-      <!-- 新增：已关联标签展示 -->
-      <div v-if="selectedTags.length > 0" class="flex flex-wrap gap-1 mb-1">
-        <span 
-          v-for="tagId in selectedTags" 
-          :key="tagId"
-          class="text-[10px] px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-800"
-        >
-          # {{ getTagName(tagId) }}
-        </span>
+      <!-- 标签管理区 -->
+      <div
+        class="tag-section bg-gray-50 dark:bg-gray-900/50 p-2 rounded-md border border-gray-100 dark:border-gray-700"
+      >
+        <p class="text-[10px] text-gray-400 uppercase font-bold mb-1.5 flex justify-between">
+          <span>关联标签</span>
+        </p>
+        <div class="flex flex-wrap gap-1 max-h-[72px] overflow-y-auto custom-scrollbar">
+          <button
+            v-for="tag in allTags"
+            :key="tag.id"
+            class="text-[10px] px-2 py-0.5 rounded-full border transition-all duration-200"
+            :class="
+              selectedTags.includes(tag.id)
+                ? 'bg-blue-100 border-blue-300 text-blue-800 dark:bg-blue-900/40 dark:border-blue-700 dark:text-blue-300'
+                : 'bg-white border-gray-200 text-gray-600 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-400 hover:border-blue-400'
+            "
+            @click="toggleTag(tag.id)"
+          >
+            {{ tag.name }}
+          </button>
+          <span v-if="allTags.length === 0" class="text-[10px] text-gray-400 italic">暂无标签</span>
+        </div>
+        <div class="flex gap-1 mt-1.5">
+          <input
+            v-model="newTagInput"
+            placeholder="+ 新建标签"
+            class="flex-1 px-2 py-1 text-[10px] border border-gray-200 dark:border-gray-600 rounded dark:bg-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            @keydown.enter.prevent="handleCreateTag"
+          />
+          <button
+            class="px-2 py-1 text-[10px] bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+            :disabled="!newTagInput.trim()"
+            @click="handleCreateTag"
+          >
+            创建
+          </button>
+        </div>
       </div>
 
       <textarea
         ref="textareaRef"
         v-model="noteValue"
-        class="tooltip-textarea min-h-[60px] min-w-[250px] resize-y rounded-md border border-gray-300 p-[8px] text-[14px] focus:border-blue-500 focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:placeholder-gray-400 dark:focus:border-blue-400 dark:focus:ring-blue-400"
-        placeholder="你正在想什么..."
-        @keydown.enter.prevent="onSaveClick"
+        class="tooltip-textarea min-h-[80px] w-full resize-y rounded-md border border-gray-300 p-[8px] text-[14px] leading-relaxed focus:border-blue-500 focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:placeholder-gray-400 dark:focus:border-blue-400 dark:focus:ring-blue-400"
+        placeholder="在这里记录你的笔记或思考..."
+        @keydown.enter.ctrl.prevent="onSaveClick"
         @keydown.esc="hide"
       />
-      <div class="tooltip-actions flex justify-end w-full gap-[8px]">
-        <button
-          class="action-button copy-button p-[4px] text-gray-400 hover:text-blue-600 rounded-full dark:hover:text-blue-400"
-          title="复制文本"
-          @click="onCopyClick"
-        >
-          <svg
-            v-if="copySuccess"
-            xmlns="http://www.w3.org/2000/svg"
-            class="w-[20px] h-[20px] text-green-500 transition-colors"
-            viewBox="0 0 20 20"
-            fill="currentColor"
-          >
-            <path
-              fill-rule="evenodd"
-              d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-              clip-rule="evenodd"
-            />
-          </svg>
-          <svg
-            v-else
-            xmlns="http://www.w3.org/2000/svg"
-            class="h-[20px] w-[20px]"
-            viewBox="0 0 20 20"
-            fill="currentColor"
-          >
-            <path d="M7 9a2 2 0 012-2h6a2 2 0 012 2v6a2 2 0 01-2 2H9a2 2 0 01-2-2V9z" />
-            <path d="M5 3a2 2 0 00-2 2v6a2 2 0 002 2V5h6a2 2 0 00-2-2H5z" />
-          </svg>
-        </button>
 
-        <button
-          v-if="isHighlighted"
-          class="action-button delete-button rounded-md bg-red-600 px-[12px] py-[6px] text-[14px] font-medium text-white hover:bg-red-700"
-          @click="onDeleteClick"
-        >
-          删除 ({{ shortcutDeleteText }})
-        </button>
-        <button
-          class="action-button save-button rounded-md bg-blue-600 px-[12px] py-[6px] text-[14px] font-medium text-white hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600"
-          @click="onSaveClick"
-        >
-          确认 ({{ shortcutSaveText }})
-        </button>
+      <div class="tooltip-actions flex justify-between items-center w-full">
+        <div class="flex gap-2">
+          <button
+            class="action-button p-[6px] text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-md transition-colors"
+            title="复制文本"
+            @click="onCopyClick"
+          >
+            <svg
+              v-if="copySuccess"
+              xmlns="http://www.w3.org/2000/svg"
+              class="w-5 h-5 text-green-500"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+            >
+              <path
+                fill-rule="evenodd"
+                d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                clip-rule="evenodd"
+              />
+            </svg>
+            <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+              <path d="M7 9a2 2 0 012-2h6a2 2 0 012 2v6a2 2 0 01-2 2H9a2 2 0 01-2-2V9z" />
+              <path d="M5 3a2 2 0 00-2 2v6a2 2 0 002 2V5h6a2 2 0 00-2-2H5z" />
+            </svg>
+          </button>
+        </div>
+
+        <div class="flex gap-2">
+          <button
+            v-if="isHighlighted"
+            class="px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/30 rounded-md transition-colors"
+            @click="onDeleteClick"
+          >
+            删除
+          </button>
+          <button
+            class="px-4 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-md hover:bg-blue-700 transition-colors shadow-sm"
+            @click="onSaveClick"
+          >
+            {{ isHighlighted ? '保存修改' : '确认高亮' }}
+          </button>
+        </div>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, reactive, ref, toRaw, watch } from 'vue'
+import { sendMessage } from 'webext-bridge/content-script'
 import { settings } from '~/logic/settings'
 import { tagsMetadata } from '~/logic/storage'
 import { getMaxZIndex } from '../../logic/dom'
@@ -105,25 +137,36 @@ const textToCopy = ref('')
 const copySuccess = ref(false)
 const zIndex = ref(0)
 
-const getTagName = (id: string) => tagsMetadata.value[id]?.name || id
+const newTagInput = ref('')
+const allTags = computed(() => Object.values(tagsMetadata.value).sort((a, b) => b.createdAt - a.createdAt))
 
-const formatShortcutForDisplay = (shortcut: string) => {
-  let text = shortcut
-  if (isMac) {
-    text = text
-      .replace(/meta|cmd|command/gi, '⌘')
-      .replace(/ctrl|control/gi, '⌃')
-      .replace(/alt/gi, '⌥')
-      .replace(/shift/gi, '⇧')
+function handleCreateTag() {
+  const name = newTagInput.value.trim()
+  if (!name) return
+  const id = `tag-${Date.now()}`
+  tagsMetadata.value = {
+    ...tagsMetadata.value,
+    [id]: { id, name, color: '#3B82F6', isAutoGenerated: false, createdAt: Date.now() }
   }
-  return text.replace(/\+/g, ' + ')
+  selectedTags.value.push(id)
+  newTagInput.value = ''
 }
-const shortcutSaveText = computed(() => formatShortcutForDisplay(settings.value.shortcutSave))
-const shortcutDeleteText = computed(() => formatShortcutForDisplay(settings.value.shortcutDelete))
-const isMac = /mac/i.test(navigator.platform)
+
+function toggleTag(tagId: string) {
+  const index = selectedTags.value.indexOf(tagId)
+  if (index > -1) {
+    selectedTags.value.splice(index, 1)
+  } else {
+    selectedTags.value.push(tagId)
+  }
+}
+
+function openOptions() {
+  sendMessage('open-options-page', {}, 'background')
+}
 
 const emit = defineEmits<{
-  (e: 'save', note: string, color: string): void
+  (e: 'save', note: string, color: string, tags: string[]): void
   (e: 'delete'): void
   (e: 'color-change', color: string, isExisting: boolean): void
   (e: 'clear-preview'): void
@@ -132,6 +175,8 @@ const emit = defineEmits<{
 watch(selectedColor, (newColor) => {
   emit('color-change', newColor, isHighlighted.value)
 })
+
+const isMac = /mac/i.test(navigator.platform)
 
 const handleKeydown = (event: KeyboardEvent) => {
   if (!visible.value) return
@@ -166,11 +211,13 @@ const handleKeydown = (event: KeyboardEvent) => {
       .split('+')
       .map((p) => p.trim())
     const key = parts.pop() || ''
-    const alt = parts.includes('alt')
-    const ctrl = parts.includes('ctrl') || parts.includes('control')
-    const meta = parts.includes('meta') || parts.includes('cmd') || parts.includes('command')
-    const shift = parts.includes('shift')
-    return { key, alt, ctrl, shift, meta }
+    return {
+      key,
+      alt: parts.includes('alt'),
+      ctrl: parts.includes('ctrl') || parts.includes('control'),
+      meta: parts.includes('meta') || parts.includes('cmd') || parts.includes('command'),
+      shift: parts.includes('shift')
+    }
   }
 
   const match = (shortcut: ReturnType<typeof formatShortcut>) => {
@@ -178,13 +225,11 @@ const handleKeydown = (event: KeyboardEvent) => {
       isMac && shortcut.alt && shortcut.key.length === 1 && shortcut.key >= 'a' && shortcut.key <= 'z'
         ? event.code.toLowerCase() === `key${shortcut.key}`
         : event.key.toLowerCase() === shortcut.key
-
     if (!keyMatches) return false
     if (event.altKey !== shortcut.alt) return false
     if (event.shiftKey !== shortcut.shift) return false
     if (shortcut.meta !== event.metaKey) return false
     if (shortcut.ctrl !== event.ctrlKey) return false
-
     return true
   }
 
@@ -213,7 +258,7 @@ async function onCopyClick() {
 }
 
 function onSaveClick() {
-  emit('save', noteValue.value, selectedColor.value)
+  emit('save', noteValue.value, selectedColor.value, toRaw(selectedTags.value))
   hide()
 }
 
@@ -231,9 +276,9 @@ function show(
   initialTextToCopy = '',
   initialTags: string[] = []
 ) {
-  zIndex.value = getMaxZIndex()
-  const tooltipWidth = 300
-  const tooltipHeight = 160
+  zIndex.value = getMaxZIndex() + 100
+  const tooltipWidth = 320
+  const tooltipHeight = 340
   const margin = 10
   if (x + tooltipWidth > window.innerWidth) x = window.innerWidth - tooltipWidth - margin
   if (y + tooltipHeight > window.innerHeight) y = window.innerHeight - tooltipHeight - margin
@@ -243,7 +288,7 @@ function show(
   position.y = y
   isHighlighted.value = highlighted
   noteValue.value = initialNote
-  selectedTags.value = initialTags
+  selectedTags.value = [...initialTags]
   selectedColor.value = initialColor || defaultHighlightColor.value
   textToCopy.value = initialTextToCopy
   visible.value = true
@@ -253,7 +298,7 @@ function show(
 }
 
 function hide() {
-  if (visible.value) {
+  if (visible.value && !isHighlighted.value) {
     emit('clear-preview')
   }
   visible.value = false
@@ -270,4 +315,18 @@ onUnmounted(() => {
 defineExpose({ show, hide })
 </script>
 
-<style scoped></style>
+<style scoped>
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 10px;
+}
+.dark .custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #475569;
+}
+</style>
