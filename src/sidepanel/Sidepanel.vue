@@ -78,15 +78,10 @@ onMounted(() => {
 })
 
 async function refreshAllMarks() {
-  const urls = Object.keys(marksByUrl.value)
-  const result: Record<string, Mark[]> = {}
-  for (const url of urls) {
-    const updatedMarks = await sendMessage('get-marks-for-url', { url }, 'background')
-    if (updatedMarks && updatedMarks.length > 0) {
-      result[url] = updatedMarks
-    }
+  const allMarks = await sendMessage('get-all-marks', {}, 'background')
+  if (allMarks) {
+    marksByUrl.value = allMarks
   }
-  marksByUrl.value = result
 }
 
 // --- 结构化回顾功能 ---

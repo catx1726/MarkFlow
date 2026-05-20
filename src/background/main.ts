@@ -80,8 +80,16 @@ onMessage('get-current-tab', async () => {
 })
 
 /**
- * 核心：处理自动标签晋升与关联逻辑
+ * 核心：处理自动标签晋升逻辑（优化版：防抖处理 + 惰性关联）
  */
+let autoTaggingTimer: any = null
+async function debouncedAutoTagging(mark: Mark) {
+  if (autoTaggingTimer) clearTimeout(autoTaggingTimer)
+  autoTaggingTimer = setTimeout(() => {
+    processAutoTagging(mark)
+  }, 1000) // 1秒防抖
+}
+
 async function processAutoTagging(mark: Mark) {
   try {
     const domain = new URL(mark.url).hostname
@@ -103,11 +111,9 @@ async function processAutoTagging(mark: Mark) {
 
       // 检查是否达到晋升阈值
       if (shouldPromoteToTag({ count: stat.count, domains: new Set(stat.domains) })) {
-        // 检查是否已存在同名标签
         let existingTag = Object.values(tagsMetadata.value).find(t => t.name.toLowerCase() === key)
 
         if (!existingTag) {
-          // 自动创建标签
           const tagId = `auto-tag-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`
           existingTag = {
             id: tagId,
@@ -117,26 +123,25 @@ async function processAutoTagging(mark: Mark) {
             createdAt: Date.now()
           }
           tagsMetadata.value[tagId] = existingTag
-          console.log(`[background] Auto-created tag: ${kw} (${tagId})`)
+          
+          // 仅在创建新标签时，执行一次全量历史标记关联（避免频繁扫描）
+          Object.values(marksByUrl.value).forEach((pageMarks) => {
+            pageMarks.forEach((m) => {
+              if ((m.text.toLowerCase().includes(key) || m.title?.toLowerCase().includes(key))) {
+                if (!m.tags) m.tags = []
+                if (!m.tags.includes(existingTag!.id)) {
+                  m.tags.push(existingTag!.id)
+                }
+              }
+            })
+          })
         }
-
+        
         // 关联当前标记
         if (!mark.tags) mark.tags = []
         if (!mark.tags.includes(existingTag.id)) {
           mark.tags.push(existingTag.id)
         }
-
-        // 扫描并关联历史标记
-        Object.values(marksByUrl.value).forEach((pageMarks) => {
-          pageMarks.forEach((m) => {
-            if ((m.text.toLowerCase().includes(key) || m.title?.toLowerCase().includes(key))) {
-              if (!m.tags) m.tags = []
-              if (!m.tags.includes(existingTag!.id)) {
-                m.tags.push(existingTag!.id)
-              }
-            }
-          })
-        })
       }
     }
 
@@ -151,7 +156,7 @@ async function processAutoTagging(mark: Mark) {
 }
 
 /**
- * 核心：清理关键词统计信息
+ * 核心：清理关键词统计信息（优化版：重新计算确保准确性）
  */
 function cleanupKeywordStats(mark: Mark) {
   const domain = new URL(mark.url).hostname
@@ -162,11 +167,18 @@ function cleanupKeywordStats(mark: Mark) {
     const key = kw.toLowerCase()
     const stat = keywordStats.value[key]
     if (stat) {
+      // 严谨做法：如果该域名下还有其他标记包含此词，则保留域名记录
+      const domainStillHasKeyword = Object.values(marksByUrl.value)
+        .filter((_, url) => new URL(url).hostname === domain)
+        .flat()
+        .some(m => m.id !== mark.id && (m.text.toLowerCase().includes(key) || m.title?.toLowerCase().includes(key)))
+      
       stat.count = Math.max(0, stat.count - 1)
-      // 如果该关键词在当前域名下已无标记，则移除域名记录
-      // 注意：这只是一个近似逻辑，因为一个域名下可能有多个标记包含同一个词
-      // 严谨的做法需要扫描该域名下所有标记，但为了性能暂时采用递减
-      if (stat.count === 0) {
+      if (!domainStillHasKeyword) {
+        stat.domains = stat.domains.filter(d => d !== domain)
+      }
+      
+      if (stat.count === 0 || stat.domains.length === 0) {
         delete keywordStats.value[key]
       }
       needsPersistence = true
@@ -178,39 +190,18 @@ function cleanupKeywordStats(mark: Mark) {
 }
 
 onMessage('add-mark', async ({ data }) => {
-  console.log('Adding new mark:', data)
   const { url } = data
   if (!marksByUrl.value[url]) marksByUrl.value[url] = []
 
   marksByUrl.value[url].push(data)
   marksByUrl.value = { ...marksByUrl.value } // 确保持久化
 
-  // 异步处理自动标签逻辑，不阻塞添加操作
-  processAutoTagging(data)
+  // 异步防抖处理自动标签逻辑
+  debouncedAutoTagging(data)
 })
 
 onMessage('remove-mark', async ({ data: markToRemove }) => {
   const { url, id } = markToRemove
-  if (marksByUrl.value[url]) {
-    const mark = marksByUrl.value[url].find(m => m.id === id)
-    if (mark) {
-      cleanupKeywordStats(mark)
-      marksByUrl.value[url] = marksByUrl.value[url].filter((m) => m.id !== id)
-      if (marksByUrl.value[url].length === 0) delete marksByUrl.value[url]
-      marksByUrl.value = { ...marksByUrl.value } // 确保持久化
-    }
-  }
-})
-
-onMessage('get-marks-for-url', async ({ data }) => {
-  await dataReady
-  const { url } = data
-  const resultProxy = marksByUrl.value[url] || []
-  return resultProxy.map(toRaw)
-})
-
-onMessage<RemoveMarkPayload>('remove-mark-by-id', async ({ data }) => {
-  const { url, id } = data
   if (marksByUrl.value[url]) {
     const mark = marksByUrl.value[url].find(m => m.id === id)
     if (mark) {
@@ -222,12 +213,21 @@ onMessage<RemoveMarkPayload>('remove-mark-by-id', async ({ data }) => {
   }
 })
 
-onMessage<UpdateMarkNotePayload>('update-mark-note', async ({ data }) => {
-  const { url, id, note } = data
+onMessage('get-marks-for-url', async ({ data }) => {
+  await dataReady
+  const { url } = data
+  // 返回空数组而不是 undefined，确保 Sidepanel 逻辑一致
+  return (marksByUrl.value[url] || []).map(toRaw)
+})
+
+onMessage<RemoveMarkPayload>('remove-mark-by-id', async ({ data }) => {
+  const { url, id } = data
   if (marksByUrl.value[url]) {
-    const markToUpdate = marksByUrl.value[url].find((m) => m.id === id)
-    if (markToUpdate) {
-      markToUpdate.note = note
+    const mark = marksByUrl.value[url].find(m => m.id === id)
+    if (mark) {
+      cleanupKeywordStats(mark)
+      marksByUrl.value[url] = marksByUrl.value[url].filter((m) => m.id !== id)
+      if (marksByUrl.value[url].length === 0) delete marksByUrl.value[url]
       marksByUrl.value = { ...marksByUrl.value }
     }
   }
@@ -311,11 +311,19 @@ onMessage<{ tabId: number }>('open-sidepanel', async ({ data }) => {
 onMessage<{ url: string }>('remove-marks-by-url', async ({ data }) => {
   const { url } = data
   if (marksByUrl.value[url]) {
-    // 清理统计信息
     marksByUrl.value[url].forEach(cleanupKeywordStats)
     delete marksByUrl.value[url]
     marksByUrl.value = { ...marksByUrl.value }
   }
+})
+
+onMessage('get-all-marks', async () => {
+  await dataReady
+  const result: Record<string, Mark[]> = {}
+  Object.entries(marksByUrl.value).forEach(([url, marks]) => {
+    result[url] = marks.map(toRaw)
+  })
+  return result
 })
 
 onMessage('refresh-sidepanel-data', async () => {
@@ -324,6 +332,17 @@ onMessage('refresh-sidepanel-data', async () => {
 
 onMessage('open-options-page', async () => {
   browser.runtime.openOptionsPage()
+})
+
+/**
+ * 专门的消息处理器用于创建标签，解决 Content Script 直接修改存储的问题
+ */
+onMessage<{ name: string, color?: string }>('create-tag', async ({ data }) => {
+  const { name, color = '#3B82F6' } = data
+  const id = `tag-${Date.now()}`
+  const newTag = { id, name, color, isAutoGenerated: false, createdAt: Date.now() }
+  tagsMetadata.value = { ...tagsMetadata.value, [id]: newTag }
+  return newTag
 })
 
 browser.runtime.onInstalled.addListener((details) => {

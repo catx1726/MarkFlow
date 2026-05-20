@@ -43,9 +43,9 @@ interface AssociationStats {
 
 /**
  * 判断是否应该将关键词晋升为正式标签。
- * 考虑到算法目前的粗糙度，提高阈值以减少误报：域名数量 >= 3 且 标记数量 >= 5
+ * 阈值（与 Spec 保持一致）：域名数量 >= 2 且 标记数量 >= 3
  */
 export function shouldPromoteToTag(stats: AssociationStats): boolean {
-  return stats.domains.size >= 3 && stats.count >= 5
+  return stats.domains.size >= 2 && stats.count >= 3
 }
 
