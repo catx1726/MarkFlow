@@ -100,7 +100,7 @@ async function processAutoTagging(mark: Mark) {
     let needsPersistence = false
     let hasNewTagCreated = false
 
-    // 复制一份统计数据进行修改，避免循环中触发多次持久化
+    // 复制一份镜像，避免循环中触发多次持久化
     const statsUpdate = { ...keywordStats.value }
     const tagsUpdate = { ...tagsMetadata.value }
     const marksUpdate = { ...marksByUrl.value }
@@ -202,11 +202,10 @@ onMessage('add-mark', async ({ data }) => {
   const { url } = data
   if (!marksByUrl.value[url]) marksByUrl.value[url] = []
 
-  // 这里的 push 会触发第一次持久化
   marksByUrl.value[url].push(data)
   marksByUrl.value = { ...marksByUrl.value } 
 
-  // 异步处理自动标签
+  // 异步防抖处理自动标签
   debouncedAutoTagging(data)
 })
 
@@ -237,6 +236,17 @@ onMessage<RemoveMarkPayload>('remove-mark-by-id', async ({ data }) => {
       cleanupKeywordStats(mark)
       marksByUrl.value[url] = marksByUrl.value[url].filter((m) => m.id !== id)
       if (marksByUrl.value[url].length === 0) delete marksByUrl.value[url]
+      marksByUrl.value = { ...marksByUrl.value }
+    }
+  }
+})
+
+onMessage<UpdateMarkNotePayload>('update-mark-note', async ({ data }) => {
+  const { url, id, note } = data
+  if (marksByUrl.value[url]) {
+    const markToUpdate = marksByUrl.value[url].find((m) => m.id === id)
+    if (markToUpdate) {
+      markToUpdate.note = note
       marksByUrl.value = { ...marksByUrl.value }
     }
   }
