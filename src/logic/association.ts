@@ -14,26 +14,29 @@ const STOP_WORDS = new Set([
 
 /**
  * 提取文本中的关键词。
+ * 增强版：支持基础的中文 2+ 字符词簇识别。
  */
 export function extractKeywords(text: string): string[] {
   if (!text) return []
 
-  // 移除非字母数字的字符，保留空格以便分词
-  const cleanText = text.replace(/[^\w\s\u4e00-\u9fa5]/g, ' ')
+  const results: string[] = []
+  
+  // 1. 提取中文词簇 (2个及以上汉字)
+  const chineseClusters = text.match(/[\u4e00-\u9fa5]{2,}/g) || []
+  results.push(...chineseClusters)
 
-  // 分词
-  const words = cleanText.split(/\s+/)
-
-  // 过滤逻辑
-  const keywords = words.filter(word => {
+  // 2. 提取英文/数字词
+  // 移除非字母数字字符
+  const cleanText = text.replace(/[^\w\s]/g, ' ')
+  const englishWords = cleanText.split(/\s+/)
+  
+  const filteredEnglish = englishWords.filter(word => {
     const w = word.toLowerCase()
-    const isMeaningful = w.length > 1
-    const isNotNumeric = isNaN(Number(w))
-    const isNotStopWord = !STOP_WORDS.has(w)
-    return isMeaningful && isNotNumeric && isNotStopWord
+    return w.length > 2 && isNaN(Number(w)) && !STOP_WORDS.has(w)
   })
+  results.push(...filteredEnglish)
 
-  return Array.from(new Set(keywords))
+  return Array.from(new Set(results))
 }
 
 interface AssociationStats {
