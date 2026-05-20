@@ -290,8 +290,15 @@ onMessage('goto-mark', ({ data }) => {
   restorer.scrollToMark(data.markId)
 })
 onMessage('remove-mark', async ({ data: markToRemove }) => {
-  if (!markToRemove || !markToRemove.id) return
-  await ui.removeMarkById(markToRemove.id)
+  if (!markToRemove || !markToRemove.id) return { success: false, error: 'Invalid mark data' }
+  try {
+    await ui.removeMarkById(markToRemove.id)
+    return { success: true }
+  }
+  catch (error) {
+    console.error('Failed to remove mark in content script:', error)
+    return { success: false, error: (error as Error).message }
+  }
 })
 onMessage('goto-chapter', ({ data }) => {
   const element = querySelectorDeep(data.selector)

@@ -1,12 +1,13 @@
 <!-- src/sidepanel/Sidepanel.vue -->
 <script setup lang="ts">
 import { sendMessage } from 'webext-bridge/options'
-import { computed, nextTick, onMounted, onUnmounted, ref, toRaw, watchEffect } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, toRaw, watch, watchEffect } from 'vue'
 import { CLEANUP_DAYS_THRESHOLD } from '~/logic/config'
 import type { Mark } from '~/logic/storage'
 import { marksByUrl, tagsMetadata, tagsReady } from '~/logic/storage'
 import { usePreferredDark } from '@vueuse/core'
 import TurndownService from 'turndown'
+import { buildTagTree, type MarkGroup, type TagTree } from '~/logic/tagTree'
 
 const isDark = usePreferredDark()
 const turndownService = new TurndownService()
@@ -78,98 +79,30 @@ onMounted(() => {
 async function refreshAllMarks() {
   const allMarks = await sendMessage('get-all-marks', {}, 'background')
   if (allMarks) {
-    marksByUrl.value = allMarks
+    // 逐 URL 合并更新，避免直接替换整个响应式对象导致依赖失效
+    Object.keys(marksByUrl.value).forEach((key) => delete marksByUrl.value[key])
+    Object.entries(allMarks).forEach(([url, marks]) => {
+      marksByUrl.value[url] = marks
+    })
+    marksByUrl.value = { ...marksByUrl.value }
   }
 }
 
 // --- 结构化回顾功能 ---
 
-interface MarkGroup {
-  title: string
-  level: number
-  selector: string
-  marks: Mark[]
-  count: number
-  order: number
-}
-
 const collapsedFolders = ref<Record<string, boolean>>({}),
   collapsedStates = ref<Record<string, Record<string, boolean>>>({}),
   collapsedUrls = ref<Record<string, boolean>>({}),
-  structuredMarks = computed(() => {
-    const tree: Record<
-      string,
-      { tagName: string; pages: Record<string, { pageTitle: string; groups: MarkGroup[]; totalMarks: number }> }
-    > = {
-      inbox: { tagName: '收集箱 (Inbox)', pages: {} }
-    }
+  structuredMarks = ref<TagTree>({ inbox: { tagName: '收集箱 (Inbox)', pages: {} } })
 
-    Object.values(tagsMetadata.value).forEach((tag) => {
-      tree[tag.id] = { tagName: tag.name, pages: {} }
-    })
-
-    const sortedUrls = Object.entries(marksByUrl.value)
-      .filter(([_, marks]) => marks && marks.length > 0)
-      .map(([url, marks]) => ({
-        url,
-        marks,
-        lastActive: Math.max(...marks.map((m) => m.createdAt))
-      }))
-      .sort((a, b) => b.lastActive - a.lastActive)
-
-    for (const { url, marks } of sortedUrls) {
-      const pageTitle = getPageTitle(marks)
-
-      for (const mark of marks) {
-        const targetTags = mark.tags && mark.tags.length > 0 ? mark.tags : ['inbox']
-
-        for (const tagId of targetTags) {
-          const actualTagId = tree[tagId] ? tagId : 'inbox'
-
-          if (!tree[actualTagId].pages[url]) {
-            tree[actualTagId].pages[url] = { pageTitle, groups: [], totalMarks: 0 }
-          }
-
-          const pageEntry = tree[actualTagId].pages[url]
-          pageEntry.totalMarks++
-
-          const contextTitle = mark.contextTitle || '未分类标记',
-            contextLevel = mark.contextLevel || 7,
-            contextSelector = mark.contextSelector || 'body',
-            contextOrder = mark.contextOrder ?? -1
-
-          let group = pageEntry.groups.find((g) => g.title === contextTitle)
-          if (!group) {
-            group = {
-              title: contextTitle,
-              level: contextLevel,
-              selector: contextSelector,
-              marks: [],
-              count: 0,
-              order: contextOrder
-            }
-            pageEntry.groups.push(group)
-          }
-          group.marks.push(mark)
-        }
-      }
-    }
-
-    Object.values(tree).forEach((folder) => {
-      Object.values(folder.pages).forEach((page) => {
-        page.groups.forEach((group) => {
-          group.marks.sort((a, b) => {
-            if (a.domIndex !== undefined && b.domIndex !== undefined) return a.domIndex - b.domIndex
-            return a.createdAt - b.createdAt
-          })
-          group.count = group.marks.length
-        })
-        page.groups.sort((a, b) => a.order - b.order)
-      })
-    })
-
-    return tree
-  })
+// 使用 watch + debounce 替代 computed，避免每次 marksByUrl/tagsMetadata 微小变化都触发全量重建
+let structuredMarksDebounceTimer: ReturnType<typeof setTimeout> | null = null
+watch([marksByUrl, tagsMetadata], () => {
+  if (structuredMarksDebounceTimer) clearTimeout(structuredMarksDebounceTimer)
+  structuredMarksDebounceTimer = setTimeout(() => {
+    structuredMarks.value = buildTagTree(marksByUrl.value, tagsMetadata.value)
+  }, 50)
+}, { deep: true, immediate: true })
 
 function toggleFolder(tagId: string) {
   collapsedFolders.value[tagId] = !isFolderCollapsed(tagId)
@@ -380,6 +313,17 @@ async function removeMark(mark: Mark) {
   if (!confirm('确定要删除此标记吗？')) return
   const rawMark = toRaw(mark)
   await sendMessage('remove-mark', rawMark, 'background')
+
+  // 乐观更新本地状态，避免全量刷新
+  const urlMarks = marksByUrl.value[rawMark.url]
+  if (urlMarks) {
+    marksByUrl.value[rawMark.url] = urlMarks.filter((m) => m.id !== rawMark.id)
+    if (marksByUrl.value[rawMark.url].length === 0) {
+      delete marksByUrl.value[rawMark.url]
+    }
+    marksByUrl.value = { ...marksByUrl.value }
+  }
+
   const allTabs = await browser.tabs.query({ currentWindow: true }),
     targetUrl = getNormalizedUrlForTabMatching(rawMark.url)
   const tab = allTabs.find((t) => {
@@ -391,7 +335,6 @@ async function removeMark(mark: Mark) {
     }
   })
   if (tab?.id) sendMessage('remove-mark', rawMark, { context: 'content-script', tabId: tab.id })
-  await refreshAllMarks()
   closeMenus()
 }
 
@@ -473,9 +416,8 @@ async function removeTagFromAll(tagId: string) {
   if (!confirm(`确定要删除标签「${tagName}」吗？标记本身不会被删除，而是移回收集箱。`)) return
 
   // 调用后台进行物理删除和关联清理
+  // 后台已使用 enqueueWrite 序列化写操作，storage sync 会自动更新前端状态，无需全量刷新
   await sendMessage('delete-tag', { tagId }, 'background')
-  
-  await refreshAllMarks()
   activeFolderMenu.value = null
 }
 
