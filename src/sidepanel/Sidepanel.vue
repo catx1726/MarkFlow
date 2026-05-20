@@ -478,16 +478,31 @@ async function removeTagFromAll(tagId: string) {
   }
   const tagName = tagsMetadata.value[tagId]?.name || tagId
   if (!confirm(`确定要删除标签「${tagName}」吗？标记本身不会被删除，而是移回收集箱。`)) return
-  const updated: Record<string, Mark[]> = {}
-  for (const [url, marks] of Object.entries(marksByUrl.value))
-    updated[url] = marks.map((m) => (m.tags?.includes(tagId) ? { ...m, tags: m.tags.filter((t) => t !== tagId) } : m))
-  marksByUrl.value = updated
-  // 从 tagsMetadata 中彻底删除该标签，确保侧边栏文件夹同步消失
+
+  // 1. 扫描所有包含该标签的标记，通过消息批量更新
+  const updatePromises: Promise<any>[] = []
+  Object.values(marksByUrl.value).forEach(marks => {
+    marks.forEach(m => {
+      if (m.tags?.includes(tagId)) {
+        const newTags = m.tags.filter(t => t !== tagId)
+        updatePromises.push(sendMessage('update-mark-details', { id: m.id, url: m.url, tags: newTags }, 'background'))
+      }
+    })
+  })
+
+  if (updatePromises.length > 0) {
+    await Promise.all(updatePromises)
+  }
+
+  // 2. 从 tagsMetadata 中彻底删除该标签
   const newTags = { ...tagsMetadata.value }
   delete newTags[tagId]
   tagsMetadata.value = newTags
+
+  await refreshAllMarks()
   activeFolderMenu.value = null
 }
+
 
 function openRenameDialog(tagId: string) {
   editingTagId.value = tagId
@@ -564,28 +579,36 @@ function closeTagPicker() {
   tagPickerVisible.value = false
 }
 
-function togglePageTag(tagId: string) {
+async function togglePageTag(tagId: string) {
   if (!tagPickerUrl.value) return
   const url = tagPickerUrl.value
   const marks = marksByUrl.value[url]
   if (!marks) return
 
+  const updatePromises: Promise<any>[] = []
+
   if (tagPickerMarkId.value) {
+    // 针对单个标记
     const m = marks.find((m) => m.id === tagPickerMarkId.value)
     if (!m) return
     const tags = m.tags || []
     const idx = tags.indexOf(tagId)
-    m.tags = idx >= 0 ? tags.filter((t) => t !== tagId) : [...tags, tagId]
-    marksByUrl.value = { ...marksByUrl.value }
-    return
+    const newTags = idx >= 0 ? tags.filter((t) => t !== tagId) : [...tags, tagId]
+    updatePromises.push(sendMessage('update-mark-details', { id: m.id, url: m.url, tags: newTags }, 'background'))
+  } else {
+    // 针对整个页面
+    marks.forEach((m) => {
+      const tags = m.tags || []
+      const idx = tags.indexOf(tagId)
+      const newTags = idx >= 0 ? tags.filter((t) => t !== tagId) : [...tags, tagId]
+      updatePromises.push(sendMessage('update-mark-details', { id: m.id, url: m.url, tags: newTags }, 'background'))
+    })
   }
-
-  marksByUrl.value[url] = marks.map((m) => {
-    const tags = m.tags || []
-    const idx = tags.indexOf(tagId)
-    return { ...m, tags: idx >= 0 ? tags.filter((t) => t !== tagId) : [...tags, tagId] }
-  })
-  marksByUrl.value = { ...marksByUrl.value }
+  
+  if (updatePromises.length > 0) {
+    await Promise.all(updatePromises)
+    await refreshAllMarks()
+  }
 }
 
 function isPageTagChecked(tagId: string): boolean {

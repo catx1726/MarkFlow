@@ -1,26 +1,39 @@
+// 基础停用词表（后续可扩展）
+const STOP_WORDS = new Set([
+  // 英文常见词
+  'the', 'this', 'that', 'have', 'with', 'what', 'your', 'from', 'they', 'their', 'them', 'been', 'were',
+  'will', 'would', 'should', 'could', 'some', 'other', 'than', 'then', 'more', 'about', 'only', 'such',
+  'just', 'than', 'into', 'over', 'also', 'back', 'much', 'well', 'thru', 'very', 'here', 'when', 'where',
+  'there', 'even', 'does', 'did', 'make', 'made', 'went', 'went', 'came', 'down', 'upon', 'then', 'than',
+  'each', 'much', 'before', 'once', 'after', 'again', 'many', 'most', 'such', 'well', 'very', 'than',
+  // 中文常见连词、介词等
+  '这个', '那个', '一个', '一些', '这样', '那样', '如果', '但是', '而且', '因为', '所以', '虽然', '但是',
+  '这些', '那些', '这种', '那种', '进行', '已经', '可以', '可能', '应该', '如果', '然后', '最后', '由于',
+  '对于', '关于', '所谓', '作为', '或者', '还是', '甚至', '尽管', '既然', '以此', '不仅', '而且', '就是'
+])
+
 /**
  * 提取文本中的关键词。
- * 目前采用基于长度和常见停用词过滤的简单逻辑，后期可升级为 NLP 库。
  */
 export function extractKeywords(text: string): string[] {
   if (!text) return []
 
   // 移除非字母数字的字符，保留空格以便分词
   const cleanText = text.replace(/[^\w\s\u4e00-\u9fa5]/g, ' ')
-  
-  // 分词（按空格和中文标点）
+
+  // 分词
   const words = cleanText.split(/\s+/)
-  
-  // 过滤：
-  // 1. 长度大于 1（避免提取“是”、“的”等单字，除非是重要的专有名词）
-  // 2. 排除纯数字
+
+  // 过滤逻辑
   const keywords = words.filter(word => {
-    const isMeaningful = word.length > 1
-    const isNotNumeric = isNaN(Number(word))
-    return isMeaningful && isNotNumeric
+    const w = word.toLowerCase()
+    const isMeaningful = w.length > 1
+    const isNotNumeric = isNaN(Number(w))
+    const isNotStopWord = !STOP_WORDS.has(w)
+    return isMeaningful && isNotNumeric && isNotStopWord
   })
 
-  return Array.from(new Set(keywords)) // 去重
+  return Array.from(new Set(keywords))
 }
 
 interface AssociationStats {
@@ -30,8 +43,9 @@ interface AssociationStats {
 
 /**
  * 判断是否应该将关键词晋升为正式标签。
- * 阈值：域名数量 >= 2 且 标记数量 >= 3
+ * 考虑到算法目前的粗糙度，提高阈值以减少误报：域名数量 >= 3 且 标记数量 >= 5
  */
 export function shouldPromoteToTag(stats: AssociationStats): boolean {
-  return stats.domains.size >= 2 && stats.count >= 3
+  return stats.domains.size >= 3 && stats.count >= 5
 }
+
