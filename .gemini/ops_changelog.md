@@ -16,3 +16,27 @@
 | 2026-05-11 14:30:00 | Fix restoration bug on dynamic sites (Zhihu) | src/contentScripts/restorer.ts, src/contentScripts/state.ts | Debounce disambiguation modal and auto-resolve items when restored via Rangy path | 0f66f5d | git reset --hard HEAD~1 |
 | 2026-05-19 11:30:00 | Implement error collection filtering and handle ErrorEvent | src/logic/errorCollector.ts, src/tests/errorCollector.spec.ts | Filter out host page noise and improve robustness for ErrorEvent (Issue #34) | aa08cba | git reset --hard HEAD~1 |
 | 2026-05-20 12:30:00 | Implement and optimize content association and hierarchical sidebar | src/sidepanel/Sidepanel.vue, src/background/main.ts, src/contentScripts/ui.ts | Realize "Tag -> Page -> Mark" structure and fix data consistency via SSOT (Issue #33) | 9ff0d0f | git checkout main && git branch -D feature/content-association |
+
+| 2026-05-21 01:25:00 | Merge PR #37 after 4 rounds of AI CR fixes | src/background/main.ts, src/sidepanel/Sidepanel.vue, src/contentScripts/views/Tooltip.vue, src/logic/tagTree.ts | Fix concurrency safety, deadlock, race conditions, queue robustness; merge into main (Issue #33) | 4d1dac4 | git revert -m 1 4d1dac4 |
+
+---
+
+## Self-Reflection: Content Association Feature (Issue #33)
+
+**Execution Summary:**
+- Successfully implemented "Tag -> Page -> Mark" hierarchical sidebar with `buildTagTree` pure function.
+- Introduced `enqueueWrite` serialized write queue to prevent storage corruption in concurrent operations.
+- Removed `refreshAllMarks` optimistic updates in favor of SSOT (storage sync + background broadcast), eliminating data inconsistency bugs.
+- Added `remove-marks` batch message for efficient bulk deletion.
+- Completed 4 rounds of AI CR fixes addressing blocking issues around concurrency, deadlocks, race conditions, and queue safety.
+
+**Key Challenges & Lessons:**
+1. **Vue Reactivity + Storage Sync**: Direct mutation of nested objects in `marksByUrl.value` does not reliably trigger `useWebExtensionStorage` persistence. Full object replacement (`{ ...obj }`) is necessary but expensive.
+2. **Write Queue Design**: Initial naive Promise chain caused deadlocks when errors were unhandled. The fix was adding rejection handlers that allow the queue to continue (`writeQueue = result.catch(...)`).
+3. **AI CR Round 5 Hallucination**: The final CR round flagged issues (`refreshAllMarks`, `watch deep`, `get-all-tags`) that did not exist in the actual merged code. This suggests AI CR tools may cache or hallucinate code snapshots. Human verification remains essential.
+4. **Content Script Refresh Separation**: Sidepanel data refresh (via storage sync) and content script highlight refresh (via explicit `refresh-highlights` message) must remain separate channels to avoid regressions.
+
+**What Would I Do Differently:**
+- Implement `enqueueWrite` with proper error propagation (e.g., using a typed queue library like `p-queue`) from the start rather than hand-rolling a Promise chain.
+- Write unit tests for `buildTagTree` and `enqueueWrite` before the first CR round to catch edge cases early.
+- Consider using `shallowRef` for large reactive objects to reduce Vue reactivity overhead.
