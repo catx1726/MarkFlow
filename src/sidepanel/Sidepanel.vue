@@ -59,7 +59,10 @@ async function toggleTagForMark(mark: Mark, tagId: string) {
 
 let unregisterRefreshListener: (() => void) | null = null
 
+const isSidepanelActive = ref(true)
+
 onUnmounted(() => {
+  isSidepanelActive.value = false
   document.removeEventListener('click', closeMenus)
   unregisterRefreshListener?.()
   if (structuredMarksDebounceTimer) clearTimeout(structuredMarksDebounceTimer)
@@ -95,8 +98,10 @@ const collapsedFolders = ref<Record<string, boolean>>({}),
 // 使用 watch + debounce 替代 computed，避免每次 marksByUrl/tagsMetadata 微小变化都触发全量重建
 let structuredMarksDebounceTimer: ReturnType<typeof setTimeout> | null = null
 watch([marksByUrl, tagsMetadata], () => {
+  if (!isSidepanelActive.value) return
   if (structuredMarksDebounceTimer) clearTimeout(structuredMarksDebounceTimer)
   structuredMarksDebounceTimer = setTimeout(() => {
+    if (!isSidepanelActive.value) return
     structuredMarks.value = buildTagTree(marksByUrl.value, tagsMetadata.value)
   }, 50)
 }, { deep: true, immediate: true, flush: 'post' })

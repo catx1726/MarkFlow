@@ -49,10 +49,15 @@ let writeQueue: Promise<unknown> = Promise.resolve()
 function enqueueWrite<T>(writeFn: () => Promise<T>): Promise<T> {
   // 即使前一个写操作失败，当前写操作也要继续排队执行，确保序列化不被破坏
   const result = writeQueue.then(() => writeFn(), () => writeFn())
-  writeQueue = result.catch(() => {})
+  writeQueue = result.catch((error) => {
+    console.error('[enqueueWrite] Write operation failed:', error)
+    return undefined
+  })
   result.then(
     () => { browser.runtime.sendMessage({ type: 'refresh-sidepanel-data' }).catch(() => {}) },
-    () => { browser.runtime.sendMessage({ type: 'refresh-sidepanel-data' }).catch(() => {}) }
+    (error) => {
+      console.error('[enqueueWrite] Broadcast skipped due to write failure:', error)
+    }
   )
   return result
 }
@@ -380,16 +385,25 @@ onMessage<{ tagId: string }>('delete-tag', async ({ data }) => {
         tagsMetadata.value = { ...tagsMetadata.value }
 
         // 优化：先构建新对象再一次性赋值，减少响应式触发次数
-        // 注意：如果标记数量极大，此操作可能阻塞写队列。当前假设正常使用场景下数据量在可控范围。
+        // 分批处理以避免大数据量时阻塞写队列，每批最多处理 500 个 URL
+        const BATCH_SIZE = 500
+        const entries = Object.entries(marksByUrl.value)
         const updatedMarksByUrl = { ...marksByUrl.value }
-        Object.entries(updatedMarksByUrl).forEach(([url, marks]) => {
-          updatedMarksByUrl[url] = marks.map(m => {
-            if (m.tags?.includes(tagId)) {
-              return { ...m, tags: m.tags.filter(t => t !== tagId) }
-            }
-            return m
+        for (let i = 0; i < entries.length; i += BATCH_SIZE) {
+          const batch = entries.slice(i, i + BATCH_SIZE)
+          batch.forEach(([url, marks]) => {
+            updatedMarksByUrl[url] = marks.map(m => {
+              if (m.tags?.includes(tagId)) {
+                return { ...m, tags: m.tags.filter(t => t !== tagId) }
+              }
+              return m
+            })
           })
-        })
+          // 每批处理后让出执行权，避免阻塞队列中的后续操作
+          if (i + BATCH_SIZE < entries.length) {
+            await new Promise(resolve => setTimeout(resolve, 0))
+          }
+        }
         marksByUrl.value = updatedMarksByUrl
       }
     })
