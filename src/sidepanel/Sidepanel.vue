@@ -62,6 +62,7 @@ let unregisterRefreshListener: (() => void) | null = null
 onUnmounted(() => {
   document.removeEventListener('click', closeMenus)
   unregisterRefreshListener?.()
+  if (structuredMarksDebounceTimer) clearTimeout(structuredMarksDebounceTimer)
 })
 
 onMounted(() => {
@@ -98,7 +99,7 @@ watch([marksByUrl, tagsMetadata], () => {
   structuredMarksDebounceTimer = setTimeout(() => {
     structuredMarks.value = buildTagTree(marksByUrl.value, tagsMetadata.value)
   }, 50)
-}, { deep: true, immediate: true })
+}, { deep: true, immediate: true, flush: 'post' })
 
 function toggleFolder(tagId: string) {
   collapsedFolders.value[tagId] = !isFolderCollapsed(tagId)
@@ -202,7 +203,20 @@ function closeMenus() {
 async function removeAllMarksForUrl(url: string) {
   if (confirm(`确定要删除此页面下的所有标记吗？此操作不可撤销。`)) {
     await sendMessage('remove-marks-by-url', { url }, 'background')
-    await broadcastRefresh()
+    // 通知对应页面的 content script 刷新高亮（仅刷新高亮，不修改 marksByUrl 数据）
+    const allTabs = await browser.tabs.query({ currentWindow: true })
+    const targetUrl = getNormalizedUrlForTabMatching(url)
+    const tab = allTabs.find((t) => {
+      if (!t.url) return false
+      try {
+        return getNormalizedUrlForTabMatching(t.url) === targetUrl
+      } catch (e) {
+        return false
+      }
+    })
+    if (tab?.id) {
+      sendMessage('refresh-highlights', {}, { context: 'content-script', tabId: tab.id }).catch(() => {})
+    }
   }
   closeMenus()
 }
@@ -309,19 +323,7 @@ async function removeMark(mark: Mark) {
   if (!confirm('确定要删除此标记吗？')) return
   const rawMark = toRaw(mark)
   const result = await sendMessage('remove-mark', rawMark, 'background')
-
-  // 等待后台确认成功后再更新本地状态，避免乐观更新导致的不一致
-  if (result && (result as any).success !== false) {
-    const urlMarks = marksByUrl.value[rawMark.url]
-    if (urlMarks) {
-      marksByUrl.value[rawMark.url] = urlMarks.filter((m) => m.id !== rawMark.id)
-      if (marksByUrl.value[rawMark.url].length === 0) {
-        delete marksByUrl.value[rawMark.url]
-      }
-      marksByUrl.value = { ...marksByUrl.value }
-    }
-  }
-  else {
+  if (result && (result as any).success === false) {
     console.error('Failed to remove mark:', (result as any)?.error)
   }
 
@@ -349,7 +351,13 @@ async function cleanupOldMarks() {
   if (confirm(`确定要清理 ${CLEANUP_DAYS_THRESHOLD} 天前的所有标记吗？此操作不可撤销。`)) {
     await sendMessage('cleanup-old-marks', { days: CLEANUP_DAYS_THRESHOLD }, 'background')
     await getStorageUsage()
-    await broadcastRefresh()
+    // 清理操作影响全局，通知所有 content script 刷新高亮
+    const tabs = await browser.tabs.query({ status: 'complete' })
+    for (const tab of tabs) {
+      if (tab.id && tab.url && tab.url.startsWith('http')) {
+        sendMessage('refresh-highlights', {}, { context: 'content-script', tabId: tab.id }).catch(() => {})
+      }
+    }
   }
 }
 
@@ -357,7 +365,13 @@ async function cleanupUselessMarks() {
   if (confirm('确定要清理所有没有备注的标记吗？此操作不可撤销。')) {
     await sendMessage('cleanup-useless-marks', {}, 'background')
     await getStorageUsage()
-    await broadcastRefresh()
+    // 清理操作影响全局，通知所有 content script 刷新高亮
+    const tabs = await browser.tabs.query({ status: 'complete' })
+    for (const tab of tabs) {
+      if (tab.id && tab.url && tab.url.startsWith('http')) {
+        sendMessage('refresh-highlights', {}, { context: 'content-script', tabId: tab.id }).catch(() => {})
+      }
+    }
   }
 }
 
@@ -520,7 +534,6 @@ async function togglePageTag(tagId: string) {
   
   if (updatePromises.length > 0) {
     await Promise.all(updatePromises)
-    await refreshAllMarks()
   }
 }
 
@@ -560,9 +573,9 @@ function toggleGroupMenu(url: string, title: string) {
 
 async function removeGroupMarks(url: string, group: any) {
   if (!confirm(`确定要删除分组「${group.title}」下的所有标记吗？`)) return
-  await Promise.all(group.marks.map((m: Mark) => sendMessage('remove-mark', toRaw(m), 'background')))
+  await sendMessage('remove-marks', { marks: group.marks.map(toRaw) }, 'background')
 
-  // 同步通知 content script 移除页面高亮，与 removeMark 保持一致
+  // 同步通知 content script 移除页面高亮
   const allTabs = await browser.tabs.query({ currentWindow: true })
   const targetUrl = getNormalizedUrlForTabMatching(url)
   const tab = allTabs.find((t) => {
@@ -581,7 +594,6 @@ async function removeGroupMarks(url: string, group: any) {
     )
   }
 
-  await refreshAllMarks()
   activeGroupMenu.value = null
 }
 

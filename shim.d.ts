@@ -16,6 +16,7 @@ declare module 'webext-bridge' {
     'update-mark-details': ProtocolWithReturn<{ id: string; url: string; note?: string; color?: string; tags?: string[]; [key: string]: any }, { success: boolean; error?: string }>
     'add-mark': ProtocolWithReturn<Mark, { success: boolean; error?: string }>
     'remove-mark': ProtocolWithReturn<Mark, { success: boolean; error?: string }>
+    'remove-marks': ProtocolWithReturn<{ marks: any[] }, { success: boolean; error?: string }>
     'goto-mark': { markId: string }
     'get-storage-usage': ProtocolWithReturn<void, { usage: number; quota: number }>
     'cleanup-old-marks': ProtocolWithReturn<{ days: number }, { success: boolean; error?: string }>

@@ -50,6 +50,10 @@ function enqueueWrite<T>(writeFn: () => Promise<T>): Promise<T> {
   // 即使前一个写操作失败，当前写操作也要继续排队执行，确保序列化不被破坏
   const result = writeQueue.then(() => writeFn(), () => writeFn())
   writeQueue = result.catch(() => {})
+  result.then(
+    () => { browser.runtime.sendMessage({ type: 'refresh-sidepanel-data' }).catch(() => {}) },
+    () => { browser.runtime.sendMessage({ type: 'refresh-sidepanel-data' }).catch(() => {}) }
+  )
   return result
 }
 
@@ -282,6 +286,29 @@ onMessage<{ url: string }>('remove-marks-by-url', async ({ data }) => {
   }
   catch (error) {
     console.error('Failed to remove marks by url:', error)
+    return { success: false, error: (error as Error).message }
+  }
+})
+
+onMessage<{ marks: any[] }>('remove-marks', async ({ data }) => {
+  try {
+    const { marks } = data
+    await enqueueWrite(async () => {
+      for (const mark of marks) {
+        const { url, id } = mark
+        if (marksByUrl.value[url]) {
+          marksByUrl.value[url] = marksByUrl.value[url].filter((m) => m.id !== id)
+          if (marksByUrl.value[url].length === 0) {
+            delete marksByUrl.value[url]
+          }
+        }
+      }
+      marksByUrl.value = { ...marksByUrl.value }
+    })
+    return { success: true }
+  }
+  catch (error) {
+    console.error('Failed to remove marks:', error)
     return { success: false, error: (error as Error).message }
   }
 })
