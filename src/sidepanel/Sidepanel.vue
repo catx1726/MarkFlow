@@ -375,11 +375,9 @@ function exportToMarkdown(urlData: { pageTitle: string; groups: MarkGroup[] }) {
   const { pageTitle, groups } = urlData
   const firstMark = groups.length > 0 && groups[0].marks.length > 0 ? groups[0].marks[0] : null
   const pageURL = firstMark?.url || ''
-  let markdown = `# [${pageTitle}](${pageURL})\n\n---\n\n`
+  let markdown = `> 来源：[${pageTitle}](${pageURL})\n\n---\n\n`
   for (const group of groups) {
-    const headingLevel = Math.min(group.level + 1, 6)
-    const heading = '#'.repeat(headingLevel)
-    markdown += `${heading} ${group.title}\n\n`
+    markdown += `**${group.title}**\n\n`
     for (const mark of group.marks) {
       if (mark.html) {
         try {
@@ -392,7 +390,7 @@ function exportToMarkdown(urlData: { pageTitle: string; groups: MarkGroup[] }) {
         markdown += `> ${mark.text.replace(/>/g, '\\>')}\n\n`
       }
       if (mark.note) markdown += `**备注**：${mark.note}\n\n`
-      markdown += `***\n\n`
+      markdown += `---\n\n`
     }
   }
   const blob = new Blob([markdown], { type: 'text/markdown;charset=utf-8' })
@@ -456,13 +454,12 @@ function cancelRename() {
 }
 
 function exportTagFolder(folder: { tagName: string; pages: Record<string, any> }) {
-  let markdown = `# ${folder.tagName}\n\n---\n\n`
+  let markdown = `**标签：${folder.tagName}**\n\n---\n\n`
   for (const [url, urlData] of Object.entries(folder.pages)) {
     const { pageTitle, groups } = urlData as any
-    markdown += `## [${pageTitle}](${url})\n\n---\n\n`
+    markdown += `**[${pageTitle}](${url})**\n\n`
     for (const group of groups) {
-      const headingLevel = Math.min(group.level + 1, 6)
-      markdown += `${'#'.repeat(headingLevel)} ${group.title}\n\n`
+      markdown += `*${group.title}*\n\n`
       for (const mark of group.marks) {
         if (mark.html) {
           try {
@@ -474,7 +471,7 @@ function exportTagFolder(folder: { tagName: string; pages: Record<string, any> }
           markdown += `> ${mark.text.replace(/>/g, '\\>')}\n\n`
         }
         if (mark.note) markdown += `**备注**：${mark.note}\n\n`
-        markdown += `***\n\n`
+        markdown += `---\n\n`
       }
     }
   }
@@ -594,7 +591,7 @@ async function removeGroupMarks(url: string, group: any) {
 }
 
 function exportGroup(url: string, group: any) {
-  let md = `# ${group.title}\n\n---\n\n`
+  let md = `**分组：${group.title}**\n\n---\n\n`
   for (const mark of group.marks) {
     if (mark.html) {
       try {
@@ -606,7 +603,7 @@ function exportGroup(url: string, group: any) {
       md += `> ${mark.text.replace(/>/g, '\\>')}\n\n`
     }
     if (mark.note) md += `**备注**：${mark.note}\n\n`
-    md += `***\n\n`
+    md += `---\n\n`
   }
   const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' })
   const urlObj = URL.createObjectURL(blob)
