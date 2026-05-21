@@ -2,7 +2,7 @@ import { reactive, ref } from 'vue'
 import type { Candidate } from '~/logic/search'
 
 export interface TooltipInstance {
-  show: (x: number, y: number, isHighlighted: boolean, note: string, color: string | undefined, textToCopy: string) => void
+  show: (x: number, y: number, isHighlighted: boolean, note: string, color: string | undefined, textToCopy: string, tags?: string[]) => void
   hide: () => void
 }
 

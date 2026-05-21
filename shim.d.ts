@@ -11,15 +11,17 @@ declare module 'webext-bridge' {
     'get-current-tab': ProtocolWithReturn<{ tabId: number }, { title?: string }>
     'get-marks-for-url': ProtocolWithReturn<{ url: string }, Mark[]>
     'get-mark-by-id': ProtocolWithReturn<{ id: string; url: string }, Mark>
-    'remove-mark-by-id': { id: string; url: string }
-    'update-mark-note': { id: string; url: string; note: string }
-    'update-mark-details': { id: string; url: string; note?: string; color?: string }
-    'add-mark': Mark
-    'remove-mark': Mark
+    'remove-mark-by-id': ProtocolWithReturn<{ id: string; url: string }, { success: boolean; error?: string }>
+    'update-mark-note': ProtocolWithReturn<{ id: string; url: string; note: string }, { success: boolean; error?: string }>
+    'update-mark-details': ProtocolWithReturn<{ id: string; url: string; note?: string; color?: string; tags?: string[]; [key: string]: any }, { success: boolean; error?: string }>
+    'add-mark': ProtocolWithReturn<Mark, { success: boolean; error?: string }>
+    'remove-mark': ProtocolWithReturn<Mark, { success: boolean; error?: string }>
+    'remove-marks': ProtocolWithReturn<{ marks: any[] }, { success: boolean; error?: string }>
     'goto-mark': { markId: string }
-    'get-storage-usage': ProtocolWithReturn<?, { usage: number; quota: number }>
-    'cleanup-old-marks': { days: number }
-    'cleanup-useless-marks'
+    'get-storage-usage': ProtocolWithReturn<void, { usage: number; quota: number }>
+    'cleanup-old-marks': ProtocolWithReturn<{ days: number }, { success: boolean; error?: string }>
+    'cleanup-useless-marks': ProtocolWithReturn<void, { success: boolean; error?: string }>
     'goto-chapter': ProtocolWithReturn<{ selector: string }>
+    'open-options-page'
   }
 }

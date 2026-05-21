@@ -7,9 +7,11 @@ import {
   type Mark,
   marksByUrl,
   dataReady,
+  tagsMetadata,
+  tagsReady,
   type RemoveMarkPayload,
   type UpdateMarkNotePayload,
-  GetMarkByIdPayload
+  type GetMarkByIdPayload
 } from '~/logic/storage'
 
 // only on dev mode
@@ -40,6 +42,25 @@ browser.runtime.onInstalled.addListener((): void => {
 })
 
 let previousTabId = 0
+
+// 写操作队列，用于序列化对 marksByUrl 和 tagsMetadata 的并发写操作
+let writeQueue: Promise<unknown> = Promise.resolve()
+
+function enqueueWrite<T>(writeFn: () => Promise<T>): Promise<T> {
+  // 即使前一个写操作失败，当前写操作也要继续排队执行，确保序列化不被破坏
+  const result = writeQueue.then(() => writeFn(), () => writeFn())
+  writeQueue = result.catch((error) => {
+    console.error('[enqueueWrite] Write operation failed:', error)
+    return undefined
+  })
+  result.then(
+    () => { browser.runtime.sendMessage({ type: 'refresh-sidepanel-data' }).catch(() => {}) },
+    (error) => {
+      console.error('[enqueueWrite] Broadcast skipped due to write failure:', error)
+    }
+  )
+  return result
+}
 
 // communication example: send previous tab title from background page
 // see shim.d.ts for type declaration
@@ -77,187 +98,323 @@ onMessage('get-current-tab', async () => {
 })
 
 onMessage('add-mark', async ({ data }) => {
-  console.log('Adding new mark:', data)
-  const { url } = data
-  if (!marksByUrl.value[url]) marksByUrl.value[url] = []
-
-  marksByUrl.value[url].push(data)
+  try {
+    console.log('Adding new mark:', data)
+    const { url } = data
+    await enqueueWrite(async () => {
+      if (!marksByUrl.value[url]) marksByUrl.value[url] = []
+      marksByUrl.value[url].push(data)
+      marksByUrl.value = { ...marksByUrl.value }
+    })
+    return { success: true }
+  }
+  catch (error) {
+    console.error('Failed to add mark:', error)
+    return { success: false, error: (error as Error).message }
+  }
 })
 
 onMessage('remove-mark', async ({ data: markToRemove }) => {
-  const { url, id } = markToRemove
-  if (marksByUrl.value[url]) {
-    marksByUrl.value[url] = marksByUrl.value[url].filter((m) => m.id !== id)
-
-    // 如果该 URL 下已无标记，则删除此 URL 条目
-    if (marksByUrl.value[url].length === 0) delete marksByUrl.value[url]
+  try {
+    const { url, id } = markToRemove
+    await enqueueWrite(async () => {
+      if (marksByUrl.value[url]) {
+        marksByUrl.value[url] = marksByUrl.value[url].filter((m) => m.id !== id)
+        if (marksByUrl.value[url].length === 0) delete marksByUrl.value[url]
+        marksByUrl.value = { ...marksByUrl.value }
+      }
+    })
+    return { success: true }
+  }
+  catch (error) {
+    console.error('Failed to remove mark:', error)
+    return { success: false, error: (error as Error).message }
   }
 })
 
 onMessage('get-marks-for-url', async ({ data }) => {
-  console.log(`[background] Received get-marks-for-url for: ${data.url}`)
   await dataReady
-  console.log(`[background] Storage is ready. dataReady.value is: ${dataReady}`)
   const { url } = data
-  const resultProxy = marksByUrl.value[url] || []
-
-  // 优化修正：对数组中的每个元素应用 toRaw，确保返回一个纯净的数组
-  const result = resultProxy.map(toRaw)
-
-  console.log(`[background] Returning ${result.length} marks for ${url}`)
-  return result
+  return (marksByUrl.value[url] || []).map(toRaw)
 })
 
 onMessage<RemoveMarkPayload>('remove-mark-by-id', async ({ data }) => {
-  const { url, id } = data
-  if (marksByUrl.value[url]) {
-    marksByUrl.value[url] = marksByUrl.value[url].filter((m) => m.id !== id)
-
-    if (marksByUrl.value[url].length === 0) delete marksByUrl.value[url]
+  try {
+    const { url, id } = data
+    await enqueueWrite(async () => {
+      if (marksByUrl.value[url]) {
+        marksByUrl.value[url] = marksByUrl.value[url].filter((m) => m.id !== id)
+        if (marksByUrl.value[url].length === 0) delete marksByUrl.value[url]
+        marksByUrl.value = { ...marksByUrl.value }
+      }
+    })
+    return { success: true }
+  }
+  catch (error) {
+    console.error('Failed to remove mark by id:', error)
+    return { success: false, error: (error as Error).message }
   }
 })
 
 onMessage<UpdateMarkNotePayload>('update-mark-note', async ({ data }) => {
-  const { url, id, note } = data
-  if (marksByUrl.value[url]) {
-    const markToUpdate = marksByUrl.value[url].find((m) => m.id === id)
-    if (markToUpdate) markToUpdate.note = note
+  try {
+    const { url, id, note } = data
+    await enqueueWrite(async () => {
+      if (marksByUrl.value[url]) {
+        const markToUpdate = marksByUrl.value[url].find((m) => m.id === id)
+        if (markToUpdate) {
+          markToUpdate.note = note
+          marksByUrl.value = { ...marksByUrl.value }
+        }
+      }
+    })
+    return { success: true }
+  }
+  catch (error) {
+    console.error('Failed to update mark note:', error)
+    return { success: false, error: (error as Error).message }
   }
 })
 
-onMessage<UpdateMarkNotePayload>('update-mark-details', async ({ data }) => {
-  const { url, id, ...updates } = data
-  if (marksByUrl.value[url]) {
-    const index = marksByUrl.value[url].findIndex((m) => m.id === id)
-    if (index !== -1) {
-      // 核心修复：合并更新并确保响应式触发
-      const markToUpdate = marksByUrl.value[url][index]
-      Object.assign(markToUpdate, updates)
-      marksByUrl.value = { ...marksByUrl.value }
-      console.log(`[background] Mark ${id} updated successfully with keys: ${Object.keys(updates).join(', ')}`)
-    }
+onMessage<any>('update-mark-details', async ({ data }) => {
+  try {
+    const { url, id, ...updates } = data
+    await enqueueWrite(async () => {
+      if (marksByUrl.value[url]) {
+        const index = marksByUrl.value[url].findIndex((m) => m.id === id)
+        if (index !== -1) {
+          const markToUpdate = marksByUrl.value[url][index]
+          Object.assign(markToUpdate, updates)
+          marksByUrl.value = { ...marksByUrl.value }
+          console.log(`[background] Mark ${id} updated successfully`)
+        }
+      }
+    })
+    return { success: true }
+  }
+  catch (error) {
+    console.error('Failed to update mark details:', error)
+    return { success: false, error: (error as Error).message }
   }
 })
 
 onMessage<GetMarkByIdPayload>('get-mark-by-id', async ({ data }) => {
   const { url, id } = data
   if (marksByUrl.value[url]) {
-    // 1. 找到响应式对象
     const markProxy = marksByUrl.value[url].find((m) => m.id === id)
-
-    // 2. 核心修正：返回之前使用 toRaw() 剥离 Proxy
-    if (markProxy) {
-      return toRaw(markProxy) // <-- 使用 toRaw 返回纯 JS 对象
-    }
+    if (markProxy) return toRaw(markProxy)
   }
   return undefined
 })
 
 onMessage('get-storage-usage', async () => {
-  const usage = await browser.storage.local.getBytesInUse()
-
-  // 1. 尝试从 browser.storage.local 获取 QUOTA_BYTES
-  // 仅 Chrome/Edge (5MB) 会有值，Firefox 为 undefined
+  const usage = await (browser.storage.local as any).getBytesInUse()
   const rawQuota = (browser.storage.local as any).QUOTA_BYTES
-
-  let quota: number | null
-
-  if (typeof rawQuota === 'number') {
-    // 2. 如果 rawQuota 是数字 (Chrome/Edge)，则使用它
-    quota = rawQuota
-  } else {
-    // 3. 如果 rawQuota 不存在 (Firefox)，则返回 null，
-    //    表示浏览器没有提供官方的 API 常量来获取此限制。
-    //    (如果您想硬编码 10MB 的 Firefox 限制，可以改为 10 * 1024 * 1024)
-    quota = 10 * 1024 * 1024
-  }
-
+  const quota = typeof rawQuota === 'number' ? rawQuota : 10 * 1024 * 1024
   return { usage, quota }
 })
 
 onMessage('cleanup-old-marks', async ({ data }) => {
-  const { days } = data
-  const threshold = Date.now() - days * 24 * 60 * 60 * 1000
-  const allMarks = marksByUrl.value // <-- 修正
-  const keptMarks = Object.values(allMarks)
-    .flat()
-    .filter((mark: Mark) => mark.createdAt > threshold) // <-- 为 mark 显式添加类型
+  try {
+    const { days } = data
+    const threshold = Date.now() - days * 24 * 60 * 60 * 1000
+    await enqueueWrite(async () => {
+      const allMarks = marksByUrl.value
+      const keptMarks = Object.values(allMarks)
+        .flat()
+        .filter((mark: Mark) => mark.createdAt > threshold)
 
-  // 重新构建以 URL 分组的 marks 对象
-  marksByUrl.value = keptMarks.reduce((acc, mark) => {
-    // <-- 修正
-    if (!acc[mark.url]) acc[mark.url] = []
-    acc[mark.url].push(mark)
-    return acc
-  }, {} as Record<string, Mark[]>) // <-- 为初始值添加类型断言
+      marksByUrl.value = keptMarks.reduce((acc, mark) => {
+        if (!acc[mark.url]) acc[mark.url] = []
+        acc[mark.url].push(mark)
+        return acc
+      }, {} as Record<string, Mark[]>)
+    })
+    return { success: true }
+  }
+  catch (error) {
+    console.error('Failed to cleanup old marks:', error)
+    return { success: false, error: (error as Error).message }
+  }
 })
 
-onMessage('cleanup-useless-marks', () => {
-  const allMarks = marksByUrl.value // <-- 修正
-  const keptMarks = Object.values(allMarks)
-    .flat()
-    .filter((mark: Mark) => mark.note && mark.note.trim() !== '') // <-- 为 mark 显式添加类型
+onMessage('cleanup-useless-marks', async () => {
+  try {
+    await enqueueWrite(async () => {
+      const allMarks = marksByUrl.value
+      const keptMarks = Object.values(allMarks)
+        .flat()
+        .filter((mark: Mark) => mark.note && mark.note.trim() !== '')
 
-  marksByUrl.value = keptMarks.reduce((acc, mark) => {
-    // <-- 修正
-    if (!acc[mark.url]) acc[mark.url] = []
-    acc[mark.url].push(mark)
-    return acc
-  }, {} as Record<string, Mark[]>) // <-- 为初始值添加类型断言
+      marksByUrl.value = keptMarks.reduce((acc, mark) => {
+        if (!acc[mark.url]) acc[mark.url] = []
+        acc[mark.url].push(mark)
+        return acc
+      }, {} as Record<string, Mark[]>)
+    })
+    return { success: true }
+  }
+  catch (error) {
+    console.error('Failed to cleanup useless marks:', error)
+    return { success: false, error: (error as Error).message }
+  }
 })
 
 onMessage<{ tabId: number }>('open-sidepanel', async ({ data }) => {
-  console.log('[web-marker-extension] Opening side panel', data)
-
   const { tabId } = data
-
-  if (!tabId) {
-    console.error('Tab ID missing for opening side panel.')
-    return { success: false, error: 'Tab ID missing' }
-  }
+  if (!tabId) return { success: false, error: 'Tab ID missing' }
 
   try {
     // @ts-expect-error missing types
     if (browser.sidePanel && typeof (browser.sidePanel as any).open === 'function') {
-      // Chrome (MV3) 需要一个 tabId
-      const tabId = data?.tabId
-      if (!tabId) {
-        console.error('Tab ID missing for opening side panel in Chrome.')
-        return { success: false, error: 'Tab ID missing for Chrome' }
-      }
       // @ts-expect-error missing types
       await (browser.sidePanel as any).open({ tabId })
       return { success: true, browser: 'Chrome' }
     }
-
-    // 3. Fallback
     return { success: false, error: 'Side panel/Sidebar API not found.' }
   } catch (e) {
     console.error('Failed to open side panel/sidebar:', e)
-    // 返回一个明确的错误信息
     return { success: false, error: `API call failed: ${(e as Error).message}` }
   }
 })
 
 onMessage<{ url: string }>('remove-marks-by-url', async ({ data }) => {
-  const { url } = data
-  if (marksByUrl.value[url]) {
-    delete marksByUrl.value[url]
+  try {
+    const { url } = data
+    await enqueueWrite(async () => {
+      if (marksByUrl.value[url]) {
+        delete marksByUrl.value[url]
+        marksByUrl.value = { ...marksByUrl.value }
+      }
+    })
+    return { success: true }
+  }
+  catch (error) {
+    console.error('Failed to remove marks by url:', error)
+    return { success: false, error: (error as Error).message }
   }
 })
 
-onMessage('refresh-sidepanel-data', async () => {
-  console.log('[background] Broadcasting refresh-sidepanel-data via native messaging')
-  // 使用原生消息广播给所有扩展页面（包括 Sidepanel, Popup, Options）
-  // 这绕过了 webext-bridge 的上下文路由限制，确保所有打开的 Sidepanel 都能收到通知
-  await browser.runtime.sendMessage({ type: 'refresh-sidepanel-data' }).catch(() => {
-    // 如果没有接收者（例如 Sidepanel 未打开），忽略错误
+onMessage<{ marks: any[] }>('remove-marks', async ({ data }) => {
+  try {
+    const { marks } = data
+    await enqueueWrite(async () => {
+      for (const mark of marks) {
+        const { url, id } = mark
+        if (marksByUrl.value[url]) {
+          marksByUrl.value[url] = marksByUrl.value[url].filter((m) => m.id !== id)
+          if (marksByUrl.value[url].length === 0) {
+            delete marksByUrl.value[url]
+          }
+        }
+      }
+      marksByUrl.value = { ...marksByUrl.value }
+    })
+    return { success: true }
+  }
+  catch (error) {
+    console.error('Failed to remove marks:', error)
+    return { success: false, error: (error as Error).message }
+  }
+})
+
+onMessage('get-all-marks', async () => {
+  await dataReady
+  const result: Record<string, Mark[]> = {}
+  Object.entries(marksByUrl.value).forEach(([url, marks]) => {
+    result[url] = marks.map(toRaw)
   })
+  return result
+})
+
+onMessage('get-all-tags', async () => {
+  await tagsReady
+  return toRaw(tagsMetadata.value)
+})
+
+onMessage('refresh-sidepanel-data', async () => {
+  await browser.runtime.sendMessage({ type: 'refresh-sidepanel-data' }).catch(() => {})
+})
+
+onMessage('open-options-page', async () => {
+  browser.runtime.openOptionsPage()
 })
 
 /**
- * 当扩展首次安装时，自动打开配置页面。
+ * 专门的消息处理器用于创建标签，解决 Content Script 直接修改存储的问题
  */
+onMessage<{ name: string, color?: string }>('create-tag', async ({ data }) => {
+  try {
+    const { name, color = '#3B82F6' } = data
+    const id = `tag-${Date.now()}`
+    const newTag = { id, name, color, isAutoGenerated: false, createdAt: Date.now() }
+    await enqueueWrite(async () => {
+      tagsMetadata.value = { ...tagsMetadata.value, [id]: newTag }
+    })
+    return newTag
+  }
+  catch (error) {
+    console.error('Failed to create tag:', error)
+    return { success: false, error: (error as Error).message }
+  }
+})
+
+onMessage<{ tagId: string, name: string }>('rename-tag', async ({ data }) => {
+  try {
+    const { tagId, name } = data
+    await enqueueWrite(async () => {
+      if (tagsMetadata.value[tagId]) {
+        tagsMetadata.value[tagId] = { ...tagsMetadata.value[tagId], name }
+        tagsMetadata.value = { ...tagsMetadata.value }
+      }
+    })
+    return { success: true }
+  }
+  catch (error) {
+    console.error('Failed to rename tag:', error)
+    return { success: false, error: (error as Error).message }
+  }
+})
+
+onMessage<{ tagId: string }>('delete-tag', async ({ data }) => {
+  try {
+    const { tagId } = data
+    await enqueueWrite(async () => {
+      if (tagsMetadata.value[tagId]) {
+        delete tagsMetadata.value[tagId]
+        tagsMetadata.value = { ...tagsMetadata.value }
+
+        // 优化：先构建新对象再一次性赋值，减少响应式触发次数
+        // 分批处理以避免大数据量时阻塞写队列，每批最多处理 500 个 URL
+        const BATCH_SIZE = 500
+        const entries = Object.entries(marksByUrl.value)
+        const updatedMarksByUrl = { ...marksByUrl.value }
+        for (let i = 0; i < entries.length; i += BATCH_SIZE) {
+          const batch = entries.slice(i, i + BATCH_SIZE)
+          batch.forEach(([url, marks]) => {
+            updatedMarksByUrl[url] = marks.map(m => {
+              if (m.tags?.includes(tagId)) {
+                return { ...m, tags: m.tags.filter(t => t !== tagId) }
+              }
+              return m
+            })
+          })
+          // 每批处理后让出执行权，避免阻塞队列中的后续操作
+          if (i + BATCH_SIZE < entries.length) {
+            await new Promise(resolve => setTimeout(resolve, 0))
+          }
+        }
+        marksByUrl.value = updatedMarksByUrl
+      }
+    })
+    return { success: true }
+  }
+  catch (error) {
+    console.error('Failed to delete tag:', error)
+    return { success: false, error: (error as Error).message }
+  }
+})
+
 browser.runtime.onInstalled.addListener((details) => {
   if (details.reason === 'install') browser.runtime.openOptionsPage()
 })

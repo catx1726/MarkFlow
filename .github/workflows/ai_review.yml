@@ -1,4 +1,4 @@
-name: AI Code Review Assistant
+﻿name: AI Code Review Assistant
 
 on:
   pull_request:

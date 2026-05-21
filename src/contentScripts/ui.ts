@@ -48,7 +48,7 @@ export class UIManager {
     const tooltipRoot = document.createElement('div')
     uiRoot.appendChild(tooltipRoot)
     const tooltipAppInstance = createApp(Tooltip, {
-      onSave: (note: string, color: string) => this.handleSave(note, color),
+      onSave: (note: string, color: string, tags: string[]) => this.handleSave(note, color, tags),
       onDelete: () => this.handleDelete(),
       onColorChange: (color: string, isExisting: boolean) => this.handleColorChange(color, isExisting),
       onClearPreview: () => this.clearPreviewWithColorRestore(),
@@ -246,11 +246,11 @@ export class UIManager {
     parentsToNormalize.forEach((parent) => parent.normalize())
   }
 
-  showTooltip(x: number, y: number, isHighlighted: boolean, note: string, color: string, text: string): void {
+  showTooltip(x: number, y: number, isHighlighted: boolean, note: string, color: string, text: string, tags: string[] = []): void {
     clearTimeout(this._tooltipDebounceTimer)
     this._tooltipDebounceTimer = window.setTimeout(() => {
       this.ensureMounted()
-      this.state.tooltipApp?.show(x, y, isHighlighted, note, color, text)
+      this.state.tooltipApp?.show(x, y, isHighlighted, note, color, text, tags)
     }, 50)
   }
 
@@ -266,12 +266,12 @@ export class UIManager {
     this._originalColorForChange = color
   }
 
-  private async handleSave(note: string, color: string) {
+  private async handleSave(note: string, color: string, tags: string[] = []) {
     if (this.state.currentMarkIdForColorChange) {
       try {
         await sendMessage(
           'update-mark-details',
-          { id: this.state.currentMarkIdForColorChange, url: getCanonicalUrlForMark(), note, color },
+          { id: this.state.currentMarkIdForColorChange, url: getCanonicalUrlForMark(), note, color, tags },
           'background',
         )
         document.querySelectorAll(`.webext-highlight-${this.state.currentMarkIdForColorChange}`).forEach((el) => {
@@ -287,7 +287,7 @@ export class UIManager {
         const root = this.state.currentSerializationRoot || document.documentElement
         const doc = root instanceof ShadowRoot ? root.ownerDocument : document
         const range = rangy.deserializeRange(this.state.serializedSelection, root, doc)
-        if (range && !range.collapsed) await this.createHighlight(range, note, color)
+        if (range && !range.collapsed) await this.createHighlight(range, note, color, tags)
       } catch (e) {
         console.error('Error during save action (create):', e)
       }
@@ -333,6 +333,7 @@ export class UIManager {
     rangyRange: rangy.RangyRange,
     note?: string,
     color: string = settings.value.defaultHighlightColor,
+    manualTags: string[] = [],
   ) {
     const uniqueId = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`
     const className = `webext-highlight-${uniqueId}`
@@ -367,6 +368,9 @@ export class UIManager {
     applier.applyToRange(rangyRange)
     this.state.restoredMarkIds.add(uniqueId) // 标记为已恢复，防止 restorer 重复处理触发歧义
 
+    // 仅使用手动选择的标签
+    const tags: string[] = [...manualTags]
+
     const markData: Mark = {
       id: uniqueId,
       url: getCanonicalUrlForMark(),
@@ -379,6 +383,7 @@ export class UIManager {
       createdAt: Date.now(),
       title: document.title,
       domIndex,
+      tags,
       contextTitle,
       contextSelector,
       contextLevel,

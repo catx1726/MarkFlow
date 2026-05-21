@@ -11,7 +11,8 @@ export const defaultSettings = {
   ],
   blacklist: [] as string[],
   shortcutSave: 'Alt+S',
-  shortcutDelete: 'Alt+D'
+  shortcutDelete: 'Alt+D',
+  autoAssociation: true
 }
 
 export function isPageBlacklisted(url: string, blacklist: string[]): boolean {

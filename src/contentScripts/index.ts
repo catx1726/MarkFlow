@@ -114,7 +114,9 @@ function handleKeyDown(event: KeyboardEvent) {
 
 function handleMouseDown(event: MouseEvent) {
   ui.cancelTooltipDebounce()
-  const target = event.target as HTMLElement
+  // 修复：使用 composedPath 获取实际目标，处理 Shadow DOM 事件重定向
+  const actualTarget = event.composedPath().find((el) => el instanceof HTMLElement) as HTMLElement | undefined
+  const target = actualTarget || (event.target as HTMLElement)
   if (target instanceof Element && target.shadowRoot) return
   if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return
   const path = event.composedPath() as HTMLElement[]
@@ -170,11 +172,23 @@ function processSelection(event: {
   detail: number
 }) {
   const initialSelection = rangy.getSelection()
-  const targetNode = event.target as Node
+  // 修复：使用 composedPath 中的实际目标元素，正确处理 Shadow DOM 内的事件重定向
+  const actualTargetNode = (event.path.find((el) => el instanceof Node && el.nodeType === Node.ELEMENT_NODE) as HTMLElement | undefined) || (event.target as HTMLElement | null)
+  const targetNode = actualTargetNode as Node
   const targetElement = (
     targetNode.nodeType === Node.ELEMENT_NODE ? targetNode : targetNode.parentNode
   ) as HTMLElement | null
   const markElement = targetElement?.closest('span[class*="webext-highlight-"]') as HTMLElement | null
+  console.log('[TooltipDebug] processSelection:', {
+    markElement: !!markElement,
+    isCollapsed: initialSelection?.isCollapsed,
+    rangeCount: initialSelection?.rangeCount,
+    altKey: event.altKey,
+    className: markElement?.className,
+    targetTag: (targetNode as HTMLElement)?.tagName,
+    targetClass: (targetNode as HTMLElement)?.className,
+    targetId: (targetNode as HTMLElement)?.id
+  })
   const isNewSelectionAction = event.altKey && !initialSelection.isCollapsed
 
   if (isNewSelectionAction) {
@@ -212,7 +226,7 @@ function processSelection(event: {
         state.currentMarkIdForColorChange = null
 
         state.previewApplier?.applyToRange(range)
-        ui.showTooltip(event.clientX, event.clientY, false, '', settings.value.defaultHighlightColor, capturedText)
+        ui.showTooltip(event.clientX, event.clientY, false, '', settings.value.defaultHighlightColor, capturedText, [])
       } catch (e) {
         console.error('[WebMarker] Error during selection processing:', e)
         state.tooltipApp?.hide()
@@ -258,8 +272,9 @@ async function showTooltipForExistingMark(markId: string, x: number, y: number) 
   const mark = await sendMessage('get-mark-by-id', { id: markId, url: getCanonicalUrlForMark() }, 'background')
   const note = mark ? mark.note : ''
   const color = mark ? mark.color : settings.value.defaultHighlightColor
+  const tags = mark ? mark.tags : undefined
   ui.setOriginalColorForChange(color)
-  state.tooltipApp?.show(x, y, true, note, color, mark?.text ?? '')
+  state.tooltipApp?.show(x, y, true, note, color, mark?.text ?? '', tags)
 }
 
 // #endregion
@@ -275,8 +290,15 @@ onMessage('goto-mark', ({ data }) => {
   restorer.scrollToMark(data.markId)
 })
 onMessage('remove-mark', async ({ data: markToRemove }) => {
-  if (!markToRemove || !markToRemove.id) return
-  await ui.removeMarkById(markToRemove.id)
+  if (!markToRemove || !markToRemove.id) return { success: false, error: 'Invalid mark data' }
+  try {
+    await ui.removeMarkById(markToRemove.id)
+    return { success: true }
+  }
+  catch (error) {
+    console.error('Failed to remove mark in content script:', error)
+    return { success: false, error: (error as Error).message }
+  }
 })
 onMessage('goto-chapter', ({ data }) => {
   const element = querySelectorDeep(data.selector)
