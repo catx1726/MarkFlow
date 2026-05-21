@@ -232,7 +232,7 @@ function openOptionsPage() {
 
 async function copyMarkText(mark: Mark) {
   try {
-    await navigator.clipboard.writeText('引文：' + mark.text + '\n' + '备注：' + mark.note)
+    await navigator.clipboard.writeText('标记：' + mark.text + '\n' + '备注：' + mark.note)
     copiedMarkId.value = mark.id
     closeMenus()
     setTimeout(() => {
@@ -912,7 +912,7 @@ function openGroupTagPicker(url: string, title: string) {
                         title="分组操作"
                         @click="toggleGroupMenu(url, group.title)"
                       >
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                           <path
                             d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z"
                           />
@@ -1030,7 +1030,7 @@ function openGroupTagPicker(url: string, title: string) {
                                 class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 flex items-center gap-2"
                                 @click="toggleTextExpansion(mark.id)"
                               >
-                                <span>{{ expandedTexts.has(mark.id) ? '收起引文' : '展开引文' }}</span>
+                                <span>{{ expandedTexts.has(mark.id) ? '收起标记' : '展开标记' }}</span>
                               </button>
                               <button
                                 v-if="mark.note"
