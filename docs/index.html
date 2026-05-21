@@ -10,7 +10,7 @@
     />
     <meta
       name="keywords"
-      content="网页高亮, 浏览器扩展, 网页批注, 笔记工具, 知识管理, 划词工具, 侧边栏笔记, Markdown 导出, MarkFlow, 结构化回顾"
+      content="网页高亮, 浏览器扩展, 网页批注, 笔记工具, 知识管理, 划词工具, 侧边栏笔记, Markdown 导出, MarkFlow, 结构化回顾, 标签管理, 知识图谱, 网页标记"
     />
     <link rel="icon" href="./icon.png" />
     <script src="https://cdn.tailwindcss.com"></script>
@@ -157,7 +157,20 @@
           <p class="mt-2 text-3xl font-extrabold text-gray-900 dark:text-white sm:text-4xl">为什么选择 MarkFlow?</p>
         </div>
 
-        <div class="grid md:grid-cols-3 gap-10">
+        <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-10">
+          <div
+            class="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-sm hover:shadow-md transition-all fade-up border border-transparent dark:border-gray-700"
+          >
+            <div
+              class="w-12 h-12 bg-purple-100 dark:bg-purple-900/50 text-purple-600 dark:text-purple-400 rounded-xl flex items-center justify-center mb-6"
+            >
+              🏷️
+            </div>
+            <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-3">标签化知识管理</h3>
+            <p class="text-gray-500 dark:text-gray-400">
+              跨网页为标记添加标签/课题维度，构建个人知识图谱。三级树状侧边栏（标签→网页→标记）让碎片信息有机归集。
+            </p>
+          </div>
           <div
             class="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-sm hover:shadow-md transition-all fade-up border border-transparent dark:border-gray-700"
           >
@@ -179,9 +192,9 @@
             >
               📑
             </div>
-            <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-3">智能大纲构建</h3>
+            <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-3">智能大纲与排序</h3>
             <p class="text-gray-500 dark:text-gray-400">
-              自动解析文章标题层级，将碎片笔记组织成清晰的结构化目录，阅读深度一目了然。
+              自动解析文章标题层级构建目录，标记按阅读顺序排列，最近活跃的网页自动置顶。
             </p>
           </div>
           <div
@@ -190,10 +203,36 @@
             <div
               class="w-12 h-12 bg-green-100 dark:bg-green-900/50 text-green-600 dark:text-green-400 rounded-xl flex items-center justify-center mb-6"
             >
+              🌐
+            </div>
+            <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-3">跨元素无缝恢复</h3>
+            <p class="text-gray-500 dark:text-gray-400">
+              高亮可跨越段落、列表和 Shadow DOM。四级恢复架构 + 自愈合机制，动态页面也能持久保留。
+            </p>
+          </div>
+          <div
+            class="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-sm hover:shadow-md transition-all fade-up border border-transparent dark:border-gray-700"
+          >
+            <div
+              class="w-12 h-12 bg-orange-100 dark:bg-orange-900/50 text-orange-600 dark:text-orange-400 rounded-xl flex items-center justify-center mb-6"
+            >
+              📤
+            </div>
+            <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-3">Markdown 一键导出</h3>
+            <p class="text-gray-500 dark:text-gray-400">
+              支持按标签或按网页导出为 Markdown，格式零层级入侵，完美嵌入 Obsidian、Notion 等笔记工具。
+            </p>
+          </div>
+          <div
+            class="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-sm hover:shadow-md transition-all fade-up border border-transparent dark:border-gray-700"
+          >
+            <div
+              class="w-12 h-12 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-xl flex items-center justify-center mb-6"
+            >
               🛡️
             </div>
             <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-3">极致本地安全</h3>
-            <p class="text-gray-500 dark:text-gray-400">不采集、不上传，数据 100% 留存在你的设备中。</p>
+            <p class="text-gray-500 dark:text-gray-400">不采集、不上传，数据 100% 留存在你的设备中，无需注册登录。</p>
           </div>
         </div>
       </div>
@@ -206,7 +245,7 @@
           <p class="mt-2 text-3xl font-extrabold text-gray-900 dark:text-white sm:text-4xl">如呼吸般自然的交互体验</p>
         </div>
 
-        <div class="grid md:grid-cols-3 gap-12 relative">
+        <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-10 relative">
           <div class="flex flex-col items-center text-center fade-up">
             <div
               class="w-16 h-16 bg-indigo-600 text-white rounded-2xl shadow-lg shadow-indigo-200 dark:shadow-none flex items-center justify-center text-2xl font-bold mb-6"
@@ -221,17 +260,29 @@
             </p>
           </div>
 
-          <div class="flex flex-col items-center text-center fade-up" style="transition-delay: 150ms">
+          <div class="flex flex-col items-center text-center fade-up" style="transition-delay: 100ms">
             <div
               class="w-16 h-16 bg-indigo-600 text-white rounded-2xl shadow-lg shadow-indigo-200 dark:shadow-none flex items-center justify-center text-2xl font-bold mb-6"
             >
               2
             </div>
+            <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-3">添加标签</h3>
+            <p class="text-gray-600 dark:text-gray-400">
+              在浮动工具栏中为标记关联标签，构建你的知识分类体系。未归类的标记自动进入<b>收集箱</b>。
+            </p>
+          </div>
+
+          <div class="flex flex-col items-center text-center fade-up" style="transition-delay: 200ms">
+            <div
+              class="w-16 h-16 bg-indigo-600 text-white rounded-2xl shadow-lg shadow-indigo-200 dark:shadow-none flex items-center justify-center text-2xl font-bold mb-6"
+            >
+              3
+            </div>
             <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-3">结构化回顾</h3>
             <p class="text-gray-600 dark:text-gray-400">
               点击浏览器图标开启
-              <b>SidePanel (知识浮岛)</b>
-              ，你的笔记将按文章章节标题自动排版。
+              <b>SidePanel</b>
+              ，笔记按标签 → 网页 → 章节自动排版，阅读顺序与标记顺序一致。
             </p>
           </div>
 
@@ -239,7 +290,7 @@
             <div
               class="w-16 h-16 bg-indigo-600 text-white rounded-2xl shadow-lg shadow-indigo-200 dark:shadow-none flex items-center justify-center text-2xl font-bold mb-6"
             >
-              3
+              4
             </div>
             <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-3">精准回跳</h3>
             <p class="text-gray-600 dark:text-gray-400">
@@ -263,9 +314,21 @@
             </p>
           </div>
           <div class="p-6 rounded-xl bg-gray-50 dark:bg-gray-800">
+            <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-2">Q: 标签系统怎么用？一个标记可以打多个标签吗？</h3>
+            <p class="text-gray-600 dark:text-gray-400">
+              A: 高亮后在浮动工具栏中点击"添加标签"即可关联。一个标记可以属于多个标签，它会出现在每个对应的标签文件夹下。未打标签的标记默认存放在"收集箱"中。
+            </p>
+          </div>
+          <div class="p-6 rounded-xl bg-gray-50 dark:bg-gray-800">
             <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-2">Q: 数据可以导出吗？</h3>
             <p class="text-gray-600 dark:text-gray-400">
-              A: 当然可以。MarkFlow 支持一键导出当前页或全部笔记为 Markdown 格式，完美适配 Obsidian 和 Notion。
+              A: 当然可以。MarkFlow 支持按标签或按网页一键导出为 Markdown 格式，零层级入侵设计可无缝嵌入 Obsidian、Notion 等笔记工具。
+            </p>
+          </div>
+          <div class="p-6 rounded-xl bg-gray-50 dark:bg-gray-800">
+            <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-2">Q: 我的高亮在哔哩哔哩/Reddit 等动态页面会丢失吗？</h3>
+            <p class="text-gray-600 dark:text-gray-400">
+              A: 不会。MarkFlow 内置了四级恢复架构与"全局搜索回退"机制，即使评论在滚动时发生漂移或容器复用，系统也能自动找回你的标记。
             </p>
           </div>
         </div>
