@@ -806,7 +806,7 @@ function openGroupTagPicker(url: string, title: string) {
                 </div>
               </transition>
             </div>
-          </div>
+          </summary>
 
           <div
             class="space-y-4 p-2 border-x border-b border-gray-200 dark:border-gray-700 rounded-b-lg bg-gray-50 dark:bg-gray-800"
@@ -1065,7 +1065,7 @@ function openGroupTagPicker(url: string, title: string) {
               </div>
             </section>
           </div>
-        </div>
+        </details>
       </div>
     </div>
 
