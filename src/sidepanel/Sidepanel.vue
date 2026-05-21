@@ -90,10 +90,9 @@ async function refreshAllMarks() {
 
 // --- 结构化回顾功能 ---
 
-const collapsedFolders = ref<Record<string, boolean>>({}),
-  collapsedStates = ref<Record<string, Record<string, boolean>>>({}),
+const collapsedStates = ref<Record<string, Record<string, boolean>>>({}),
   collapsedUrls = ref<Record<string, boolean>>({}),
-  structuredMarks = ref<TagTree>({ inbox: { tagName: '收集箱 (Inbox)', pages: {} } })
+  structuredMarks = ref<TagTree>({ inbox: { tagName: '收集箱 (Inbox)', totalMarks: 0, pages: {} } })
 
 // 使用 watch + debounce 替代 computed，避免每次 marksByUrl/tagsMetadata 微小变化都触发全量重建
 let structuredMarksDebounceTimer: ReturnType<typeof setTimeout> | null = null
@@ -105,14 +104,6 @@ watch([marksByUrl, tagsMetadata], () => {
     structuredMarks.value = buildTagTree(marksByUrl.value, tagsMetadata.value)
   }, 50)
 }, { deep: true, immediate: true, flush: 'post' })
-
-function toggleFolder(tagId: string) {
-  collapsedFolders.value[tagId] = !isFolderCollapsed(tagId)
-}
-
-function isFolderCollapsed(tagId: string): boolean {
-  return !!collapsedFolders.value[tagId]
-}
 
 function toggleUrlCollapse(url: string) {
   collapsedUrls.value[url] = !isUrlCollapsed(url)
@@ -709,16 +700,20 @@ function openGroupTagPicker(url: string, title: string) {
       </div>
       <div v-else>
         <!-- 顶级文件夹层 (Tags / Inbox) -->
-        <div v-for="[tagId, folder] in Object.entries(structuredMarks)" :key="tagId" class="mb-6 shadow-sm">
-          <div
-            class="flex items-center gap-2 p-2 bg-gray-200 dark:bg-gray-700 rounded-t-lg cursor-pointer hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors border border-gray-200 dark:border-gray-700 border-b-0"
-            :class="{ 'rounded-b-lg': isFolderCollapsed(tagId) }"
-            @click="toggleFolder(tagId)"
+        <details
+          v-for="[tagId, folder] in Object.entries(structuredMarks)"
+          :key="tagId"
+          name="tag-folder"
+          :open="tagId === 'inbox'"
+          class="mb-6 shadow-sm group/folder"
+        >
+          <summary
+            class="flex items-center gap-2 p-2 bg-gray-200 dark:bg-gray-700 rounded-t-lg cursor-pointer hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors border border-gray-200 dark:border-gray-700 list-none"
+            :class="{ 'opacity-50 grayscale': folder.totalMarks === 0 }"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
-              class="h-5 w-5 text-gray-500 transition-transform duration-200"
-              :class="{ 'rotate-[-90deg]': isFolderCollapsed(tagId) }"
+              class="h-5 w-5 text-gray-500 transition-transform duration-200 group-open/folder:rotate-0 rotate-[-90deg]"
               viewBox="0 0 20 20"
               fill="currentColor"
             >
@@ -729,7 +724,11 @@ function openGroupTagPicker(url: string, title: string) {
               />
             </svg>
             <span class="font-bold text-gray-700 dark:text-gray-200 flex-1">{{ folder.tagName }}</span>
-            <span class="text-xs text-gray-400 mr-2">{{ Object.keys(folder.pages).length }}</span>
+            <span
+              class="px-2 py-0.5 text-xs font-semibold bg-gray-300 dark:bg-gray-600 text-gray-600 dark:text-gray-300 rounded-full mr-2"
+            >
+              {{ folder.totalMarks }}
+            </span>
             <div class="relative flex-shrink-0" @click.stop>
               <button
                 class="p-1 text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 rounded-full"
@@ -813,7 +812,6 @@ function openGroupTagPicker(url: string, title: string) {
           </div>
 
           <div
-            v-if="!isFolderCollapsed(tagId)"
             class="space-y-4 p-2 border-x border-b border-gray-200 dark:border-gray-700 rounded-b-lg bg-gray-50 dark:bg-gray-800"
           >
             <div
@@ -1242,5 +1240,11 @@ function openGroupTagPicker(url: string, title: string) {
 }
 .rich-text-content :where(em, i) {
   font-style: italic;
+}
+summary::-webkit-details-marker {
+  display: none;
+}
+summary {
+  list-style: none;
 }
 </style>
