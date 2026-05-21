@@ -705,7 +705,7 @@ function openGroupTagPicker(url: string, title: string) {
           class="mb-6 shadow-sm group/folder"
         >
           <summary
-            class="flex items-center gap-2 p-2 bg-gray-200 dark:bg-gray-700 rounded-t-lg cursor-pointer hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors border border-gray-200 dark:border-gray-700 list-none"
+            class="flex items-center gap-2 p-2 bg-gray-200 dark:bg-gray-700 rounded-t-lg cursor-pointer hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors border border-gray-200 dark:border-gray-700 list-none rounded-b-lg group-open/folder:rounded-b-none"
             :class="{ 'opacity-50 grayscale': folder.totalMarks === 0 }"
           >
             <svg
