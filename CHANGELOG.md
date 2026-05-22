@@ -1,5 +1,9 @@
 # Unreleased
 
+### [2026-05-22] feat: sidebar accordion, count badges and optimized Markdown export (#38, #39) (#40)
+feat: sidebar accordion, count badges and optimized Markdown export (#38, #39)
+
+
 ### [2026-05-21] [FEATURE] 内容关联与侧边栏三级架构优化 (#33) (#37)
 [FEATURE] 内容关联与侧边栏三级架构优化 (#33)
 
