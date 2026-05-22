@@ -18,6 +18,22 @@
 | 2026-05-20 12:30:00 | Implement and optimize content association and hierarchical sidebar | src/sidepanel/Sidepanel.vue, src/background/main.ts, src/contentScripts/ui.ts | Realize "Tag -> Page -> Mark" structure and fix data consistency via SSOT (Issue #33) | 9ff0d0f | git checkout main && git branch -D feature/content-association |
 
 | 2026-05-21 01:25:00 | Merge PR #37 after 4 rounds of AI CR fixes | src/background/main.ts, src/sidepanel/Sidepanel.vue, src/contentScripts/views/Tooltip.vue, src/logic/tagTree.ts | Fix concurrency safety, deadlock, race conditions, queue robustness; merge into main (Issue #33) | 4d1dac4 | git revert -m 1 4d1dac4 |
+| 2026-05-21 16:50:00 | Implement sidebar accordion, count badges and optimized Markdown export | src/logic/tagTree.ts, src/sidepanel/Sidepanel.vue, docs/superpowers/specs/2026-05-21-ux-improvements-design.md, docs/superpowers/plans/2026-05-21-ux-improvements-plan.md | Resolve "scrolling hell" with mutual-exclusion interaction (#39) and improve Markdown embedding compatibility (#38) | HEAD | git checkout main && git branch -D feat/ux-optimization-issue-38-39 |
+
+---
+
+## Self-Reflection: UX Improvements & Markdown Optimization (Issues #38 & #39)
+
+**Execution Summary:**
+- 实现基于原生 `<details name="...">` 的互斥手风琴交互，实现零 JS 状态管理，彻底解决侧边栏“滚动地狱”问题 (#39)。
+- 在 `TagTree` 逻辑层引入 `totalMarks` 预计算，为侧边栏文件夹提供实时的数量徽章与空状态置灰视觉反馈。
+- 重构 Markdown 导出模板，将所有 `#` 标题降级为 `> 引用` 和 `**加粗**` 样式，显著提升了标记片段在 Obsidian 等文档工具中的嵌入兼容性 (#38)。
+- 修复了文件夹折叠状态下底部圆角丢失的 UI 细节问题。
+
+**Key Challenges & Lessons:**
+1. **原生特性优先**：对于 Accordion 等标准交互，原生 `<details>` 结合 `name` 属性（Chrome 120+）比 Vue 手动管理 `activeId` 更简洁且无障碍支持更好。
+2. **视觉细节**：使用 `group-open` 修改父级圆角样式是处理折叠面板视觉连贯性的关键。
+3. **导出颗粒化**：导出内容从“完整文档”向“可嵌入片段”的思维转变，更能满足重度知识管理用户的拼凑式工作流。
 
 ---
 

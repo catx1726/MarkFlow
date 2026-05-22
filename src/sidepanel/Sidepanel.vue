@@ -90,10 +90,9 @@ async function refreshAllMarks() {
 
 // --- 结构化回顾功能 ---
 
-const collapsedFolders = ref<Record<string, boolean>>({}),
-  collapsedStates = ref<Record<string, Record<string, boolean>>>({}),
+const collapsedStates = ref<Record<string, Record<string, boolean>>>({}),
   collapsedUrls = ref<Record<string, boolean>>({}),
-  structuredMarks = ref<TagTree>({ inbox: { tagName: '收集箱 (Inbox)', pages: {} } })
+  structuredMarks = ref<TagTree>({ inbox: { tagName: '收集箱 (Inbox)', totalMarks: 0, pages: {} } })
 
 // 使用 watch + debounce 替代 computed，避免每次 marksByUrl/tagsMetadata 微小变化都触发全量重建
 let structuredMarksDebounceTimer: ReturnType<typeof setTimeout> | null = null
@@ -105,14 +104,6 @@ watch([marksByUrl, tagsMetadata], () => {
     structuredMarks.value = buildTagTree(marksByUrl.value, tagsMetadata.value)
   }, 50)
 }, { deep: true, immediate: true, flush: 'post' })
-
-function toggleFolder(tagId: string) {
-  collapsedFolders.value[tagId] = !isFolderCollapsed(tagId)
-}
-
-function isFolderCollapsed(tagId: string): boolean {
-  return !!collapsedFolders.value[tagId]
-}
 
 function toggleUrlCollapse(url: string) {
   collapsedUrls.value[url] = !isUrlCollapsed(url)
@@ -384,11 +375,9 @@ function exportToMarkdown(urlData: { pageTitle: string; groups: MarkGroup[] }) {
   const { pageTitle, groups } = urlData
   const firstMark = groups.length > 0 && groups[0].marks.length > 0 ? groups[0].marks[0] : null
   const pageURL = firstMark?.url || ''
-  let markdown = `# [${pageTitle}](${pageURL})\n\n---\n\n`
+  let markdown = `> 来源：[${pageTitle}](${pageURL})\n\n---\n\n`
   for (const group of groups) {
-    const headingLevel = Math.min(group.level + 1, 6)
-    const heading = '#'.repeat(headingLevel)
-    markdown += `${heading} ${group.title}\n\n`
+    markdown += `**${group.title}**\n\n`
     for (const mark of group.marks) {
       if (mark.html) {
         try {
@@ -401,7 +390,7 @@ function exportToMarkdown(urlData: { pageTitle: string; groups: MarkGroup[] }) {
         markdown += `> ${mark.text.replace(/>/g, '\\>')}\n\n`
       }
       if (mark.note) markdown += `**备注**：${mark.note}\n\n`
-      markdown += `***\n\n`
+      markdown += `---\n\n`
     }
   }
   const blob = new Blob([markdown], { type: 'text/markdown;charset=utf-8' })
@@ -465,13 +454,12 @@ function cancelRename() {
 }
 
 function exportTagFolder(folder: { tagName: string; pages: Record<string, any> }) {
-  let markdown = `# ${folder.tagName}\n\n---\n\n`
+  let markdown = `**标签：${folder.tagName}**\n\n---\n\n`
   for (const [url, urlData] of Object.entries(folder.pages)) {
     const { pageTitle, groups } = urlData as any
-    markdown += `## [${pageTitle}](${url})\n\n---\n\n`
+    markdown += `**[${pageTitle}](${url})**\n\n`
     for (const group of groups) {
-      const headingLevel = Math.min(group.level + 1, 6)
-      markdown += `${'#'.repeat(headingLevel)} ${group.title}\n\n`
+      markdown += `*${group.title}*\n\n`
       for (const mark of group.marks) {
         if (mark.html) {
           try {
@@ -483,7 +471,7 @@ function exportTagFolder(folder: { tagName: string; pages: Record<string, any> }
           markdown += `> ${mark.text.replace(/>/g, '\\>')}\n\n`
         }
         if (mark.note) markdown += `**备注**：${mark.note}\n\n`
-        markdown += `***\n\n`
+        markdown += `---\n\n`
       }
     }
   }
@@ -603,7 +591,7 @@ async function removeGroupMarks(url: string, group: any) {
 }
 
 function exportGroup(url: string, group: any) {
-  let md = `# ${group.title}\n\n---\n\n`
+  let md = `**分组：${group.title}**\n\n---\n\n`
   for (const mark of group.marks) {
     if (mark.html) {
       try {
@@ -615,7 +603,7 @@ function exportGroup(url: string, group: any) {
       md += `> ${mark.text.replace(/>/g, '\\>')}\n\n`
     }
     if (mark.note) md += `**备注**：${mark.note}\n\n`
-    md += `***\n\n`
+    md += `---\n\n`
   }
   const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' })
   const urlObj = URL.createObjectURL(blob)
@@ -709,16 +697,20 @@ function openGroupTagPicker(url: string, title: string) {
       </div>
       <div v-else>
         <!-- 顶级文件夹层 (Tags / Inbox) -->
-        <div v-for="[tagId, folder] in Object.entries(structuredMarks)" :key="tagId" class="mb-6 shadow-sm">
-          <div
-            class="flex items-center gap-2 p-2 bg-gray-200 dark:bg-gray-700 rounded-t-lg cursor-pointer hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors border border-gray-200 dark:border-gray-700 border-b-0"
-            :class="{ 'rounded-b-lg': isFolderCollapsed(tagId) }"
-            @click="toggleFolder(tagId)"
+        <details
+          v-for="[tagId, folder] in Object.entries(structuredMarks)"
+          :key="tagId"
+          name="tag-folder"
+          :open="tagId === 'inbox'"
+          class="mb-6 shadow-sm group/folder"
+        >
+          <summary
+            class="flex items-center gap-2 p-2 bg-gray-200 dark:bg-gray-700 rounded-t-lg cursor-pointer hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors border border-gray-200 dark:border-gray-700 list-none rounded-b-lg group-open/folder:rounded-b-none"
+            :class="{ 'opacity-50 grayscale': folder.totalMarks === 0 }"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
-              class="h-5 w-5 text-gray-500 transition-transform duration-200"
-              :class="{ 'rotate-[-90deg]': isFolderCollapsed(tagId) }"
+              class="h-5 w-5 text-gray-500 transition-transform duration-200 group-open/folder:rotate-0 rotate-[-90deg]"
               viewBox="0 0 20 20"
               fill="currentColor"
             >
@@ -729,7 +721,11 @@ function openGroupTagPicker(url: string, title: string) {
               />
             </svg>
             <span class="font-bold text-gray-700 dark:text-gray-200 flex-1">{{ folder.tagName }}</span>
-            <span class="text-xs text-gray-400 mr-2">{{ Object.keys(folder.pages).length }}</span>
+            <span
+              class="px-2 py-0.5 text-xs font-semibold bg-gray-300 dark:bg-gray-600 text-gray-600 dark:text-gray-300 rounded-full mr-2"
+            >
+              {{ folder.totalMarks }}
+            </span>
             <div class="relative flex-shrink-0" @click.stop>
               <button
                 class="p-1 text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 rounded-full"
@@ -810,10 +806,9 @@ function openGroupTagPicker(url: string, title: string) {
                 </div>
               </transition>
             </div>
-          </div>
+          </summary>
 
           <div
-            v-if="!isFolderCollapsed(tagId)"
             class="space-y-4 p-2 border-x border-b border-gray-200 dark:border-gray-700 rounded-b-lg bg-gray-50 dark:bg-gray-800"
           >
             <div
@@ -1070,7 +1065,7 @@ function openGroupTagPicker(url: string, title: string) {
               </div>
             </section>
           </div>
-        </div>
+        </details>
       </div>
     </div>
 
@@ -1242,5 +1237,11 @@ function openGroupTagPicker(url: string, title: string) {
 }
 .rich-text-content :where(em, i) {
   font-style: italic;
+}
+summary::-webkit-details-marker {
+  display: none;
+}
+summary {
+  list-style: none;
 }
 </style>

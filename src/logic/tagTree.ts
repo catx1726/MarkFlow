@@ -12,6 +12,7 @@ export interface MarkGroup {
 export interface TagTree {
   [tagId: string]: {
     tagName: string
+    totalMarks: number
     pages: Record<string, {
       pageTitle: string
       groups: MarkGroup[]
@@ -25,11 +26,11 @@ export function buildTagTree(
   tagsMetadata: Record<string, Tag>,
 ): TagTree {
   const tree: TagTree = {
-    inbox: { tagName: '收集箱 (Inbox)', pages: {} }
+    inbox: { tagName: '收集箱 (Inbox)', totalMarks: 0, pages: {} }
   }
 
   Object.values(tagsMetadata).forEach((tag) => {
-    tree[tag.id] = { tagName: tag.name, pages: {} }
+    tree[tag.id] = { tagName: tag.name, totalMarks: 0, pages: {} }
   })
 
   const sortedUrls = Object.entries(marksByUrl)
@@ -56,6 +57,7 @@ export function buildTagTree(
 
         const pageEntry = tree[actualTagId].pages[url]
         pageEntry.totalMarks++
+        tree[actualTagId].totalMarks++
 
         const contextTitle = mark.contextTitle || '未分类标记'
         const contextLevel = mark.contextLevel || 7

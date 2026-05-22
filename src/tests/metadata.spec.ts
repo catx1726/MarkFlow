@@ -1,6 +1,7 @@
 import { beforeAll, describe, expect, it } from 'vitest'
 import rangy from 'rangy/lib/rangy-core'
 import { findCommonAncestor, getHighlightContext } from '../logic/dom'
+import { buildTagTree } from '../logic/tagTree'
 
 describe('metadata capture', () => {
   beforeAll(() => {
@@ -68,5 +69,20 @@ describe('metadata capture', () => {
     expect(context.contextTitle).toBe('未分类笔记')
     expect(context.contextSelector).toBe('body')
     expect(context.contextOrder).toBe(-1)
+  })
+
+  it('buildTagTree should calculate totalMarks for folders', () => {
+    const marksByUrl = {
+      'https://example.com': [
+        { id: '1', url: 'https://example.com', text: 't1', createdAt: 100, tags: ['inbox'] },
+        { id: '2', url: 'https://example.com', text: 't2', createdAt: 200, tags: ['tag1'] }
+      ]
+    }
+    const tagsMetadata = {
+      tag1: { id: 'tag1', name: 'Tag 1', color: 'red', createdAt: 0 }
+    }
+    const tree = buildTagTree(marksByUrl as any, tagsMetadata as any)
+    expect(tree.inbox.totalMarks).toBe(1)
+    expect(tree.tag1.totalMarks).toBe(1)
   })
 })
