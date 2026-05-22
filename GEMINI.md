@@ -55,6 +55,7 @@ AI 引擎在执行任务时，必须参考以下标准文档以确保工程质�
 | **系统安全** | `docs/standards/security-standards.md`              | 计划/执行     |
 | **日志记录** | `docs/standards/logging-standards.md`               | 执行 (Act)    |
 | **环境配置** | `docs/standards/environment-standards.md`           | 启动/执行     |
+| **发布流程** | `docs/standards/release-standards.md`               | 闭环 (Close)  |
 | **代码审查** | `docs/standards/review-standards/review/reviewer/`  | 闭环 (Close)  |
 | **提交描述** | `docs/standards/review-standards/review/developer/` | 闭环 (Close)  |
 

@@ -1,34 +1,17 @@
 # Unreleased
 
-### [2026-05-22] feat: sidebar accordion, count badges and optimized Markdown export (#38, #39) (#40)
-feat: sidebar accordion, count badges and optimized Markdown export (#38, #39)
-
-
-### [2026-05-21] [FEATURE] 内容关联与侧边栏三级架构优化 (#33) (#37)
-[FEATURE] 内容关联与侧边栏三级架构优化 (#33)
-
-
-### [2026-05-19] [BUG] 错误捕获范围过滤优化 (#34) (#36)
-[BUG] 错误捕获范围过滤优化 (#34)
-
-
-### [2026-05-11] feat: sidebar sorting optimizations & Zhihu restoration fixes (#35)
-feat: sidebar sorting optimizations & Zhihu restoration fixes
-
-
-### [2026-05-08] [REFACTOR] Content Script 架构重构：类封装与职责分离 (Issue #26) (#30)
-[REFACTOR] Content Script 架构重构：类封装与职责分离 (Issue #26)
-
-
-### [2026-04-21] Refactor content script into modular architecture (#25)
-Refactor content script into modular architecture
-
-
-### [2026-04-21] [REFACTOR] Search & DOM Logic Optimization (#23)
-[REFACTOR] Search & DOM Logic Optimization
-
-
 # Released
+
+## [v0.6.0] - 2026-05-22
+
+- **Feat**: 内容关联与侧边栏三级架构 (标签 -> 网页 -> 标记) (#33, #37).
+- **Feat**: 侧边栏手风琴式折叠、互斥展开与数量徽标 (#38, #39, #40).
+- **Feat**: 优化 Markdown 导出 (平铺标题层级，更好的嵌入体验).
+- **Feat**: 页面按最近活跃排序，标记按文档位置排序 (#35).
+- **Fix**: 错误收集范围过滤 (仅限扩展错误) (#34, #36).
+- **Fix**: 修复知乎等页面的恢复问题 (两阶段恢复与防抖弹窗).
+- **Fix**: 侧边栏圆角恢复、模板嵌套错误修复及术语统一.
+
 
 ### [2026-04-16] Error Collection & Export
 
