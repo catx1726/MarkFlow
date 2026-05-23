@@ -28,8 +28,16 @@ export function mergeMarks(local: Record<string, Mark[]>, remote: Record<string,
     const localMarksMap = new Map(result[url].map(m => [m.id, m]))
     remoteMarks.forEach((rm) => {
       const lm = localMarksMap.get(rm.id)
-      if (!lm || rm.createdAt > lm.createdAt) {
+      if (!lm) {
         localMarksMap.set(rm.id, rm)
+      }
+      else {
+        // 比较两者的最后更新时间（可能是创建时间或删除时间）
+        const localTime = Math.max(lm.createdAt, lm.deletedAt || 0)
+        const remoteTime = Math.max(rm.createdAt, rm.deletedAt || 0)
+        if (remoteTime > localTime) {
+          localMarksMap.set(rm.id, rm)
+        }
       }
     })
     result[url] = Array.from(localMarksMap.values())
@@ -58,7 +66,11 @@ export async function getGists(token: string): Promise<GistResponse[]> {
   const res = await fetch('https://api.github.com/gists', {
     headers: { Authorization: `token ${token}` }
   })
-  if (!res.ok) throw new Error('GitHub API 请求失败')
+  if (!res.ok) {
+    if (res.status === 401) throw new Error('Token 无效，请重新生成')
+    if (res.status === 403) throw new Error('Token 权限不足，请确保勾选了 "gist" 权限')
+    throw new Error(`GitHub API 请求失败: ${res.status}`)
+  }
   return res.json()
 }
 
@@ -75,7 +87,11 @@ export async function createGist(token: string, data: SyncData): Promise<GistRes
       files: { 'markflow_sync.json': { content: JSON.stringify(data) } }
     })
   })
-  if (!res.ok) throw new Error('创建 Gist 失败')
+  if (!res.ok) {
+    if (res.status === 401) throw new Error('Token 无效，请重新生成')
+    if (res.status === 403) throw new Error('Token 权限不足，请确保勾选了 "gist" 权限')
+    throw new Error(`创建 Gist 失败: ${res.status}`)
+  }
   return res.json()
 }
 
@@ -90,5 +106,10 @@ export async function updateGist(token: string, gistId: string, data: SyncData):
       files: { 'markflow_sync.json': { content: JSON.stringify(data) } }
     })
   })
+  if (!res.ok) {
+    if (res.status === 401) throw new Error('Token 无效，请重新生成')
+    if (res.status === 403) throw new Error('Token 权限不足，请确保勾选了 "gist" 权限')
+    throw new Error(`更新 Gist 失败: ${res.status}`)
+  }
   return res.ok
 }

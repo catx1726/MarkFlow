@@ -123,9 +123,11 @@ onMessage('remove-mark', async ({ data: markToRemove }) => {
     const { url, id } = markToRemove
     await enqueueWrite(async () => {
       if (marksByUrl.value[url]) {
-        marksByUrl.value[url] = marksByUrl.value[url].filter((m) => m.id !== id)
-        if (marksByUrl.value[url].length === 0) delete marksByUrl.value[url]
-        marksByUrl.value = { ...marksByUrl.value }
+        const mark = marksByUrl.value[url].find(m => m.id === id)
+        if (mark) {
+          mark.deletedAt = Date.now()
+          marksByUrl.value = { ...marksByUrl.value }
+        }
       }
     })
     return { success: true }
@@ -139,7 +141,9 @@ onMessage('remove-mark', async ({ data: markToRemove }) => {
 onMessage('get-marks-for-url', async ({ data }) => {
   await dataReady
   const { url } = data
-  return (marksByUrl.value[url] || []).map(toRaw)
+  return (marksByUrl.value[url] || [])
+    .filter(m => !m.deletedAt)
+    .map(toRaw)
 })
 
 onMessage<RemoveMarkPayload>('remove-mark-by-id', async ({ data }) => {
@@ -147,9 +151,11 @@ onMessage<RemoveMarkPayload>('remove-mark-by-id', async ({ data }) => {
     const { url, id } = data
     await enqueueWrite(async () => {
       if (marksByUrl.value[url]) {
-        marksByUrl.value[url] = marksByUrl.value[url].filter((m) => m.id !== id)
-        if (marksByUrl.value[url].length === 0) delete marksByUrl.value[url]
-        marksByUrl.value = { ...marksByUrl.value }
+        const mark = marksByUrl.value[url].find(m => m.id === id)
+        if (mark) {
+          mark.deletedAt = Date.now()
+          marksByUrl.value = { ...marksByUrl.value }
+        }
       }
     })
     return { success: true }
@@ -287,7 +293,10 @@ onMessage<{ url: string }>('remove-marks-by-url', async ({ data }) => {
     const { url } = data
     await enqueueWrite(async () => {
       if (marksByUrl.value[url]) {
-        delete marksByUrl.value[url]
+        const now = Date.now()
+        marksByUrl.value[url].forEach(m => {
+          if (!m.deletedAt) m.deletedAt = now
+        })
         marksByUrl.value = { ...marksByUrl.value }
       }
     })
@@ -303,12 +312,13 @@ onMessage<{ marks: any[] }>('remove-marks', async ({ data }) => {
   try {
     const { marks } = data
     await enqueueWrite(async () => {
-      for (const mark of marks) {
-        const { url, id } = mark
+      const now = Date.now()
+      for (const mToRemove of marks) {
+        const { url, id } = mToRemove
         if (marksByUrl.value[url]) {
-          marksByUrl.value[url] = marksByUrl.value[url].filter((m) => m.id !== id)
-          if (marksByUrl.value[url].length === 0) {
-            delete marksByUrl.value[url]
+          const mark = marksByUrl.value[url].find(m => m.id === id)
+          if (mark) {
+            mark.deletedAt = now
           }
         }
       }
@@ -403,29 +413,39 @@ const performPush = debounce(async () => {
   }
 }, 10000)
 
-async function performPull() {
+async function performPull(retries = 3) {
   await Promise.all([dataReady, tagsReady, syncReady])
   if (!syncConfig.value.enabled || !syncConfig.value.token || !syncConfig.value.gistId) return
 
-  try {
-    // eslint-disable-next-line no-console
-    console.log('[Sync] Starting initial pull...')
-    const gists = await getGists(syncConfig.value.token)
-    const gist = gists.find(g => g.id === syncConfig.value.gistId)
-    const file = gist?.files['markflow_sync.json']
-    
-    if (file && file.content) {
-      const remoteData = JSON.parse(file.content)
-      await enqueueWrite(async () => {
-        marksByUrl.value = mergeMarks(toRaw(marksByUrl.value), remoteData.marks || {})
-        tagsMetadata.value = mergeTags(toRaw(tagsMetadata.value), remoteData.tags || {})
-      })
-      syncConfig.value.lastSyncTime = Date.now()
+  for (let i = 0; i < retries; i++) {
+    try {
       // eslint-disable-next-line no-console
-      console.log('[Sync] Initial pull and merge successful')
+      console.log(`[Sync] Starting initial pull (attempt ${i + 1})...`)
+      const gists = await getGists(syncConfig.value.token)
+      const gist = gists.find(g => g.id === syncConfig.value.gistId)
+      const file = gist?.files['markflow_sync.json']
+      
+      if (file && file.content) {
+        const remoteData = JSON.parse(file.content)
+        await enqueueWrite(async () => {
+          marksByUrl.value = mergeMarks(toRaw(marksByUrl.value), remoteData.marks || {})
+          tagsMetadata.value = mergeTags(toRaw(tagsMetadata.value), remoteData.tags || {})
+        })
+        syncConfig.value.lastSyncTime = Date.now()
+        // eslint-disable-next-line no-console
+        console.log('[Sync] Initial pull and merge successful')
+      }
+      return // 成功则退出
+    } catch (error) {
+      if (i === retries - 1) {
+        console.error('[Sync] Initial pull failed after retries:', error)
+      } else {
+        const delay = Math.pow(2, i) * 1000
+        // eslint-disable-next-line no-console
+        console.warn(`[Sync] Pull failed, retrying in ${delay}ms...`, error)
+        await new Promise(resolve => setTimeout(resolve, delay))
+      }
     }
-  } catch (error) {
-    console.error('[Sync] Initial pull failed:', error)
   }
 }
 

@@ -27,6 +27,20 @@ describe('Sync Logic', () => {
       const result = mergeMarks(local, remote)
       expect(result.url1[0].text).toBe('新内容')
     })
+
+    it('应该同步删除操作 (Tombstone)', () => {
+      const local = { url1: [{ id: '1', text: 'm1', createdAt: 100 } as Mark] }
+      const remote = { url1: [{ id: '1', text: 'm1', createdAt: 100, deletedAt: 200 } as Mark] }
+      const result = mergeMarks(local, remote)
+      expect(result.url1[0].deletedAt).toBe(200)
+    })
+
+    it('如果本地删除较新，应该保留删除状态', () => {
+      const local = { url1: [{ id: '1', text: 'm1', createdAt: 100, deletedAt: 300 } as Mark] }
+      const remote = { url1: [{ id: '1', text: 'm1', createdAt: 100, deletedAt: 200 } as Mark] }
+      const result = mergeMarks(local, remote)
+      expect(result.url1[0].deletedAt).toBe(300)
+    })
   })
 
   describe('mergeTags', () => {

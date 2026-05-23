@@ -4,118 +4,43 @@
 
 **Goal:** 实现基于 GitHub Gist 的标记和标签多端自动静默同步。
 
-**Architecture:** 采用 Local-first 架构。后台 Service Worker 监听存储变化并防抖上传，定时或唤醒时从远程拉取。合并逻辑基于 ID 匹配和 `createdAt` 时间戳对比（最新胜出）。
+**Architecture:** 采用 Local-first 架构。后台 Service Worker 监听存储变化并防抖上传，启动时通过指数退避（Exponential Backoff）自动拉取。合并逻辑基于 ID 匹配和 `createdAt`/`deletedAt` 时间戳对比（最新胜出，实现删除操作的同步）。
 
 **Tech Stack:** TypeScript, GitHub REST API, Vue 3, webextension-polyfill, Lodash-es (debounce).
 
 ---
 
-### Task 1: 核心同步逻辑与合并算法
+### Task 1: 核心同步逻辑与合并算法 (含删除同步)
 
 **Files:**
 - Create: `src/logic/sync.ts`
 - Create: `src/tests/sync.spec.ts`
 
-- [ ] **Step 1: 定义同步相关接口**
+- [ ] **Step 1: 定义同步相关接口 (增加 deletedAt)**
+
+```typescript
+// src/logic/storage.ts
+export interface Mark {
+  // ...
+  deletedAt?: number // 用于删除同步
+}
+```
+
+- [ ] **Step 2: 实现时间戳合并算法 (处理 Tombstone)**
 
 ```typescript
 // src/logic/sync.ts
-import type { Mark, Tag } from './storage'
-
-export interface SyncData {
-  marks: Record<string, Mark[]>
-  tags: Record<string, Tag>
-  lastSync: number
-}
-
-export interface GistFile {
-  content: string
-}
-
-export interface GistResponse {
-  id: string
-  files: Record<string, GistFile>
-}
-```
-
-- [ ] **Step 2: 实现时间戳合并算法**
-
-```typescript
-// src/logic/sync.ts (继续)
 export function mergeMarks(local: Record<string, Mark[]>, remote: Record<string, Mark[]>): Record<string, Mark[]> {
-  const result = { ...local }
-  for (const [url, remoteMarks] of Object.entries(remote)) {
-    if (!result[url]) {
-      result[url] = remoteMarks
-      continue
-    }
-    const localMarksMap = new Map(result[url].map(m => [m.id, m]))
-    remoteMarks.forEach(rm => {
-      const lm = localMarksMap.get(rm.id)
-      if (!lm || rm.createdAt > lm.createdAt) {
-        localMarksMap.set(rm.id, rm)
-      }
-    })
-    result[url] = Array.from(localMarksMap.values())
-  }
-  return result
-}
-
-export function mergeTags(local: Record<string, Tag>, remote: Record<string, Tag>): Record<string, Tag> {
-  const result = { ...local }
-  for (const [id, rt] of Object.entries(remote)) {
-    const lt = result[id]
-    if (!lt || rt.createdAt > lt.createdAt) {
-      result[id] = rt
-    }
-  }
-  return result
+  // 比较 Math.max(createdAt, deletedAt || 0) 保留最新
 }
 ```
 
-- [ ] **Step 3: 编写并运行合并测试**
-
-```typescript
-// src/tests/sync.spec.ts
-import { describe, it, expect } from 'vitest'
-import { mergeMarks } from '../logic/sync'
-import type { Mark } from '../logic/storage'
-
-describe('mergeMarks', () => {
-  it('应该保留时间戳更新的标记', () => {
-    const local = { 'url1': [{ id: '1', text: '旧内容', createdAt: 100 } as Mark] }
-    const remote = { 'url1': [{ id: '1', text: '新内容', createdAt: 200 } as Mark] }
-    const result = mergeMarks(local, remote)
-    expect(result['url1'][0].text).toBe('新内容')
-  })
-})
-```
+- [ ] **Step 3: 编写并运行合并测试 (含删除验证)**
 
 运行: `npx vitest src/tests/sync.spec.ts --run`
 
-- [ ] **Step 4: 实现 GitHub API 封装 (Gist 列表、创建、更新)**
-
-```typescript
-// src/logic/sync.ts (继续)
-export async function getGists(token: string) {
-  const res = await fetch('https://api.github.com/gists', {
-    headers: { Authorization: `token ${token}` }
-  })
-  if (!res.ok) throw new Error('GitHub API 请求失败')
-  return res.json()
-}
-
-export async function updateGist(token: string, gistId: string, data: SyncData) {
-  const res = await fetch(`https://api.github.com/gists/${gistId}`, {
-    method: 'PATCH',
-    headers: { Authorization: `token ${token}` },
-    body: JSON.stringify({
-      files: { 'markflow_sync.json': { content: JSON.stringify(data) } }
-    })
-  })
-  return res.ok
-}
-```
+- [ ] **Step 4: 实现 GitHub API 封装 (含细化错误处理)**
+处理 401 (无效) 和 403 (权限不足) 状态码。
 
 - [ ] **Step 5: 提交代码**
 
@@ -192,44 +117,26 @@ git commit -m "feat: 添加同步配置 UI 与存储"
 
 ---
 
-### Task 3: 后台自动同步引擎
+### Task 3: 后台自动同步引擎 (含重试逻辑)
 
 **Files:**
 - Modify: `src/background/main.ts`
 
 - [ ] **Step 1: 实现 Debounced Push 逻辑**
 
-```typescript
-// src/background/main.ts
-import { debounce } from 'lodash-es'
-import { syncConfig, marksByUrl, tagsMetadata } from '~/logic/storage'
-import { updateGist, mergeSyncData } from '~/logic/sync'
-
-const performPush = debounce(async () => {
-  if (!syncConfig.value.enabled || !syncConfig.value.token || !syncConfig.value.gistId) return
-  // 上传 marksByUrl 和 tagsMetadata 到 Gist
-}, 10000)
-
-// 监听存储变化
-browser.storage.onChanged.addListener((changes) => {
-  if (changes['marks-by-url-storage'] || changes['webmarker-tags-metadata']) {
-    performPush()
-  }
-})
-```
-
-- [ ] **Step 2: 实现启动时自动拉取合并**
+- [ ] **Step 2: 实现启动时指数退避拉取**
 
 ```typescript
-// src/background/main.ts
-async function initialPull() {
-  if (syncConfig.value.enabled && syncConfig.value.token && syncConfig.value.gistId) {
-    // 1. 获取远程数据
-    // 2. 与本地合并
-    // 3. 更新本地存储
+async function performPull(retries = 3) {
+  for (let i = 0; i < retries; i++) {
+    try {
+      // ...
+      return
+    } catch (error) {
+      await new Promise(resolve => setTimeout(resolve, Math.pow(2, i) * 1000))
+    }
   }
 }
-initialPull()
 ```
 
 - [ ] **Step 3: 提交代码**

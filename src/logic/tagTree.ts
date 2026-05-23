@@ -34,12 +34,12 @@ export function buildTagTree(
   })
 
   const sortedUrls = Object.entries(marksByUrl)
-    .filter(([_, marks]) => marks && marks.length > 0)
     .map(([url, marks]) => ({
       url,
-      marks,
-      lastActive: Math.max(...marks.map((m) => m.createdAt))
+      marks: marks.filter(m => !m.deletedAt),
+      lastActive: marks.length > 0 ? Math.max(...marks.map(m => Math.max(m.createdAt, m.deletedAt || 0))) : 0
     }))
+    .filter(({ marks }) => marks.length > 0)
     .sort((a, b) => b.lastActive - a.lastActive)
 
   for (const { url, marks } of sortedUrls) {
