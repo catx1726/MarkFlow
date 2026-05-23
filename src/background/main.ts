@@ -130,6 +130,7 @@ onMessage('remove-mark', async ({ data: markToRemove }) => {
         }
       }
     })
+    if (!syncConfig.value.enabled) await purgeTombstones()
     return { success: true }
   }
   catch (error) {
@@ -141,9 +142,8 @@ onMessage('remove-mark', async ({ data: markToRemove }) => {
 onMessage('get-marks-for-url', async ({ data }) => {
   await dataReady
   const { url } = data
-  return (marksByUrl.value[url] || [])
-    .filter(m => !m.deletedAt)
-    .map(toRaw)
+  const marks = (marksByUrl.value[url] || []).filter(m => !m.deletedAt)
+  return marks.length > 0 ? marks.map(toRaw) : undefined
 })
 
 onMessage<RemoveMarkPayload>('remove-mark-by-id', async ({ data }) => {
@@ -158,6 +158,7 @@ onMessage<RemoveMarkPayload>('remove-mark-by-id', async ({ data }) => {
         }
       }
     })
+    if (!syncConfig.value.enabled) await purgeTombstones()
     return { success: true }
   }
   catch (error) {
@@ -300,6 +301,8 @@ onMessage<{ url: string }>('remove-marks-by-url', async ({ data }) => {
         marksByUrl.value = { ...marksByUrl.value }
       }
     })
+    // 如果未开启同步，立即物理清理以避免残留；否则由同步流程负责清理
+    if (!syncConfig.value.enabled) await purgeTombstones()
     return { success: true }
   }
   catch (error) {
@@ -324,6 +327,7 @@ onMessage<{ marks: any[] }>('remove-marks', async ({ data }) => {
       }
       marksByUrl.value = { ...marksByUrl.value }
     })
+    if (!syncConfig.value.enabled) await purgeTombstones()
     return { success: true }
   }
   catch (error) {

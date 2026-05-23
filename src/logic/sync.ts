@@ -42,6 +42,7 @@ export function mergeMarks(local: Record<string, Mark[]>, remote: Record<string,
     })
     result[url] = Array.from(localMarksMap.values())
   }
+  
   return result
 }
 
