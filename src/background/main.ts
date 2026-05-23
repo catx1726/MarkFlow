@@ -393,19 +393,16 @@ onMessage<{ tagId: string, name: string }>('rename-tag', async ({ data }) => {
 // --- 同步引擎逻辑 ---
 
 /**
- * 同步锁管理，防止 Push 和 Pull 同时运行导致数据竞争
+ * 同步任务队列，确保所有 Push 和 Pull 操作按顺序串行执行，防止数据竞争。
  */
-const syncLock = {
-  active: null as Promise<void> | null,
-  async acquire() {
-    while (this.active) await this.active
-    let resolveLock: () => void
-    this.active = new Promise((resolve) => { resolveLock = resolve })
-    return () => {
-      this.active = null
-      resolveLock()
-    }
-  }
+let syncQueue: Promise<void> = Promise.resolve()
+
+async function enqueueSync(task: () => Promise<void>) {
+  const nextSync = syncQueue.then(task).catch((err) => {
+    console.error('[Sync] Queue task failed:', err)
+  })
+  syncQueue = nextSync
+  return nextSync
 }
 
 /**
@@ -436,34 +433,32 @@ async function purgeTombstones() {
 const performPush = debounce(async () => {
   if (!syncConfig.value.enabled || !syncConfig.value.token || !syncConfig.value.gistId) return
 
-  const release = await syncLock.acquire()
-  try {
-    // eslint-disable-next-line no-console
-    console.log('[Sync] Starting background push...')
-    const success = await updateGist(syncConfig.value.token, syncConfig.value.gistId, {
-      marks: toRaw(marksByUrl.value),
-      tags: toRaw(tagsMetadata.value),
-      lastSync: Date.now()
-    })
-    if (success) {
-      syncConfig.value.lastSyncTime = Date.now()
+  await enqueueSync(async () => {
+    try {
       // eslint-disable-next-line no-console
-      console.log('[Sync] Background push successful')
-      await purgeTombstones() // 推送成功后，本地可以放心清理已删除标记
+      console.log('[Sync] Starting background push...')
+      const success = await updateGist(syncConfig.value.token, syncConfig.value.gistId, {
+        marks: toRaw(marksByUrl.value),
+        tags: toRaw(tagsMetadata.value),
+        lastSync: Date.now()
+      })
+      if (success) {
+        syncConfig.value.lastSyncTime = Date.now()
+        // eslint-disable-next-line no-console
+        console.log('[Sync] Background push successful')
+        await purgeTombstones() // 推送成功后物理清理已同步的删除标记
+      }
+    } catch (error) {
+      console.error('[Sync] Background push failed:', error)
     }
-  } catch (error) {
-    console.error('[Sync] Background push failed:', error)
-  } finally {
-    release()
-  }
+  })
 }, 10000)
 
 async function performPull(retries = 3) {
   await Promise.all([dataReady, tagsReady, syncReady])
   if (!syncConfig.value.enabled || !syncConfig.value.token || !syncConfig.value.gistId) return
 
-  const release = await syncLock.acquire()
-  try {
+  await enqueueSync(async () => {
     for (let i = 0; i < retries; i++) {
       try {
         // eslint-disable-next-line no-console
@@ -481,7 +476,7 @@ async function performPull(retries = 3) {
           syncConfig.value.lastSyncTime = Date.now()
           // eslint-disable-next-line no-console
           console.log('[Sync] Initial pull and merge successful')
-          await purgeTombstones() // 拉取并合并后，物理清理所有端都已确认删除的标记
+          await purgeTombstones() // 拉取合并后执行清理
         }
         return // 成功则退出
       } catch (error) {
@@ -495,9 +490,7 @@ async function performPull(retries = 3) {
         }
       }
     }
-  } finally {
-    release()
-  }
+  })
 }
 
 // 监听存储变化触发推送
