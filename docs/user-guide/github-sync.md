@@ -1,0 +1,34 @@
+# GitHub Gist 同步配置指南
+
+通过 GitHub Gist，您可以实现 MarkFlow 数据在多台设备之间的自动同步。
+
+## 第一步：获取 GitHub Personal Access Token (PAT)
+
+1.  登录您的 GitHub 账号。
+2.  点击右上角头像，选择 **Settings** (设置)。
+3.  在左侧边栏最下方，点击 **Developer settings**。
+4.  选择 **Personal access tokens** -> **Tokens (classic)**。
+5.  点击 **Generate new token** -> **Generate new token (classic)**。
+6.  设置 **Note** (例如：`MarkFlow-Sync`)。
+7.  **关键步骤**：在权限列表中勾选 **`gist`** 选项。
+8.  点击页面底部的 **Generate token**。
+9.  **复制生成的 Token**（注意：离开此页面后您将无法再次看到它）。
+
+## 第二步：在插件中配置
+
+1.  打开 MarkFlow 插件的 **设置 (Options)** 页面。
+2.  滚动到 **GitHub 同步** 面板。
+3.  将刚才复制的 Token 粘贴到输入框中。
+4.  点击 **连接并开启同步**。
+5.  插件会自动创建一个私有的 Gist 来存储您的标记数据。
+
+## 常见问题
+
+### 安全性如何？
+- 我们只需要 `gist` 权限，这意味着插件无法访问您的代码仓库（Repository）。
+- 数据以 `Secret Gist` 形式存储，除非拥有您的 Token，否则他人无法查看。
+
+### 多端同步如何工作？
+- 在新电脑上安装插件后，输入同一个 Token，点击连接。
+- 插件会自动通过 Token 找回之前创建的同步文件并进行合并。
+- 建议开启“自动同步”，插件会在您添加或修改标记后自动上传到云端。

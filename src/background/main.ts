@@ -9,10 +9,14 @@ import {
   dataReady,
   tagsMetadata,
   tagsReady,
+  syncConfig,
+  syncReady,
   type RemoveMarkPayload,
   type UpdateMarkNotePayload,
   type GetMarkByIdPayload
 } from '~/logic/storage'
+import { debounce } from 'lodash-es'
+import { updateGist, getGists, mergeMarks, mergeTags } from '~/logic/sync'
 
 // only on dev mode
 if (import.meta.hot) {
@@ -375,6 +379,66 @@ onMessage<{ tagId: string, name: string }>('rename-tag', async ({ data }) => {
     return { success: false, error: (error as Error).message }
   }
 })
+
+// --- 同步引擎逻辑 ---
+
+const performPush = debounce(async () => {
+  if (!syncConfig.value.enabled || !syncConfig.value.token || !syncConfig.value.gistId) return
+
+  try {
+    // eslint-disable-next-line no-console
+    console.log('[Sync] Starting background push...')
+    const success = await updateGist(syncConfig.value.token, syncConfig.value.gistId, {
+      marks: toRaw(marksByUrl.value),
+      tags: toRaw(tagsMetadata.value),
+      lastSync: Date.now()
+    })
+    if (success) {
+      syncConfig.value.lastSyncTime = Date.now()
+      // eslint-disable-next-line no-console
+      console.log('[Sync] Background push successful')
+    }
+  } catch (error) {
+    console.error('[Sync] Background push failed:', error)
+  }
+}, 10000)
+
+async function performPull() {
+  await Promise.all([dataReady, tagsReady, syncReady])
+  if (!syncConfig.value.enabled || !syncConfig.value.token || !syncConfig.value.gistId) return
+
+  try {
+    // eslint-disable-next-line no-console
+    console.log('[Sync] Starting initial pull...')
+    const gists = await getGists(syncConfig.value.token)
+    const gist = gists.find(g => g.id === syncConfig.value.gistId)
+    const file = gist?.files['markflow_sync.json']
+    
+    if (file && file.content) {
+      const remoteData = JSON.parse(file.content)
+      await enqueueWrite(async () => {
+        marksByUrl.value = mergeMarks(toRaw(marksByUrl.value), remoteData.marks || {})
+        tagsMetadata.value = mergeTags(toRaw(tagsMetadata.value), remoteData.tags || {})
+      })
+      syncConfig.value.lastSyncTime = Date.now()
+      // eslint-disable-next-line no-console
+      console.log('[Sync] Initial pull and merge successful')
+    }
+  } catch (error) {
+    console.error('[Sync] Initial pull failed:', error)
+  }
+}
+
+// 监听存储变化触发推送
+browser.storage.onChanged.addListener((changes) => {
+  // 排除掉同步配置自身的变更，避免循环
+  if (changes['marks-by-url-storage'] || changes['webmarker-tags-metadata']) {
+    performPush()
+  }
+})
+
+// 启动时拉取
+performPull()
 
 onMessage<{ tagId: string }>('delete-tag', async ({ data }) => {
   try {

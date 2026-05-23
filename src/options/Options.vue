@@ -5,6 +5,8 @@ import { settings } from '~/logic/settings'
 import { cloneDeep } from 'lodash-es'
 import { sendMessage } from 'webext-bridge/options'
 import { getLogs } from '../logic/errorCollector'
+import { syncConfig, marksByUrl, tagsMetadata } from '~/logic/storage'
+import { getGists, createGist, mergeMarks, mergeTags } from '~/logic/sync'
 
 const isDark = usePreferredDark()
 watchEffect(() => {
@@ -86,6 +88,41 @@ async function exportLogs() {
   a.href = url
   a.download = `error-logs-${Date.now()}.json`
   a.click()
+}
+
+async function connectSync() {
+  if (!syncConfig.value.token) {
+    showAlert('请先输入 GitHub Token')
+    return
+  }
+
+  try {
+    saveStatus.value = '正在连接 GitHub...'
+    const gists = await getGists(syncConfig.value.token)
+    // 查找包含 markflow_sync.json 的 Gist
+    const existingGist = gists.find(g => g.files && g.files['markflow_sync.json'])
+    
+    if (existingGist) {
+      syncConfig.value.gistId = existingGist.id
+      syncConfig.value.enabled = true
+      showAlert('已成功连接到现有的同步 Gist！')
+    } else {
+      // 创建新的
+      const newGist = await createGist(syncConfig.value.token, {
+        marks: marksByUrl.value,
+        tags: tagsMetadata.value,
+        lastSync: Date.now()
+      })
+      syncConfig.value.gistId = newGist.id
+      syncConfig.value.enabled = true
+      showAlert('已创建新的同步 Gist 并开启同步！')
+    }
+    syncConfig.value.lastSyncTime = Date.now()
+  } catch (err: any) {
+    showAlert(`连接失败: ${err.message}`)
+  } finally {
+    saveStatus.value = ''
+  }
 }
 </script>
 
@@ -272,6 +309,56 @@ async function exportLogs() {
         >
           导出错误日志
         </button>
+      </div>
+
+      <!-- GitHub Sync -->
+      <div class="setting-card">
+        <h2 class="text-[18px] font-semibold mb-[12px]">GitHub 同步</h2>
+        <p class="text-[14px] text-gray-500 mb-[16px]">
+          使用 GitHub Gist 实现多端标记同步。数据以私有 Gist 形式存储。
+        </p>
+        <div class="space-y-4">
+          <div class="flex flex-col gap-2">
+            <label class="text-[14px] font-medium">GitHub Personal Access Token (classic)</label>
+            <input
+              v-model="syncConfig.token"
+              type="password"
+              class="w-full px-[8px] py-[4px] border rounded-md bg-gray-50 dark:bg-gray-800 focus:ring-2 focus:ring-blue-500"
+              placeholder="ghp_xxxxxxxxxxxxxxxxxxxxxxxx"
+            />
+            <p class="text-[12px] text-gray-400">
+              Token 需要勾选 'gist' 权限。
+              <a
+                href="https://github.com/settings/tokens/new"
+                target="_blank"
+                class="text-blue-500 hover:underline"
+              >
+                点此生成 Token
+              </a>
+            </p>
+          </div>
+          
+          <div class="flex items-center gap-4">
+            <button
+              class="px-[16px] py-2 text-[14px] font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50"
+              :disabled="!syncConfig.token"
+              @click="connectSync"
+            >
+              {{ syncConfig.gistId ? '重新连接' : '连接并开启同步' }}
+            </button>
+            <div v-if="syncConfig.gistId" class="flex flex-col">
+              <span class="text-[12px] text-green-600 font-medium">● 已连接到云端同步</span>
+              <span class="text-[11px] text-gray-400">上次同步: {{ syncConfig.lastSyncTime ? new Date(syncConfig.lastSyncTime).toLocaleString() : '从未' }}</span>
+            </div>
+          </div>
+
+          <div v-if="syncConfig.gistId" class="pt-2 border-t border-gray-100 dark:border-gray-700">
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input v-model="syncConfig.enabled" type="checkbox" class="h-4 w-4" />
+              <span class="text-[14px]">启用自动同步</span>
+            </label>
+          </div>
+        </div>
       </div>
     </div>
 

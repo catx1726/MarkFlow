@@ -18,6 +18,19 @@ export const { data: tagsMetadata, dataReady: tagsReady } = useWebExtensionStora
   {}
 )
 
+export interface SyncConfig {
+  enabled: boolean
+  token: string
+  gistId: string
+  lastSyncTime: number
+  autoSync: boolean
+}
+
+export const { data: syncConfig, dataReady: syncReady } = useWebExtensionStorage<SyncConfig>(
+  'webmarker-sync-config',
+  { enabled: false, token: '', gistId: '', lastSyncTime: 0, autoSync: true }
+)
+
 export interface Mark {
   id: string // 唯一ID
   url: string // 标记所在的页面URL
