@@ -68,8 +68,7 @@ export async function getGists(token: string): Promise<GistResponse[]> {
     headers: { Authorization: `token ${token}` }
   })
   if (!res.ok) {
-    if (res.status === 401) throw new Error('Token 无效，请重新生成')
-    if (res.status === 403) throw new Error('Token 权限不足，请确保勾选了 "gist" 权限')
+    if (res.status === 401 || res.status === 403) throw new Error('身份验证失败或权限不足，请检查 Token 配置')
     throw new Error(`GitHub API 请求失败: ${res.status}`)
   }
   return res.json()
@@ -89,9 +88,8 @@ export async function createGist(token: string, data: SyncData): Promise<GistRes
     })
   })
   if (!res.ok) {
-    if (res.status === 401) throw new Error('Token 无效，请重新生成')
-    if (res.status === 403) throw new Error('Token 权限不足，请确保勾选了 "gist" 权限')
-    throw new Error(`创建 Gist 失败: ${res.status}`)
+    if (res.status === 401 || res.status === 403) throw new Error('身份验证失败或权限不足，请检查 Token 配置')
+    throw new Error(`请求失败: ${res.status}`)
   }
   return res.json()
 }
@@ -108,9 +106,8 @@ export async function updateGist(token: string, gistId: string, data: SyncData):
     })
   })
   if (!res.ok) {
-    if (res.status === 401) throw new Error('Token 无效，请重新生成')
-    if (res.status === 403) throw new Error('Token 权限不足，请确保勾选了 "gist" 权限')
-    throw new Error(`更新 Gist 失败: ${res.status}`)
+    if (res.status === 401 || res.status === 403) throw new Error('身份验证失败或权限不足，请检查 Token 配置')
+    throw new Error(`请求失败: ${res.status}`)
   }
   return res.ok
 }

@@ -142,8 +142,9 @@ onMessage('remove-mark', async ({ data: markToRemove }) => {
 onMessage('get-marks-for-url', async ({ data }) => {
   await dataReady
   const { url } = data
-  const marks = (marksByUrl.value[url] || []).filter(m => !m.deletedAt)
-  return marks.length > 0 ? marks.map(toRaw) : undefined
+  return (marksByUrl.value[url] || [])
+    .filter(m => !m.deletedAt)
+    .map(toRaw)
 })
 
 onMessage<RemoveMarkPayload>('remove-mark-by-id', async ({ data }) => {
@@ -358,6 +359,10 @@ onMessage('open-options-page', async () => {
   browser.runtime.openOptionsPage()
 })
 
+onMessage('trigger-sync', async () => {
+  await performPull()
+})
+
 /**
  * 专门的消息处理器用于创建标签，解决 Content Script 直接修改存储的问题
  */
@@ -511,11 +516,12 @@ browser.storage.onChanged.addListener((changes) => {
     performPush()
   }
 
-  // 监听同步配置变更，如果开启了同步且有 Gist ID，则尝试执行拉取
+  // 监听同步配置变更，仅处理启用状态切换。
+  // 初次连接时的拉取由 Options 页面主动触发，避免竞态。
   if (changes['webmarker-sync-config']) {
     const newValue = changes['webmarker-sync-config'].newValue as SyncConfig
     const oldValue = changes['webmarker-sync-config'].oldValue as SyncConfig
-    if (newValue?.enabled && newValue?.gistId && (!oldValue?.enabled || oldValue?.gistId !== newValue.gistId)) {
+    if (newValue?.enabled && !oldValue?.enabled && newValue?.gistId) {
       performPull()
     }
   }

@@ -9,8 +9,8 @@
 3.  在左侧边栏最下方，点击 **Developer settings**。
 4.  选择 **Personal access tokens** -> **Tokens (classic)**。
 5.  点击 **Generate new token** -> **Generate new token (classic)**。
-6.  设置 **Note** (例如：`MarkFlow-Sync`)。
-7.  **关键步骤**：在权限列表中勾选 **`gist`** 选项。
+6.  设置 **Note**：请输入 \`MarkFlow-Sync\`（或任何您喜欢的名称，仅用于您区分 Token 用途）。
+7.  **关键步骤**：在权限列表中**仅需勾选 \`gist\`** 选项。不需要勾选任何 repo 或其他权限。
 8.  点击页面底部的 **Generate token**。
 9.  **复制生成的 Token**（注意：离开此页面后您将无法再次看到它）。
 

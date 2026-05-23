@@ -5,7 +5,7 @@ import { settings } from '~/logic/settings'
 import { cloneDeep } from 'lodash-es'
 import { sendMessage } from 'webext-bridge/options'
 import { getLogs } from '../logic/errorCollector'
-import { syncConfig, marksByUrl, tagsMetadata } from '~/logic/storage'
+import { syncConfig, marksByUrl, tagsMetadata, dataReady, tagsReady, syncReady } from '~/logic/storage'
 import { getGists, createGist, mergeMarks, mergeTags } from '~/logic/sync'
 
 const isDark = usePreferredDark()
@@ -120,6 +120,8 @@ async function connectSync() {
       showAlert('已创建新的同步 Gist 并开启同步！')
     }
     syncConfig.value.lastSyncTime = Date.now()
+    // 成功连接后触发一次全量拉取合并
+    await sendMessage('trigger-sync', {}, 'background')
   } catch (err: any) {
     showAlert(`连接失败: ${err.message}`)
   } finally {
@@ -329,14 +331,17 @@ async function connectSync() {
               placeholder="ghp_xxxxxxxxxxxxxxxxxxxxxxxx"
             />
             <p class="text-[12px] text-gray-400">
-              Token 需要勾选 'gist' 权限。
+              请确保 Token 已勾选 <strong>'gist'</strong> 权限（无需 repo 权限）。
               <a
-                href="https://github.com/settings/tokens/new"
+                href="https://github.com/settings/tokens/new?scopes=gist&description=MarkFlow-Sync"
                 target="_blank"
                 class="text-blue-500 hover:underline"
               >
-                点此生成 Token
+                点此快速生成 Token
               </a>
+            </p>
+            <p class="text-[11px] text-amber-600/80 mt-1">
+              ⚠️ 注意：Token 将以加密/私有形式存储在浏览器本地，建议使用最小权限。
             </p>
           </div>
           
