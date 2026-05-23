@@ -458,12 +458,20 @@ const performPush = debounce(async () => {
       })
       if (success) {
         syncConfig.value.lastSyncTime = Date.now()
+        syncConfig.value.lastSyncStatus = 'success'
+        syncConfig.value.errorMessage = ''
         // eslint-disable-next-line no-console
         console.log('[Sync] Background push successful')
-        await purgeTombstones(true) // 在同步任务内部直接执行清理，避免嵌套 enqueueWrite
+        await purgeTombstones(true) // 推送成功后物理清理已同步的删除标记
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('[Sync] Background push failed:', error)
+      syncConfig.value.lastSyncStatus = 'error'
+      syncConfig.value.errorMessage = error.message
+      // 如果是身份验证问题，自动禁用同步以防止重复报错
+      if (error.message.includes('身份验证失败')) {
+        syncConfig.value.enabled = false
+      }
     }
   })
 }, 10000)
@@ -488,6 +496,8 @@ async function performPull(retries = 3) {
           marksByUrl.value = mergeMarks(toRaw(marksByUrl.value), remoteData.marks || {})
           tagsMetadata.value = mergeTags(toRaw(tagsMetadata.value), remoteData.tags || {})
           syncConfig.value.lastSyncTime = Date.now()
+          syncConfig.value.lastSyncStatus = 'success'
+          syncConfig.value.errorMessage = ''
           
           browser.runtime.sendMessage({ type: 'refresh-sidepanel-data' }).catch(() => {})
           
@@ -496,9 +506,18 @@ async function performPull(retries = 3) {
           await purgeTombstones(true)
         }
         return // 成功则退出
-      } catch (error) {
+      } catch (error: any) {
+        if (error.message.includes('身份验证失败')) {
+          syncConfig.value.enabled = false
+          syncConfig.value.lastSyncStatus = 'error'
+          syncConfig.value.errorMessage = error.message
+          return // 认证失败无需重试
+        }
+        
         if (i === retries - 1) {
           console.error('[Sync] Initial pull failed after retries:', error)
+          syncConfig.value.lastSyncStatus = 'error'
+          syncConfig.value.errorMessage = error.message
         } else {
           const delay = Math.pow(2, i) * 1000
           // eslint-disable-next-line no-console

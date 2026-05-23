@@ -354,8 +354,11 @@ async function connectSync() {
               {{ syncConfig.gistId ? '重新连接' : '连接并开启同步' }}
             </button>
             <div v-if="syncConfig.gistId" class="flex flex-col">
-              <span class="text-[12px] text-green-600 font-medium">● 已连接到云端同步</span>
+              <span class="text-[12px] font-medium" :class="syncConfig.lastSyncStatus === 'error' ? 'text-red-500' : 'text-green-600'">
+                ● {{ syncConfig.lastSyncStatus === 'error' ? '同步失败' : '已连接到云端同步' }}
+              </span>
               <span class="text-[11px] text-gray-400">上次同步: {{ syncConfig.lastSyncTime ? new Date(syncConfig.lastSyncTime).toLocaleString() : '从未' }}</span>
+              <p v-if="syncConfig.errorMessage" class="text-[11px] text-red-400 mt-1">{{ syncConfig.errorMessage }}</p>
             </div>
           </div>
 
