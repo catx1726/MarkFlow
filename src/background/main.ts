@@ -407,9 +407,10 @@ async function enqueueSync(task: () => Promise<void>) {
 
 /**
  * 物理清理已标记删除的记录 (Tombstones)
+ * @param insideSync 如果在同步任务中调用，设为 true 以避免嵌套队列
  */
-async function purgeTombstones() {
-  await enqueueWrite(async () => {
+async function purgeTombstones(insideSync = false) {
+  const task = async () => {
     const updatedMarksByUrl = { ...marksByUrl.value }
     let hasCleanup = false
     for (const [url, marks] of Object.entries(updatedMarksByUrl)) {
@@ -426,8 +427,12 @@ async function purgeTombstones() {
       marksByUrl.value = updatedMarksByUrl
       // eslint-disable-next-line no-console
       console.log('[Sync] Tombstones purged successfully')
+      browser.runtime.sendMessage({ type: 'refresh-sidepanel-data' }).catch(() => {})
     }
-  })
+  }
+
+  if (insideSync) await task()
+  else await enqueueWrite(task)
 }
 
 const performPush = debounce(async () => {
@@ -446,7 +451,7 @@ const performPush = debounce(async () => {
         syncConfig.value.lastSyncTime = Date.now()
         // eslint-disable-next-line no-console
         console.log('[Sync] Background push successful')
-        await purgeTombstones() // 推送成功后物理清理已同步的删除标记
+        await purgeTombstones(true) // 在同步任务内部直接执行清理，避免嵌套 enqueueWrite
       }
     } catch (error) {
       console.error('[Sync] Background push failed:', error)
@@ -469,14 +474,17 @@ async function performPull(retries = 3) {
         
         if (file && file.content) {
           const remoteData = JSON.parse(file.content)
-          await enqueueWrite(async () => {
-            marksByUrl.value = mergeMarks(toRaw(marksByUrl.value), remoteData.marks || {})
-            tagsMetadata.value = mergeTags(toRaw(tagsMetadata.value), remoteData.tags || {})
-          })
+          
+          // 直接更新数据并广播，不通过 enqueueWrite 以避免死锁风险
+          marksByUrl.value = mergeMarks(toRaw(marksByUrl.value), remoteData.marks || {})
+          tagsMetadata.value = mergeTags(toRaw(tagsMetadata.value), remoteData.tags || {})
           syncConfig.value.lastSyncTime = Date.now()
+          
+          browser.runtime.sendMessage({ type: 'refresh-sidepanel-data' }).catch(() => {})
+          
           // eslint-disable-next-line no-console
           console.log('[Sync] Initial pull and merge successful')
-          await purgeTombstones() // 拉取合并后执行清理
+          await purgeTombstones(true)
         }
         return // 成功则退出
       } catch (error) {

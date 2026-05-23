@@ -98,6 +98,8 @@ async function connectSync() {
 
   try {
     saveStatus.value = '正在连接 GitHub...'
+    await Promise.all([dataReady, tagsReady, syncReady])
+    
     const gists = await getGists(syncConfig.value.token)
     // 查找包含 markflow_sync.json 的 Gist
     const existingGist = gists.find(g => g.files && g.files['markflow_sync.json'])
