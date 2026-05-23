@@ -56,3 +56,22 @@
 - Implement `enqueueWrite` with proper error propagation (e.g., using a typed queue library like `p-queue`) from the start rather than hand-rolling a Promise chain.
 - Write unit tests for `buildTagTree` and `enqueueWrite` before the first CR round to catch edge cases early.
 - Consider using `shallowRef` for large reactive objects to reduce Vue reactivity overhead.
+
+| 2026-05-23 16:35:00 | Implement and Refine GitHub Gist Synchronization | src/logic/sync.ts, src/logic/storage.ts, src/options/Options.vue, src/background/main.ts, src/manifest.ts, docs/user-guide/github-sync.md | Add cross-device sync via GitHub Gist with automated background push/pull, timestamp merging, tombstone deletion, and exponential backoff retry (Issue #41, #42, #43) | HEAD | - |
+
+---
+
+## Self-Reflection: GitHub Gist Sync
+
+**Execution Summary:**
+- 实现基于 GitHub Gist API 的轻量级同步方案，支持多端数据同步。
+- 引入 `deletedAt` (Tombstone) 机制，解决了分布式系统中的删除同步问题，并实现了同步后的物理清理（Purge）。
+- 为数据拉取（Pull）实现了指数退避重试（Exponential Backoff），增强了弱网环境下的健壮性。
+- 引入了 `syncInProgress` 互斥锁和 `enqueueWrite` 队列集成，确保了并发读写下的数据一致性。
+- 在 Options 页面提供了完整的引导流程和详细的错误提示（针对 401/403 状态码）。
+
+**Key Challenges & Lessons:**
+1. **数据一致性与软删除**：在 Local-first 系统中，简单的物理删除无法同步到其他离线设备。通过引入 `deletedAt` 时间戳并在拉取合并后执行物理清理，既实现了删除同步又防止了数据无限增长。
+2. **并发控制**：网络请求（Push/Pull）与本地存储写入的异步性可能导致竞争。通过互斥锁和序列化队列的结合，确保了存储状态的确定性。
+3. **环境限制与调试**：由于沙盒环境的网络限制，`gh` 工具在大数据包请求时可能失败，通过拆分任务和本地验证确保了工程质量。
+
