@@ -392,12 +392,51 @@ onMessage<{ tagId: string, name: string }>('rename-tag', async ({ data }) => {
 
 // --- 同步引擎逻辑 ---
 
-let syncInProgress = false
+/**
+ * 同步锁管理，防止 Push 和 Pull 同时运行导致数据竞争
+ */
+const syncLock = {
+  active: null as Promise<void> | null,
+  async acquire() {
+    while (this.active) await this.active
+    let resolveLock: () => void
+    this.active = new Promise((resolve) => { resolveLock = resolve })
+    return () => {
+      this.active = null
+      resolveLock()
+    }
+  }
+}
+
+/**
+ * 物理清理已标记删除的记录 (Tombstones)
+ */
+async function purgeTombstones() {
+  await enqueueWrite(async () => {
+    const updatedMarksByUrl = { ...marksByUrl.value }
+    let hasCleanup = false
+    for (const [url, marks] of Object.entries(updatedMarksByUrl)) {
+      const activeMarks = marks.filter(m => !m.deletedAt)
+      if (activeMarks.length === 0) {
+        delete updatedMarksByUrl[url]
+        hasCleanup = true
+      } else if (activeMarks.length !== marks.length) {
+        updatedMarksByUrl[url] = activeMarks
+        hasCleanup = true
+      }
+    }
+    if (hasCleanup) {
+      marksByUrl.value = updatedMarksByUrl
+      // eslint-disable-next-line no-console
+      console.log('[Sync] Tombstones purged successfully')
+    }
+  })
+}
 
 const performPush = debounce(async () => {
-  if (syncInProgress || !syncConfig.value.enabled || !syncConfig.value.token || !syncConfig.value.gistId) return
+  if (!syncConfig.value.enabled || !syncConfig.value.token || !syncConfig.value.gistId) return
 
-  syncInProgress = true
+  const release = await syncLock.acquire()
   try {
     // eslint-disable-next-line no-console
     console.log('[Sync] Starting background push...')
@@ -410,20 +449,20 @@ const performPush = debounce(async () => {
       syncConfig.value.lastSyncTime = Date.now()
       // eslint-disable-next-line no-console
       console.log('[Sync] Background push successful')
+      await purgeTombstones() // 推送成功后，本地可以放心清理已删除标记
     }
   } catch (error) {
     console.error('[Sync] Background push failed:', error)
   } finally {
-    syncInProgress = false
+    release()
   }
 }, 10000)
 
 async function performPull(retries = 3) {
-  if (syncInProgress) return
   await Promise.all([dataReady, tagsReady, syncReady])
   if (!syncConfig.value.enabled || !syncConfig.value.token || !syncConfig.value.gistId) return
 
-  syncInProgress = true
+  const release = await syncLock.acquire()
   try {
     for (let i = 0; i < retries; i++) {
       try {
@@ -438,25 +477,11 @@ async function performPull(retries = 3) {
           await enqueueWrite(async () => {
             marksByUrl.value = mergeMarks(toRaw(marksByUrl.value), remoteData.marks || {})
             tagsMetadata.value = mergeTags(toRaw(tagsMetadata.value), remoteData.tags || {})
-            
-            // 拉取成功并合并后，物理清理已删除的标记（Tombstone 清理）
-            const updatedMarksByUrl = { ...marksByUrl.value }
-            let hasCleanup = false
-            for (const [url, marks] of Object.entries(updatedMarksByUrl)) {
-              const activeMarks = marks.filter(m => !m.deletedAt)
-              if (activeMarks.length === 0) {
-                delete updatedMarksByUrl[url]
-                hasCleanup = true
-              } else if (activeMarks.length !== marks.length) {
-                updatedMarksByUrl[url] = activeMarks
-                hasCleanup = true
-              }
-            }
-            if (hasCleanup) marksByUrl.value = updatedMarksByUrl
           })
           syncConfig.value.lastSyncTime = Date.now()
           // eslint-disable-next-line no-console
           console.log('[Sync] Initial pull and merge successful')
+          await purgeTombstones() // 拉取并合并后，物理清理所有端都已确认删除的标记
         }
         return // 成功则退出
       } catch (error) {
@@ -471,7 +496,7 @@ async function performPull(retries = 3) {
       }
     }
   } finally {
-    syncInProgress = false
+    release()
   }
 }
 
