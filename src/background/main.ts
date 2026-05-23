@@ -392,9 +392,12 @@ onMessage<{ tagId: string, name: string }>('rename-tag', async ({ data }) => {
 
 // --- 同步引擎逻辑 ---
 
-const performPush = debounce(async () => {
-  if (!syncConfig.value.enabled || !syncConfig.value.token || !syncConfig.value.gistId) return
+let syncInProgress = false
 
+const performPush = debounce(async () => {
+  if (syncInProgress || !syncConfig.value.enabled || !syncConfig.value.token || !syncConfig.value.gistId) return
+
+  syncInProgress = true
   try {
     // eslint-disable-next-line no-console
     console.log('[Sync] Starting background push...')
@@ -410,50 +413,81 @@ const performPush = debounce(async () => {
     }
   } catch (error) {
     console.error('[Sync] Background push failed:', error)
+  } finally {
+    syncInProgress = false
   }
 }, 10000)
 
 async function performPull(retries = 3) {
+  if (syncInProgress) return
   await Promise.all([dataReady, tagsReady, syncReady])
   if (!syncConfig.value.enabled || !syncConfig.value.token || !syncConfig.value.gistId) return
 
-  for (let i = 0; i < retries; i++) {
-    try {
-      // eslint-disable-next-line no-console
-      console.log(`[Sync] Starting initial pull (attempt ${i + 1})...`)
-      const gists = await getGists(syncConfig.value.token)
-      const gist = gists.find(g => g.id === syncConfig.value.gistId)
-      const file = gist?.files['markflow_sync.json']
-      
-      if (file && file.content) {
-        const remoteData = JSON.parse(file.content)
-        await enqueueWrite(async () => {
-          marksByUrl.value = mergeMarks(toRaw(marksByUrl.value), remoteData.marks || {})
-          tagsMetadata.value = mergeTags(toRaw(tagsMetadata.value), remoteData.tags || {})
-        })
-        syncConfig.value.lastSyncTime = Date.now()
+  syncInProgress = true
+  try {
+    for (let i = 0; i < retries; i++) {
+      try {
         // eslint-disable-next-line no-console
-        console.log('[Sync] Initial pull and merge successful')
-      }
-      return // 成功则退出
-    } catch (error) {
-      if (i === retries - 1) {
-        console.error('[Sync] Initial pull failed after retries:', error)
-      } else {
-        const delay = Math.pow(2, i) * 1000
-        // eslint-disable-next-line no-console
-        console.warn(`[Sync] Pull failed, retrying in ${delay}ms...`, error)
-        await new Promise(resolve => setTimeout(resolve, delay))
+        console.log(`[Sync] Starting initial pull (attempt ${i + 1})...`)
+        const gists = await getGists(syncConfig.value.token)
+        const gist = gists.find(g => g.id === syncConfig.value.gistId)
+        const file = gist?.files['markflow_sync.json']
+        
+        if (file && file.content) {
+          const remoteData = JSON.parse(file.content)
+          await enqueueWrite(async () => {
+            marksByUrl.value = mergeMarks(toRaw(marksByUrl.value), remoteData.marks || {})
+            tagsMetadata.value = mergeTags(toRaw(tagsMetadata.value), remoteData.tags || {})
+            
+            // 拉取成功并合并后，物理清理已删除的标记（Tombstone 清理）
+            const updatedMarksByUrl = { ...marksByUrl.value }
+            let hasCleanup = false
+            for (const [url, marks] of Object.entries(updatedMarksByUrl)) {
+              const activeMarks = marks.filter(m => !m.deletedAt)
+              if (activeMarks.length === 0) {
+                delete updatedMarksByUrl[url]
+                hasCleanup = true
+              } else if (activeMarks.length !== marks.length) {
+                updatedMarksByUrl[url] = activeMarks
+                hasCleanup = true
+              }
+            }
+            if (hasCleanup) marksByUrl.value = updatedMarksByUrl
+          })
+          syncConfig.value.lastSyncTime = Date.now()
+          // eslint-disable-next-line no-console
+          console.log('[Sync] Initial pull and merge successful')
+        }
+        return // 成功则退出
+      } catch (error) {
+        if (i === retries - 1) {
+          console.error('[Sync] Initial pull failed after retries:', error)
+        } else {
+          const delay = Math.pow(2, i) * 1000
+          // eslint-disable-next-line no-console
+          console.warn(`[Sync] Pull failed, retrying in ${delay}ms...`, error)
+          await new Promise(resolve => setTimeout(resolve, delay))
+        }
       }
     }
+  } finally {
+    syncInProgress = false
   }
 }
 
 // 监听存储变化触发推送
 browser.storage.onChanged.addListener((changes) => {
-  // 排除掉同步配置自身的变更，避免循环
   if (changes['marks-by-url-storage'] || changes['webmarker-tags-metadata']) {
     performPush()
+  }
+
+  // 监听同步配置变更，如果开启了同步且有 Gist ID，则尝试执行拉取
+  if (changes['webmarker-sync-config']) {
+    const newValue = changes['webmarker-sync-config'].newValue as SyncConfig
+    const oldValue = changes['webmarker-sync-config'].oldValue as SyncConfig
+    if (newValue?.enabled && newValue?.gistId && (!oldValue?.enabled || oldValue?.gistId !== newValue.gistId)) {
+      performPull()
+    }
   }
 })
 

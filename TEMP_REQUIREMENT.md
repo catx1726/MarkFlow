@@ -2,58 +2,84 @@
 
 # BUG
 
-- [ ] 流程,你好像没有创建 issue
-- [ ] AI CR :
-  ```markdown
-  1. 严重问题 (Blocking)
-    B1: performPull 函数缺少错误边界和重试机制
+  ```markdown 
+  严重问题 (Blocking)
+  
+  B1: 删除操作可能导致数据丢失
 
-    文件: src/background/main.ts (line ~400-430)
+  文件: src/background/main.ts (line ~123-155)
 
-    问题: performPull 函数在启动时调用，如果网络异常或 GitHub API 限流，只会打印错误日志，没有重试机制。这可能导致用户首次安装时同步失败而无法自动恢复。
+  问题: 当前删除标记的实现使用了软删除（设置 deletedAt），但在 remove-mark-by-url 和 remove-marks 消息处理器中，当 URL 下的所有标记都被软删除后，marksByUrl.value[url] 仍然存在（包含所有已删除的标记）。这会导致：
 
-    建议: 实现指数退避重试（Exponential Backoff），或至少添加一个定时重试机制。
+      内存占用持续增长，因为已删除的标记永远不会被清理
+      在 get-marks-for-url 中虽然过滤了 deletedAt，但底层存储仍然保留着这些数据
 
-    async function performPull(retries = 3) {
-      for (let i = 0; i < retries; i++) {
-        try {
-          // ... existing logic ...
-          return // 成功则退出
-        } catch (error) {
-          if (i === retries - 1) {
-            console.error('[Sync] Initial pull failed after retries:', error)
-            // 通知用户
-          } else {
-            await new Promise(resolve => setTimeout(resolve, Math.pow(2, i) * 1000))
-          }
-        }
+  建议: 实现一个定期清理机制，或者在同步确认后物理删除已标记为删除的数据。例如，在 performPull 成功后，可以清理那些在所有设备上都已被删除的标记。
+
+  // 在 performPull 成功后添加清理逻辑
+  function cleanupDeletedMarks() {
+    for (const [url, marks] of Object.entries(marksByUrl.value)) {
+      const activeMarks = marks.filter(m => !m.deletedAt)
+      if (activeMarks.length === 0) {
+        delete marksByUrl.value[url]
+      } else {
+        marksByUrl.value[url] = activeMarks
       }
     }
+  }
 
-    B2: mergeMarks 函数未处理删除操作
+  B2: 同步配置变更未触发推送
 
-    文件: src/logic/sync.ts (line 25-44)
+  文件: src/background/main.ts (line ~395-405)
 
-    问题: 当前合并逻辑只处理新增和更新，没有处理删除场景。如果用户在设备 A 删除了一个标记，同步到设备 B 时，设备 B 上该标记仍然存在。这是一个数据一致性问题。
+  问题: browser.storage.onChanged 监听器只检查了 marks-by-url-storage 和 webmarker-tags-metadata 的变更，但没有监听同步配置自身的变更。当用户在 Options 页面修改 syncConfig.enabled 或 syncConfig.gistId 时，不会触发推送。更严重的是，如果用户在其他设备上修改了同步配置（例如禁用了同步），当前设备无法感知。
 
-    建议: 考虑添加删除标记的同步机制。例如，在 Mark 接口中添加 deletedAt 字段，或者在同步数据中包含已删除的 ID 列表。
+  建议: 添加对同步配置变更的监听，并在配置变更时重新评估同步状态。
 
-    export interface Mark {
-      // ... existing fields
-      deletedAt?: number // 删除时间戳，用于同步删除
+  browser.storage.onChanged.addListener((changes) => {
+    if (changes['marks-by-url-storage'] || changes['webmarker-tags-metadata']) {
+      performPush()
     }
-
-    B3: connectSync 函数未处理 Token 权限不足的情况
-
-    文件: src/options/Options.vue (line ~95-120)
-
-    问题: 当用户提供的 Token 没有 gist 权限时，GitHub API 会返回 403 错误，但当前的错误处理只显示通用错误信息，没有提示用户检查 Token 权限。
-
-    建议: 在错误处理中区分不同的 HTTP 状态码，给出更具体的错误提示。
-
-    if (res.status === 403) {
-      showAlert('Token 权限不足，请确保勾选了 "gist" 权限')
-    } else if (res.status === 401) {
-      showAlert('Token 无效，请重新生成')
+    // 监听同步配置变更
+    if (changes['webmarker-sync-config']) {
+      const newConfig = changes['webmarker-sync-config'].newValue
+      if (newConfig.enabled && newConfig.gistId) {
+        performPull()
+      }
     }
-  ```   
+  })
+
+  B3: 并发写操作可能导致数据竞争
+
+  文件: src/background/main.ts (line ~395-410)
+
+  问题: performPush 和 performPull 函数没有使用 enqueueWrite 进行同步。当推送和拉取同时发生时，可能会导致：
+
+      推送时读取了正在被拉取修改的数据
+      拉取后推送，覆盖了拉取的最新数据
+      数据不一致
+
+  建议: 将同步操作也纳入写队列管理，或者实现一个简单的互斥锁。
+
+  let syncInProgress = false
+
+  async function performPush() {
+    if (syncInProgress) return
+    syncInProgress = true
+    try {
+      // ... 现有逻辑
+    } finally {
+      syncInProgress = false
+    }
+  }
+
+  async function performPull(retries = 3) {
+    if (syncInProgress) return
+    syncInProgress = true
+    try {
+      // ... 现有逻辑
+    } finally {
+      syncInProgress = false
+    }
+  }
+  ```
