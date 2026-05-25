@@ -1,5 +1,9 @@
 # Unreleased
 
+### [2026-05-25] feat: GitHub Gist Synchronization (#41)
+feat: GitHub Gist Synchronization
+
+
 # Released
 
 ## [v0.6.0] - 2026-05-22
