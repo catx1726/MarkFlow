@@ -34,7 +34,7 @@ export async function getManifest() {
       48: 'assets/icon-48.png',
       128: 'assets/icon-128.png'
     },
-    permissions: ['tabs', 'storage', 'activeTab', 'sidePanel'],
+    permissions: ['tabs', 'storage', 'activeTab', 'sidePanel', 'unlimitedStorage'],
     host_permissions: ['*://*/*'],
     content_scripts: [
       {
@@ -50,8 +50,7 @@ export async function getManifest() {
     ],
     content_security_policy: {
       extension_pages: isDev
-        ? // this is required on dev for Vite script to load
-          `script-src \'self\' http://localhost:${port}; object-src \'self\'`
+        ? `script-src \'self\' http://localhost:${port}; object-src \'self\'` // this is required on dev for Vite script to load
         : "script-src 'self'; object-src 'self'"
     }
   }

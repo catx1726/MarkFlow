@@ -18,6 +18,38 @@ export const { data: tagsMetadata, dataReady: tagsReady } = useWebExtensionStora
   {}
 )
 
+export interface SyncConfig {
+  enabled: boolean
+  token: string
+  gistId: string
+  autoSync: boolean
+}
+
+export const { data: syncConfig, dataReady: syncReady } = useWebExtensionStorage<SyncConfig>(
+  'webmarker-sync-config',
+  { 
+    enabled: false, 
+    token: '', 
+    gistId: '', 
+    autoSync: true
+  }
+)
+
+export interface SyncStatus {
+  lastSyncTime: number
+  lastSyncStatus: 'success' | 'error' | 'none'
+  errorMessage?: string
+}
+
+export const { data: syncStatus, dataReady: statusReady } = useWebExtensionStorage<SyncStatus>(
+  'webmarker-sync-status',
+  {
+    lastSyncTime: 0,
+    lastSyncStatus: 'none',
+    errorMessage: ''
+  }
+)
+
 export interface Mark {
   id: string // 唯一ID
   url: string // 标记所在的页面URL
@@ -36,6 +68,7 @@ export interface Mark {
   contextSelector?: string
   contextOrder?: number
   surroundingSnippet?: string
+  deletedAt?: number // 新增：删除时间戳，用于同步删除
 }
 
 export interface RemoveMarkPayload {
