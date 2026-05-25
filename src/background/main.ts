@@ -225,6 +225,14 @@ onMessage('get-storage-usage', async () => {
   const usage = await (browser.storage.local as any).getBytesInUse()
   const rawQuota = (browser.storage.local as any).QUOTA_BYTES
   const quota = typeof rawQuota === 'number' ? rawQuota : 10 * 1024 * 1024
+
+  // 可观测性增强：如果存储占用超过 80%，记录一条警告日志
+  if (usage > quota * 0.8) {
+    const usageMB = (usage / 1024 / 1024).toFixed(2)
+    const quotaMB = (quota / 1024 / 1024).toFixed(2)
+    collectError(new Error(`[Storage Warning] Local storage is almost full: ${usageMB}MB / ${quotaMB}MB`), 'background')
+  }
+
   return { usage, quota }
 })
 
@@ -363,6 +371,11 @@ onMessage('open-options-page', async () => {
 
 onMessage('trigger-sync', async () => {
   await performPull()
+})
+
+onMessage('report-error', async ({ data, context }) => {
+  const { message, stack, type = 'background' } = data
+  await collectError({ message, stack }, type)
 })
 
 /**

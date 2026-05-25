@@ -21,6 +21,22 @@ const L1_SIMILARITY_THRESHOLD = 95
 const CONTEXT_SIMILARITY_THRESHOLD = 80
 const L3_SIMILARITY_THRESHOLD = 75
 
+/**
+ * 采集并报告高亮恢复失败的元数据。
+ */
+function reportRestoreFailure(mark: Mark, reason: string, detail?: any) {
+  sendMessage('report-error', {
+    message: `[Highlight Failure] ${reason}`,
+    stack: JSON.stringify({
+      markId: mark.id,
+      url: window.location.href,
+      text: mark.text.substring(0, 50),
+      detail
+    }, null, 2),
+    type: 'content'
+  }, 'background').catch(() => {})
+}
+
 interface SearchRestoreResult {
   success: boolean
   candidates?: Candidate[]
@@ -157,6 +173,7 @@ export class HighlightRestorer {
     const deserializationRoot = this.getDeserializationRoot(mark)
     if (mark.shadowHostSelector && !deserializationRoot) {
       console.warn(`[HighlightRestorer] Shadow host not found for ${mark.id}, skipping search fallback.`)
+      reportRestoreFailure(mark, 'Shadow host missing', { selector: mark.shadowHostSelector })
       return { success: false }
     }
     const root = deserializationRoot || document.documentElement
@@ -184,12 +201,12 @@ export class HighlightRestorer {
           candidate.matchIndex,
         )
         if (rangeResult) {
+          // ... 成功逻辑 ...
           const { range } = rangeResult
           this.state.restoredMarkIds.add(mark.id)
           this.state.failedRestoreCooldowns.delete(mark.id)
           this.state.removeFromAmbiguousQueue(mark.id)
           
-          // 更新逻辑保持不变...
           const root = candidate.candidateElement.getRootNode()
           const newSerialized = rangy.serializeRange(range, true, root instanceof ShadowRoot ? root : undefined)
           const { contextTitle, contextSelector, contextLevel, contextOrder, surroundingSnippet } = getHighlightContext(range)
@@ -221,14 +238,17 @@ export class HighlightRestorer {
           }
           return { success: true }
         }
-        // applyPreciseHighlight 失败，返回候选者供调用方加入歧义队列
+        // applyPreciseHighlight 失败
+        reportRestoreFailure(mark, 'Apply highlight failed', { similarity })
         return { success: false, candidates: [candidate] }
       }
-      // similarity 不足，返回候选者供调用方加入歧义队列
+      // similarity 不足
+      reportRestoreFailure(mark, 'Similarity too low', { similarity, threshold: L3_SIMILARITY_THRESHOLD })
       return { success: false, candidates: [candidate] }
     } else if (ambiguityLevel === 'multiple') {
       return { success: false, candidates }
     } else {
+      reportRestoreFailure(mark, 'No candidates found')
       this.state.failedRestoreCooldowns.set(mark.id, Date.now() + 3000)
       return { success: false }
     }
