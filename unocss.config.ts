@@ -10,22 +10,34 @@ export default defineConfig({
           return `${value}px`
         }
         return value
-      }
+      },
     }),
     presetAttributify(),
-    presetIcons()
+    presetIcons(),
   ],
   transformers: [transformerDirectives()],
 
+  postprocess: (util) => {
+    util.entries.forEach((i) => {
+      const value = i[1]
+      if (typeof value === 'string' && value.endsWith('rem')) {
+        const num = Number.parseFloat(value)
+        if (!Number.isNaN(num)) {
+          i[1] = `${num * 16}px`
+        }
+      }
+    })
+  },
+
   theme: {
     colors: {
-      brand: {
-        blue: '#4285f4',
+      'brand': {
+        'blue': '#4285f4',
         'blue-dark': '#357ae8',
-        red: '#ea4335',
-        'red-dark': '#e03324'
+        'red': '#ea4335',
+        'red-dark': '#e03324',
       },
-      'border-color': '#dadce0'
-    }
-  }
+      'border-color': '#dadce0',
+    },
+  },
 })
