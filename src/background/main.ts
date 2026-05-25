@@ -483,6 +483,7 @@ const performPush = debounce(async () => {
 }, 10000)
 
 async function performPull(retries = 3) {
+  if (isSyncing) return
   await Promise.all([dataReady, tagsReady, syncReady])
   if (!syncConfig.value.enabled || !syncConfig.value.token || !syncConfig.value.gistId) return
 
