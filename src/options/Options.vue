@@ -7,6 +7,7 @@ import { sendMessage } from 'webext-bridge/options'
 import { getLogs } from '../logic/errorCollector'
 import { syncConfig, syncStatus, statusReady, marksByUrl, tagsMetadata, dataReady, tagsReady, syncReady } from '~/logic/storage'
 import { getGists, createGist, mergeMarks, mergeTags } from '~/logic/sync'
+import { t } from '~/logic/i18n'
 
 const isDark = usePreferredDark()
 watchEffect(() => {
@@ -39,16 +40,24 @@ const blacklistText = computed({
 
 const alertInfo = reactive({
   visible: false,
-  message: ''
+  title: '提示',
+  message: '',
+  isHtml: false
 })
 
-function showAlert(message: string) {
+function showAlert(message: string, title = '提示', isHtml = false) {
+  alertInfo.title = title
   alertInfo.message = message
+  alertInfo.isHtml = isHtml
   alertInfo.visible = true
 }
 
 function hideAlert() {
   alertInfo.visible = false
+}
+
+function showSyncHelp() {
+  showAlert(t('sync.helpContent'), t('sync.helpTitle'), true)
 }
 
 function addColor() {
@@ -317,7 +326,16 @@ async function connectSync() {
 
       <!-- GitHub Sync -->
       <div class="setting-card">
-        <h2 class="text-[18px] font-semibold mb-[12px]">GitHub 同步</h2>
+        <div class="flex justify-between items-center mb-[12px]">
+          <h2 class="text-[18px] font-semibold">GitHub 同步</h2>
+          <button 
+            class="text-blue-500 hover:text-blue-700 flex items-center gap-1 text-[13px]"
+            @click="showSyncHelp"
+          >
+            <div class="i-carbon-help text-[16px]" />
+            使用指南
+          </button>
+        </div>
         <p class="text-[14px] text-gray-500 mb-[16px]">
           使用 GitHub Gist 实现多端标记同步。数据以私有 Gist 形式存储。
         </p>
@@ -388,14 +406,15 @@ async function connectSync() {
     <!-- 弹窗提示 -->
     <div
       v-if="alertInfo.visible"
-      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
       @click.self="hideAlert"
     >
       <div
-        class="bg-white dark:bg-gray-900 rounded-lg shadow-xl p-[24px] w-full max-w-sm text-gray-800 dark:text-gray-200"
+        class="bg-white dark:bg-gray-900 rounded-lg shadow-xl p-[24px] w-full max-w-md text-gray-800 dark:text-gray-200"
       >
-        <h3 class="text-[18px] font-semibold mb-[16px]">提示</h3>
-        <p class="text-[14px] mb-[24px]">
+        <h3 class="text-[18px] font-semibold mb-[16px]">{{ alertInfo.title }}</h3>
+        <div v-if="alertInfo.isHtml" class="text-[14px] mb-[24px]" v-html="alertInfo.message" />
+        <p v-else class="text-[14px] mb-[24px]">
           {{ alertInfo.message }}
         </p>
         <div class="flex justify-end">

@@ -467,16 +467,37 @@ const performPush = debounce(async () => {
     try {
       // eslint-disable-next-line no-console
       console.log('[Sync] Starting background push...')
-      const success = await updateGist(syncConfig.value.token, syncConfig.value.gistId, {
+      const payload = {
         marks: toRaw(marksByUrl.value),
         tags: toRaw(tagsMetadata.value),
         lastSync: Date.now()
-      })
+      }
+
+      // 监控 Payload 大小 (GitHub API 限制约为 10MB)
+      const payloadString = JSON.stringify(payload)
+      const payloadSize = payloadString.length
+      const LIMIT_8MB = 8 * 1024 * 1024
+
+      if (payloadSize > LIMIT_8MB) {
+        const sizeMB = (payloadSize / (1024 * 1024)).toFixed(2)
+        const warningMsg = `[Sync Warning] 同步数据量接近限制 (${sizeMB}MB / 10MB)。建议清理不再需要的标记以确保同步稳定。`
+        // 写入持久化日志，方便开发者诊断
+        collectError(new Error(warningMsg), 'background')
+        // 更新 UI 提示
+        await enqueueWrite(async () => {
+          syncStatus.value.errorMessage = warningMsg
+        })
+      }
+
+      const success = await updateGist(syncConfig.value.token, syncConfig.value.gistId, payload)
       if (success) {
         await enqueueWrite(async () => {
           syncStatus.value.lastSyncTime = Date.now()
           syncStatus.value.lastSyncStatus = 'success'
-          syncStatus.value.errorMessage = ''
+          // 仅在非警告状态下清除错误消息，保留空间预警
+          if (payloadSize <= LIMIT_8MB) {
+            syncStatus.value.errorMessage = ''
+          }
           await purgeTombstones()
         })
         // eslint-disable-next-line no-console
@@ -486,7 +507,15 @@ const performPush = debounce(async () => {
       console.error('[Sync] Background push failed:', error)
       await enqueueWrite(async () => {
         syncStatus.value.lastSyncStatus = 'error'
-        syncStatus.value.errorMessage = error.message
+        let errorMsg = error.message
+
+        // 处理 GitHub 达到存储上限的特定错误 (422 Unprocessable Entity)
+        if (error.status === 422 || error.message.includes('422')) {
+          errorMsg = '同步失败：数据量超过 GitHub Gist 上限 (10MB)。请清理部分标记后重试。'
+          collectError(new Error(`[Sync Critical] Storage limit exceeded (422): ${error.message}`), 'background')
+        }
+
+        syncStatus.value.errorMessage = errorMsg
         // 如果是身份验证问题，自动禁用同步以防止重复报错
         if (error.message.includes('身份验证失败')) {
           syncConfig.value.enabled = false
