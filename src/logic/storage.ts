@@ -22,10 +22,7 @@ export interface SyncConfig {
   enabled: boolean
   token: string
   gistId: string
-  lastSyncTime: number
   autoSync: boolean
-  lastSyncStatus: 'success' | 'error' | 'none'
-  errorMessage?: string
 }
 
 export const { data: syncConfig, dataReady: syncReady } = useWebExtensionStorage<SyncConfig>(
@@ -34,9 +31,22 @@ export const { data: syncConfig, dataReady: syncReady } = useWebExtensionStorage
     enabled: false, 
     token: '', 
     gistId: '', 
-    lastSyncTime: 0, 
-    autoSync: true,
-    lastSyncStatus: 'none'
+    autoSync: true
+  }
+)
+
+export interface SyncStatus {
+  lastSyncTime: number
+  lastSyncStatus: 'success' | 'error' | 'none'
+  errorMessage?: string
+}
+
+export const { data: syncStatus, dataReady: statusReady } = useWebExtensionStorage<SyncStatus>(
+  'webmarker-sync-status',
+  {
+    lastSyncTime: 0,
+    lastSyncStatus: 'none',
+    errorMessage: ''
   }
 )
 

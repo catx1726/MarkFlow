@@ -5,7 +5,7 @@ import { settings } from '~/logic/settings'
 import { cloneDeep } from 'lodash-es'
 import { sendMessage } from 'webext-bridge/options'
 import { getLogs } from '../logic/errorCollector'
-import { syncConfig, marksByUrl, tagsMetadata, dataReady, tagsReady, syncReady } from '~/logic/storage'
+import { syncConfig, syncStatus, statusReady, marksByUrl, tagsMetadata, dataReady, tagsReady, syncReady } from '~/logic/storage'
 import { getGists, createGist, mergeMarks, mergeTags } from '~/logic/sync'
 
 const isDark = usePreferredDark()
@@ -354,11 +354,11 @@ async function connectSync() {
               {{ syncConfig.gistId ? '重新连接' : '连接并开启同步' }}
             </button>
             <div v-if="syncConfig.gistId" class="flex flex-col">
-              <span class="text-[12px] font-medium" :class="syncConfig.lastSyncStatus === 'error' ? 'text-red-500' : 'text-green-600'">
-                ● {{ syncConfig.lastSyncStatus === 'error' ? '同步失败' : '已连接到云端同步' }}
+              <span class="text-[12px] font-medium" :class="syncStatus.lastSyncStatus === 'error' ? 'text-red-500' : 'text-green-600'">
+                ● {{ syncStatus.lastSyncStatus === 'error' ? '同步失败' : '已连接到云端同步' }}
               </span>
-              <span class="text-[11px] text-gray-400">上次同步: {{ syncConfig.lastSyncTime ? new Date(syncConfig.lastSyncTime).toLocaleString() : '从未' }}</span>
-              <p v-if="syncConfig.errorMessage" class="text-[11px] text-red-400 mt-1">{{ syncConfig.errorMessage }}</p>
+              <span class="text-[11px] text-gray-400">上次同步: {{ syncStatus.lastSyncTime ? new Date(syncStatus.lastSyncTime).toLocaleString() : '从未' }}</span>
+              <p v-if="syncStatus.errorMessage" class="text-[11px] text-red-400 mt-1">{{ syncStatus.errorMessage }}</p>
             </div>
           </div>
 

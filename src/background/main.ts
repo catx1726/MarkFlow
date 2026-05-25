@@ -11,6 +11,8 @@ import {
   tagsReady,
   syncConfig,
   syncReady,
+  syncStatus,
+  statusReady,
   type RemoveMarkPayload,
   type UpdateMarkNotePayload,
   type GetMarkByIdPayload
@@ -421,17 +423,31 @@ async function enqueueSync(task: () => Promise<void>) {
 
 /**
  * 物理清理已标记删除的记录 (Tombstones)
+ * 为了确保多端同步可靠，Tombstone 会保留一段时间（如 7 天）
  */
 async function purgeTombstones() {
   const updatedMarksByUrl = { ...marksByUrl.value }
   let hasCleanup = false
+  const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000
+  const now = Date.now()
+
   for (const [url, marks] of Object.entries(updatedMarksByUrl)) {
-    const activeMarks = marks.filter(m => !m.deletedAt)
-    if (activeMarks.length === 0) {
+    // 仅清理超过 7 天的 Tombstone，或者如果同步未开启，则视情况清理
+    const filteredMarks = marks.filter(m => {
+      if (!m.deletedAt) return true
+      // 如果开启了同步，必须等待 7 天以确保其他设备有机会拉取
+      if (syncConfig.value.enabled) {
+        return (now - m.deletedAt) < SEVEN_DAYS_MS
+      }
+      // 如果未开启同步，立即清理
+      return false
+    })
+
+    if (filteredMarks.length === 0) {
       delete updatedMarksByUrl[url]
       hasCleanup = true
-    } else if (activeMarks.length !== marks.length) {
-      updatedMarksByUrl[url] = activeMarks
+    } else if (filteredMarks.length !== marks.length) {
+      updatedMarksByUrl[url] = filteredMarks
       hasCleanup = true
     }
   }
@@ -458,9 +474,9 @@ const performPush = debounce(async () => {
       })
       if (success) {
         await enqueueWrite(async () => {
-          syncConfig.value.lastSyncTime = Date.now()
-          syncConfig.value.lastSyncStatus = 'success'
-          syncConfig.value.errorMessage = ''
+          syncStatus.value.lastSyncTime = Date.now()
+          syncStatus.value.lastSyncStatus = 'success'
+          syncStatus.value.errorMessage = ''
           await purgeTombstones()
         })
         // eslint-disable-next-line no-console
@@ -469,8 +485,8 @@ const performPush = debounce(async () => {
     } catch (error: any) {
       console.error('[Sync] Background push failed:', error)
       await enqueueWrite(async () => {
-        syncConfig.value.lastSyncStatus = 'error'
-        syncConfig.value.errorMessage = error.message
+        syncStatus.value.lastSyncStatus = 'error'
+        syncStatus.value.errorMessage = error.message
         // 如果是身份验证问题，自动禁用同步以防止重复报错
         if (error.message.includes('身份验证失败')) {
           syncConfig.value.enabled = false
@@ -484,7 +500,7 @@ const performPush = debounce(async () => {
 
 async function performPull(retries = 3) {
   if (isSyncing) return
-  await Promise.all([dataReady, tagsReady, syncReady])
+  await Promise.all([dataReady, tagsReady, syncReady, statusReady])
   if (!syncConfig.value.enabled || !syncConfig.value.token || !syncConfig.value.gistId) return
 
   await enqueueSync(async () => {
@@ -504,9 +520,9 @@ async function performPull(retries = 3) {
             await enqueueWrite(async () => {
               marksByUrl.value = mergeMarks(toRaw(marksByUrl.value), remoteData.marks || {})
               tagsMetadata.value = mergeTags(toRaw(tagsMetadata.value), remoteData.tags || {})
-              syncConfig.value.lastSyncTime = Date.now()
-              syncConfig.value.lastSyncStatus = 'success'
-              syncConfig.value.errorMessage = ''
+              syncStatus.value.lastSyncTime = Date.now()
+              syncStatus.value.lastSyncStatus = 'success'
+              syncStatus.value.errorMessage = ''
 
               await purgeTombstones()
               browser.runtime.sendMessage({ type: 'refresh-sidepanel-data' }).catch(() => {})
@@ -520,8 +536,8 @@ async function performPull(retries = 3) {
           if (error.message.includes('身份验证失败')) {
             await enqueueWrite(async () => {
               syncConfig.value.enabled = false
-              syncConfig.value.lastSyncStatus = 'error'
-              syncConfig.value.errorMessage = error.message
+              syncStatus.value.lastSyncStatus = 'error'
+              syncStatus.value.errorMessage = error.message
             })
             return // 认证失败无需重试
           }
@@ -529,8 +545,8 @@ async function performPull(retries = 3) {
           if (i === retries - 1) {
             console.error('[Sync] Initial pull failed after retries:', error)
             await enqueueWrite(async () => {
-              syncConfig.value.lastSyncStatus = 'error'
-              syncConfig.value.errorMessage = error.message
+              syncStatus.value.lastSyncStatus = 'error'
+              syncStatus.value.errorMessage = error.message
             })
           } else {
             const delay = Math.pow(2, i) * 1000
