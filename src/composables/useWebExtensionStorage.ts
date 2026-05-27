@@ -66,7 +66,7 @@ export function useWebExtensionStorage<T>(
     flush = 'pre',
     deep = true,
     listenToStorageChanges = true,
-    writeDefaults = true,
+    writeDefaults = false,
     mergeDefaults = false,
     shallow,
     eventFilter,
