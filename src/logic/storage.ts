@@ -3,7 +3,6 @@ import { useWebExtensionStorage } from '~/composables/useWebExtensionStorage'
 export const { data: marksByUrl, dataReady } = useWebExtensionStorage<Record<string, Mark[]>>(
   'marks-by-url-storage',
   {},
-  { mergeDefaults: true },
 )
 
 export interface Tag {

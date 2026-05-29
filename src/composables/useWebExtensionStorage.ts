@@ -97,6 +97,7 @@ export function useWebExtensionStorage<T>(
         if (typeof mergeDefaults === 'function')
           data.value = mergeDefaults(value, rawInit)
         else if (type === 'object' && !Array.isArray(value))
+          // Perform shallow merge to supplement missing top-level fields from initialValue
           data.value = { ...(rawInit as Record<keyof unknown, unknown>), ...(value as Record<keyof unknown, unknown>) } as T
         else data.value = value
       }
