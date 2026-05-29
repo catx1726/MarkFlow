@@ -46,9 +46,10 @@ browser.runtime.onInstalled.addListener((): void => {
   console.log('Extension installed')
 })
 async function ensureReady(timeoutMs = 5000) {
-  const timeoutPromise = new Promise<never>((_, reject) =>
+  const timeoutPromise = new Promise<void>(resolve =>
     setTimeout(() => {
-      reject(new Error('[ensureReady] Storage ready timeout - blocking operation to prevent data loss'))
+      console.warn('[ensureReady] Storage ready timeout - proceeding with caution')
+      resolve()
     }, timeoutMs),
   )
   await Promise.race([
@@ -118,7 +119,8 @@ onMessage('get-current-tab', async () => {
 onMessage('add-mark', async ({ data }) => {
   await ensureReady()
   try {
-    console.warn('Adding new mark:', data)
+    // eslint-disable-next-line no-console
+    console.log('Adding new mark:', data)
     const { url } = data
     await enqueueWrite(async () => {
       if (!marksByUrl.value[url])
@@ -221,7 +223,8 @@ onMessage<any>('update-mark-details', async ({ data }) => {
           Object.assign(markToUpdate, updates)
           marksByUrl.value = { ...marksByUrl.value }
 
-          console.warn(`[background] Mark ${id} updated successfully`)
+          // eslint-disable-next-line no-console
+          console.log(`[background] Mark ${id} updated successfully`)
         }
       }
     })
