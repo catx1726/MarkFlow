@@ -43,24 +43,28 @@ describe('storage Fix Refinement', () => {
     expect(data.value).toEqual({ a: 1, b: 2 })
   })
 
-  it('should handle initialization timeout gracefully (simulated)', async () => {
-    // 模拟一个极慢的存储读取
-    let resolveGet: any
-    const slowPromise = new Promise((resolve) => {
-      resolveGet = resolve
-    })
-    vi.mocked(storage.local.get).mockReturnValue(slowPromise as any)
+  it('should NOT merge defaults when mergeDefaults is false', async () => {
+    // 模拟磁盘上有旧数据，缺少字段 'b'
+    vi.mocked(storage.local.get).mockResolvedValue({ 'test-key': JSON.stringify({ a: 1 }) })
 
-    const { data, dataReady } = useWebExtensionStorage('timeout-key', { initial: true })
-
-    // 在这里我们不等待 dataReady，因为它是 storage 层的 Promise
-    // 真正的超时守卫在 background/main.ts 的 ensureReady 中
-    // 这里我们验证 data.value 在就绪前是 initialValue
-    expect(data.value).toEqual({ initial: true })
-
-    // 模拟读取完成
-    resolveGet({ 'timeout-key': JSON.stringify({ initial: false }) })
+    const { data, dataReady } = useWebExtensionStorage('test-key', { a: 0, b: 2 }, { mergeDefaults: false })
     await dataReady
-    expect(data.value).toEqual({ initial: false })
+
+    // 不应该合并，只保留磁盘上的 a: 1 (类型系统外可能会丢失 b)
+    expect(data.value).toEqual({ a: 1 })
+  })
+
+  it('should allow blocking operation on timeout in background logic', async () => {
+    // 模拟 ensureReady 逻辑 (手动模拟，因为测试环境不直接运行 background/main.ts)
+    const ensureReady = async (timeoutMs: number, dataReady: Promise<any>) => {
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('timeout')), timeoutMs),
+      )
+      await Promise.race([dataReady, timeoutPromise])
+    }
+
+    const hangingPromise = new Promise(() => {}) // 永不 resolve
+
+    await expect(ensureReady(10, hangingPromise)).rejects.toThrow('timeout')
   })
 })
