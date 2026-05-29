@@ -46,8 +46,17 @@ browser.runtime.onInstalled.addListener((): void => {
   console.log('Extension installed')
 })
 
-async function ensureReady() {
-  await Promise.all([dataReady, tagsReady, syncReady, statusReady])
+async function ensureReady(timeoutMs = 5000) {
+  const timeoutPromise = new Promise(resolve =>
+    setTimeout(() => {
+      console.error('[ensureReady] Storage ready timeout - proceeding in degraded mode')
+      resolve(null)
+    }, timeoutMs),
+  )
+  await Promise.race([
+    Promise.all([dataReady, tagsReady, syncReady, statusReady]),
+    timeoutPromise,
+  ])
 }
 
 let previousTabId = 0
