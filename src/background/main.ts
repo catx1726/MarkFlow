@@ -46,10 +46,9 @@ browser.runtime.onInstalled.addListener((): void => {
   console.log('Extension installed')
 })
 async function ensureReady(timeoutMs = 5000) {
-  const timeoutPromise = new Promise<void>(resolve =>
+  const timeoutPromise = new Promise<never>((_, reject) =>
     setTimeout(() => {
-      console.warn('[ensureReady] Storage ready timeout - proceeding with caution')
-      resolve()
+      reject(new Error(`[ensureReady] Storage initialization timed out after ${timeoutMs}ms - blocking operation to prevent accidental data overwrite`))
     }, timeoutMs),
   )
   await Promise.race([
@@ -57,7 +56,6 @@ async function ensureReady(timeoutMs = 5000) {
     timeoutPromise,
   ])
 }
-
 let previousTabId = 0
 
 // 写操作队列，用于序列化对 marksByUrl 和 tagsMetadata 的并发写操作
