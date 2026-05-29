@@ -34,7 +34,7 @@ describe('storage Fix Refinement', () => {
 
   it('should merge defaults when mergeDefaults is true even if writeDefaults is false', async () => {
     // 模拟磁盘上有旧数据，缺少字段 'b'
-    vi.mocked(storage.local.get).mockResolvedValue({ 'test-key': { a: 1 } })
+    vi.mocked(storage.local.get).mockResolvedValue({ 'test-key': JSON.stringify({ a: 1 }) })
 
     const { data, dataReady } = useWebExtensionStorage('test-key', { a: 0, b: 2 }, { mergeDefaults: true })
     await dataReady
@@ -59,7 +59,7 @@ describe('storage Fix Refinement', () => {
     expect(data.value).toEqual({ initial: true })
 
     // 模拟读取完成
-    resolveGet({ 'timeout-key': { initial: false } })
+    resolveGet({ 'timeout-key': JSON.stringify({ initial: false }) })
     await dataReady
     expect(data.value).toEqual({ initial: false })
   })
