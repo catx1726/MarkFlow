@@ -45,12 +45,10 @@ browser.runtime.onInstalled.addListener((): void => {
   // eslint-disable-next-line no-console
   console.log('Extension installed')
 })
-
 async function ensureReady(timeoutMs = 5000) {
-  const timeoutPromise = new Promise(resolve =>
+  const timeoutPromise = new Promise<never>((_, reject) =>
     setTimeout(() => {
-      console.error('[ensureReady] Storage ready timeout - proceeding in degraded mode')
-      resolve(null)
+      reject(new Error('[ensureReady] Storage ready timeout - blocking operation to prevent data loss'))
     }, timeoutMs),
   )
   await Promise.race([
