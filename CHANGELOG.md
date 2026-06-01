@@ -1,5 +1,9 @@
 # Unreleased
 
+### [2026-06-01] fix: storage race condition and data loss prevention (#45)
+fix: storage race condition and data loss prevention
+
+
 ### [2026-05-25] feat: GitHub Gist Synchronization (#41)
 feat: GitHub Gist Synchronization
 
