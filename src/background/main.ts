@@ -3,22 +3,23 @@ import { onMessage, sendMessage } from 'webext-bridge/background'
 import type { Tabs } from 'webextension-polyfill'
 // src/background/main.ts
 import { toRaw } from 'vue'
+import { debounce } from 'lodash-es'
+import { collectError } from '../logic/errorCollector'
 import {
+  type GetMarkByIdPayload,
   type Mark,
-  marksByUrl,
+  type RemoveMarkPayload,
+  type UpdateMarkNotePayload,
   dataReady,
-  tagsMetadata,
-  tagsReady,
+  marksByUrl,
+  statusReady,
   syncConfig,
   syncReady,
   syncStatus,
-  statusReady,
-  type RemoveMarkPayload,
-  type UpdateMarkNotePayload,
-  type GetMarkByIdPayload
+  tagsMetadata,
+  tagsReady,
 } from '~/logic/storage'
-import { debounce } from 'lodash-es'
-import { updateGist, getGists, mergeMarks, mergeTags } from '~/logic/sync'
+import { getGists, mergeMarks, mergeTags, updateGist } from '~/logic/sync'
 
 // only on dev mode
 if (import.meta.hot) {
@@ -27,10 +28,8 @@ if (import.meta.hot) {
   // load latest content script
   import('./contentScriptHMR')
 }
-
-import { collectError } from '../logic/errorCollector'
-window.addEventListener('error', (event) => collectError(event.error, 'background'))
-window.addEventListener('unhandledrejection', (event) => collectError(event.reason, 'background'))
+window.addEventListener('error', event => collectError(event.error, 'background'))
+window.addEventListener('unhandledrejection', event => collectError(event.reason, 'background'))
 
 // remove or turn this off if you don't use side panel
 const USE_SIDE_PANEL = true
@@ -46,7 +45,17 @@ browser.runtime.onInstalled.addListener((): void => {
   // eslint-disable-next-line no-console
   console.log('Extension installed')
 })
-
+async function ensureReady(timeoutMs = 5000) {
+  const timeoutPromise = new Promise<never>((_, reject) =>
+    setTimeout(() => {
+      reject(new Error(`[ensureReady] Storage initialization timed out after ${timeoutMs}ms - blocking operation to prevent accidental data overwrite`))
+    }, timeoutMs),
+  )
+  await Promise.race([
+    Promise.all([dataReady, tagsReady, syncReady, statusReady]),
+    timeoutPromise,
+  ])
+}
 let previousTabId = 0
 
 // 写操作队列，用于序列化对 marksByUrl 和 tagsMetadata 的并发写操作
@@ -63,7 +72,7 @@ function enqueueWrite<T>(writeFn: () => Promise<T>): Promise<T> {
     () => { browser.runtime.sendMessage({ type: 'refresh-sidepanel-data' }).catch(() => {}) },
     (error) => {
       console.error('[enqueueWrite] Broadcast skipped due to write failure:', error)
-    }
+    },
   )
   return result
 }
@@ -81,7 +90,8 @@ browser.tabs.onActivated.addListener(async ({ tabId }) => {
   try {
     tab = await browser.tabs.get(previousTabId)
     previousTabId = tabId
-  } catch {
+  }
+  catch {
     return
   }
 
@@ -94,21 +104,25 @@ onMessage('get-current-tab', async () => {
   try {
     const tab = await browser.tabs.get(previousTabId)
     return {
-      title: tab?.title
+      title: tab?.title,
     }
-  } catch {
+  }
+  catch {
     return {
-      title: undefined
+      title: undefined,
     }
   }
 })
 
 onMessage('add-mark', async ({ data }) => {
+  await ensureReady()
   try {
+    // eslint-disable-next-line no-console
     console.log('Adding new mark:', data)
     const { url } = data
     await enqueueWrite(async () => {
-      if (!marksByUrl.value[url]) marksByUrl.value[url] = []
+      if (!marksByUrl.value[url])
+        marksByUrl.value[url] = []
       marksByUrl.value[url].push(data)
       marksByUrl.value = { ...marksByUrl.value }
     })
@@ -121,6 +135,7 @@ onMessage('add-mark', async ({ data }) => {
 })
 
 onMessage('remove-mark', async ({ data: markToRemove }) => {
+  await ensureReady()
   try {
     const { url, id } = markToRemove
     await enqueueWrite(async () => {
@@ -132,7 +147,8 @@ onMessage('remove-mark', async ({ data: markToRemove }) => {
         }
       }
     })
-    if (!syncConfig.value.enabled) await purgeTombstones()
+    if (!syncConfig.value.enabled)
+      await purgeTombstones()
     return { success: true }
   }
   catch (error) {
@@ -150,6 +166,7 @@ onMessage('get-marks-for-url', async ({ data }) => {
 })
 
 onMessage<RemoveMarkPayload>('remove-mark-by-id', async ({ data }) => {
+  await ensureReady()
   try {
     const { url, id } = data
     await enqueueWrite(async () => {
@@ -161,7 +178,8 @@ onMessage<RemoveMarkPayload>('remove-mark-by-id', async ({ data }) => {
         }
       }
     })
-    if (!syncConfig.value.enabled) await purgeTombstones()
+    if (!syncConfig.value.enabled)
+      await purgeTombstones()
     return { success: true }
   }
   catch (error) {
@@ -171,11 +189,12 @@ onMessage<RemoveMarkPayload>('remove-mark-by-id', async ({ data }) => {
 })
 
 onMessage<UpdateMarkNotePayload>('update-mark-note', async ({ data }) => {
+  await ensureReady()
   try {
     const { url, id, note } = data
     await enqueueWrite(async () => {
       if (marksByUrl.value[url]) {
-        const markToUpdate = marksByUrl.value[url].find((m) => m.id === id)
+        const markToUpdate = marksByUrl.value[url].find(m => m.id === id)
         if (markToUpdate) {
           markToUpdate.note = note
           marksByUrl.value = { ...marksByUrl.value }
@@ -191,15 +210,18 @@ onMessage<UpdateMarkNotePayload>('update-mark-note', async ({ data }) => {
 })
 
 onMessage<any>('update-mark-details', async ({ data }) => {
+  await ensureReady()
   try {
     const { url, id, ...updates } = data
     await enqueueWrite(async () => {
       if (marksByUrl.value[url]) {
-        const index = marksByUrl.value[url].findIndex((m) => m.id === id)
+        const index = marksByUrl.value[url].findIndex(m => m.id === id)
         if (index !== -1) {
           const markToUpdate = marksByUrl.value[url][index]
           Object.assign(markToUpdate, updates)
           marksByUrl.value = { ...marksByUrl.value }
+
+          // eslint-disable-next-line no-console
           console.log(`[background] Mark ${id} updated successfully`)
         }
       }
@@ -213,10 +235,12 @@ onMessage<any>('update-mark-details', async ({ data }) => {
 })
 
 onMessage<GetMarkByIdPayload>('get-mark-by-id', async ({ data }) => {
+  await ensureReady()
   const { url, id } = data
   if (marksByUrl.value[url]) {
-    const markProxy = marksByUrl.value[url].find((m) => m.id === id)
-    if (markProxy) return toRaw(markProxy)
+    const markProxy = marksByUrl.value[url].find(m => m.id === id)
+    if (markProxy)
+      return toRaw(markProxy)
   }
   return undefined
 })
@@ -237,6 +261,7 @@ onMessage('get-storage-usage', async () => {
 })
 
 onMessage('cleanup-old-marks', async ({ data }) => {
+  await ensureReady()
   try {
     const { days } = data
     const threshold = Date.now() - days * 24 * 60 * 60 * 1000
@@ -247,7 +272,8 @@ onMessage('cleanup-old-marks', async ({ data }) => {
         .filter((mark: Mark) => mark.createdAt > threshold)
 
       marksByUrl.value = keptMarks.reduce((acc, mark) => {
-        if (!acc[mark.url]) acc[mark.url] = []
+        if (!acc[mark.url])
+          acc[mark.url] = []
         acc[mark.url].push(mark)
         return acc
       }, {} as Record<string, Mark[]>)
@@ -261,6 +287,7 @@ onMessage('cleanup-old-marks', async ({ data }) => {
 })
 
 onMessage('cleanup-useless-marks', async () => {
+  await ensureReady()
   try {
     await enqueueWrite(async () => {
       const allMarks = marksByUrl.value
@@ -269,7 +296,8 @@ onMessage('cleanup-useless-marks', async () => {
         .filter((mark: Mark) => mark.note && mark.note.trim() !== '')
 
       marksByUrl.value = keptMarks.reduce((acc, mark) => {
-        if (!acc[mark.url]) acc[mark.url] = []
+        if (!acc[mark.url])
+          acc[mark.url] = []
         acc[mark.url].push(mark)
         return acc
       }, {} as Record<string, Mark[]>)
@@ -284,7 +312,8 @@ onMessage('cleanup-useless-marks', async () => {
 
 onMessage<{ tabId: number }>('open-sidepanel', async ({ data }) => {
   const { tabId } = data
-  if (!tabId) return { success: false, error: 'Tab ID missing' }
+  if (!tabId)
+    return { success: false, error: 'Tab ID missing' }
 
   try {
     // @ts-expect-error missing types
@@ -294,26 +323,30 @@ onMessage<{ tabId: number }>('open-sidepanel', async ({ data }) => {
       return { success: true, browser: 'Chrome' }
     }
     return { success: false, error: 'Side panel/Sidebar API not found.' }
-  } catch (e) {
+  }
+  catch (e) {
     console.error('Failed to open side panel/sidebar:', e)
     return { success: false, error: `API call failed: ${(e as Error).message}` }
   }
 })
 
 onMessage<{ url: string }>('remove-marks-by-url', async ({ data }) => {
+  await ensureReady()
   try {
     const { url } = data
     await enqueueWrite(async () => {
       if (marksByUrl.value[url]) {
         const now = Date.now()
-        marksByUrl.value[url].forEach(m => {
-          if (!m.deletedAt) m.deletedAt = now
+        marksByUrl.value[url].forEach((m) => {
+          if (!m.deletedAt)
+            m.deletedAt = now
         })
         marksByUrl.value = { ...marksByUrl.value }
       }
     })
     // 如果未开启同步，立即物理清理以避免残留；否则由同步流程负责清理
-    if (!syncConfig.value.enabled) await purgeTombstones()
+    if (!syncConfig.value.enabled)
+      await purgeTombstones()
     return { success: true }
   }
   catch (error) {
@@ -323,6 +356,7 @@ onMessage<{ url: string }>('remove-marks-by-url', async ({ data }) => {
 })
 
 onMessage<{ marks: any[] }>('remove-marks', async ({ data }) => {
+  await ensureReady()
   try {
     const { marks } = data
     await enqueueWrite(async () => {
@@ -338,7 +372,8 @@ onMessage<{ marks: any[] }>('remove-marks', async ({ data }) => {
       }
       marksByUrl.value = { ...marksByUrl.value }
     })
-    if (!syncConfig.value.enabled) await purgeTombstones()
+    if (!syncConfig.value.enabled)
+      await purgeTombstones()
     return { success: true }
   }
   catch (error) {
@@ -348,7 +383,7 @@ onMessage<{ marks: any[] }>('remove-marks', async ({ data }) => {
 })
 
 onMessage('get-all-marks', async () => {
-  await dataReady
+  await ensureReady()
   const result: Record<string, Mark[]> = {}
   Object.entries(marksByUrl.value).forEach(([url, marks]) => {
     result[url] = marks.map(toRaw)
@@ -357,7 +392,7 @@ onMessage('get-all-marks', async () => {
 })
 
 onMessage('get-all-tags', async () => {
-  await tagsReady
+  await ensureReady()
   return toRaw(tagsMetadata.value)
 })
 
@@ -373,7 +408,7 @@ onMessage('trigger-sync', async () => {
   await performPull()
 })
 
-onMessage('report-error', async ({ data, context }) => {
+onMessage('report-error', async ({ data, context: _context }) => {
   const { message, stack, type = 'background' } = data
   await collectError({ message, stack }, type)
 })
@@ -382,6 +417,7 @@ onMessage('report-error', async ({ data, context }) => {
  * 专门的消息处理器用于创建标签，解决 Content Script 直接修改存储的问题
  */
 onMessage<{ name: string, color?: string }>('create-tag', async ({ data }) => {
+  await ensureReady()
   try {
     const { name, color = '#3B82F6' } = data
     const id = `tag-${Date.now()}`
@@ -398,6 +434,7 @@ onMessage<{ name: string, color?: string }>('create-tag', async ({ data }) => {
 })
 
 onMessage<{ tagId: string, name: string }>('rename-tag', async ({ data }) => {
+  await ensureReady()
   try {
     const { tagId, name } = data
     await enqueueWrite(async () => {
@@ -446,8 +483,9 @@ async function purgeTombstones() {
 
   for (const [url, marks] of Object.entries(updatedMarksByUrl)) {
     // 仅清理超过 7 天的 Tombstone，或者如果同步未开启，则视情况清理
-    const filteredMarks = marks.filter(m => {
-      if (!m.deletedAt) return true
+    const filteredMarks = marks.filter((m) => {
+      if (!m.deletedAt)
+        return true
       // 如果开启了同步，必须等待 7 天以确保其他设备有机会拉取
       if (syncConfig.value.enabled) {
         return (now - m.deletedAt) < SEVEN_DAYS_MS
@@ -459,7 +497,8 @@ async function purgeTombstones() {
     if (filteredMarks.length === 0) {
       delete updatedMarksByUrl[url]
       hasCleanup = true
-    } else if (filteredMarks.length !== marks.length) {
+    }
+    else if (filteredMarks.length !== marks.length) {
       updatedMarksByUrl[url] = filteredMarks
       hasCleanup = true
     }
@@ -473,7 +512,8 @@ async function purgeTombstones() {
 }
 
 const performPush = debounce(async () => {
-  if (isSyncing || !syncConfig.value.enabled || !syncConfig.value.token || !syncConfig.value.gistId) return
+  if (isSyncing || !syncConfig.value.enabled || !syncConfig.value.token || !syncConfig.value.gistId)
+    return
 
   await enqueueSync(async () => {
     isSyncing = true
@@ -483,7 +523,7 @@ const performPush = debounce(async () => {
       const payload = {
         marks: toRaw(marksByUrl.value),
         tags: toRaw(tagsMetadata.value),
-        lastSync: Date.now()
+        lastSync: Date.now(),
       }
 
       // 监控 Payload 大小 (GitHub API 限制约为 10MB)
@@ -516,7 +556,8 @@ const performPush = debounce(async () => {
         // eslint-disable-next-line no-console
         console.log('[Sync] Background push successful')
       }
-    } catch (error: any) {
+    }
+    catch (error: any) {
       console.error('[Sync] Background push failed:', error)
       await enqueueWrite(async () => {
         syncStatus.value.lastSyncStatus = 'error'
@@ -534,16 +575,19 @@ const performPush = debounce(async () => {
           syncConfig.value.enabled = false
         }
       })
-    } finally {
+    }
+    finally {
       isSyncing = false
     }
   })
 }, 10000)
 
 async function performPull(retries = 3) {
-  if (isSyncing) return
-  await Promise.all([dataReady, tagsReady, syncReady, statusReady])
-  if (!syncConfig.value.enabled || !syncConfig.value.token || !syncConfig.value.gistId) return
+  if (isSyncing)
+    return
+  await ensureReady()
+  if (!syncConfig.value.enabled || !syncConfig.value.token || !syncConfig.value.gistId)
+    return
 
   await enqueueSync(async () => {
     isSyncing = true
@@ -574,7 +618,8 @@ async function performPull(retries = 3) {
             console.log('[Sync] Initial pull and merge successful')
           }
           return // 成功则退出
-        } catch (error: any) {
+        }
+        catch (error: any) {
           if (error.message.includes('身份验证失败')) {
             await enqueueWrite(async () => {
               syncConfig.value.enabled = false
@@ -590,15 +635,17 @@ async function performPull(retries = 3) {
               syncStatus.value.lastSyncStatus = 'error'
               syncStatus.value.errorMessage = error.message
             })
-          } else {
-            const delay = Math.pow(2, i) * 1000
-            // eslint-disable-next-line no-console
+          }
+          else {
+            const delay = 2 ** i * 1000
+
             console.warn(`[Sync] Pull failed, retrying in ${delay}ms...`, error)
             await new Promise(resolve => setTimeout(resolve, delay))
           }
         }
       }
-    } finally {
+    }
+    finally {
       isSyncing = false
     }
   })
@@ -624,6 +671,7 @@ browser.storage.onChanged.addListener((changes) => {
 performPull()
 
 onMessage<{ tagId: string }>('delete-tag', async ({ data }) => {
+  await ensureReady()
   try {
     const { tagId } = data
     await enqueueWrite(async () => {
@@ -639,7 +687,7 @@ onMessage<{ tagId: string }>('delete-tag', async ({ data }) => {
         for (let i = 0; i < entries.length; i += BATCH_SIZE) {
           const batch = entries.slice(i, i + BATCH_SIZE)
           batch.forEach(([url, marks]) => {
-            updatedMarksByUrl[url] = marks.map(m => {
+            updatedMarksByUrl[url] = marks.map((m) => {
               if (m.tags?.includes(tagId)) {
                 return { ...m, tags: m.tags.filter(t => t !== tagId) }
               }
@@ -663,5 +711,6 @@ onMessage<{ tagId: string }>('delete-tag', async ({ data }) => {
 })
 
 browser.runtime.onInstalled.addListener((details) => {
-  if (details.reason === 'install') browser.runtime.openOptionsPage()
+  if (details.reason === 'install')
+    browser.runtime.openOptionsPage()
 })
