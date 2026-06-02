@@ -51,6 +51,7 @@ const {
   togglePageTag,
   isPageTagChecked,
   openTagPicker,
+  closeTagPicker,
   openRenameDialog,
   confirmRename,
   cancelRename,
@@ -267,7 +268,7 @@ async function handleDeleteTag(tagId: string) {
     <div
       v-if="tagPickerUrl"
       class="fixed inset-0 bg-black/40 flex items-center justify-center z-50"
-      @click.self="tagPickerUrl = null"
+      @click.self="closeTagPicker"
     >
       <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-5 w-80 max-w-full mx-4">
         <h3 class="text-base font-semibold mb-3 text-gray-800 dark:text-gray-200">
@@ -301,7 +302,7 @@ async function handleDeleteTag(tagId: string) {
         <div class="flex justify-end mt-4">
           <button
             class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
-            @click="tagPickerUrl = null"
+            @click="closeTagPicker"
           >
             完成
           </button>

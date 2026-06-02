@@ -1,4 +1,4 @@
-import { ref } from 'vue'
+import { ref, toRaw } from 'vue'
 import { sendMessage } from 'webext-bridge/options'
 import { marksByUrl, tagsMetadata } from '~/logic/storage'
 
@@ -49,18 +49,29 @@ export function useTagActions() {
     await sendMessage('delete-tag', { tagId }, 'background')
   }
 
+  function openTagPicker(url: string, markId: string | null = null) {
+    tagPickerUrl.value = url
+    tagPickerMarkId.value = markId
+  }
+
+  function closeTagPicker() {
+    tagPickerUrl.value = null
+    tagPickerMarkId.value = null
+  }
+
   async function togglePageTag(tagId: string) {
-    if (!tagPickerUrl.value)
+    const currentUrl = tagPickerUrl.value
+    if (!currentUrl)
       return
-    const url = tagPickerUrl.value
-    const marks = marksByUrl.value[url]
-    if (!marks)
+
+    const marksSnapshot = toRaw(marksByUrl.value[currentUrl])
+    if (!marksSnapshot)
       return
 
     const updatePromises: Promise<any>[] = []
 
     if (tagPickerMarkId.value) {
-      const m = marks.find(m => m.id === tagPickerMarkId.value)
+      const m = marksSnapshot.find(m => m.id === tagPickerMarkId.value)
       if (!m)
         return
       const tags = m.tags || []
@@ -69,7 +80,7 @@ export function useTagActions() {
       updatePromises.push(sendMessage('update-mark-details', { id: m.id, url: m.url, tags: newTags }, 'background'))
     }
     else {
-      marks.forEach((m) => {
+      marksSnapshot.forEach((m) => {
         const tags = m.tags || []
         const idx = tags.indexOf(tagId)
         const newTags = idx >= 0 ? tags.filter(t => t !== tagId) : [...tags, tagId]
@@ -93,11 +104,6 @@ export function useTagActions() {
     return marks.some(m => (m.tags || []).includes(tagId))
   }
 
-  function openTagPicker(url: string, markId: string | null = null) {
-    tagPickerUrl.value = url
-    tagPickerMarkId.value = markId
-  }
-
   return {
     newTagName,
     tagPickerUrl,
@@ -111,6 +117,7 @@ export function useTagActions() {
     togglePageTag,
     isPageTagChecked,
     openTagPicker,
+    closeTagPicker,
     openRenameDialog,
     confirmRename,
     cancelRename,
