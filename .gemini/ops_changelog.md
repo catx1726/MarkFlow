@@ -1,4 +1,4 @@
-﻿# Operations Changelog
+# Operations Changelog
 
 | Time | Action | Target | Reason | Commit_ID | Undo_CMD |
 | :--- | :----- | :----- | :----- | :-------- | :------- |
@@ -58,6 +58,27 @@
 - Consider using `shallowRef` for large reactive objects to reduce Vue reactivity overhead.
 
 | 2026-05-23 16:35:00 | Implement and Refine GitHub Gist Synchronization | src/logic/sync.ts, src/logic/storage.ts, src/options/Options.vue, src/background/main.ts, src/manifest.ts, docs/user-guide/github-sync.md | Add cross-device sync via GitHub Gist with automated background push/pull, timestamp merging, tombstone deletion, and exponential backoff retry (Issue #41, #42, #43) | HEAD | - |
+| 2026-06-02 08:55:00 | Refactor Sidepanel into modular Composables and Components | src/sidepanel/Sidepanel.vue, src/sidepanel/composables/*, src/sidepanel/components/*, src/tests/tagTree.spec.ts | Modularize monolithic Sidepanel.vue into 5 domain-specific composables and 5 focused UI components to improve maintainability and testability (Issue #46) | e14fd1d | git checkout main && git branch -D issue-46 |
+
+---
+
+## Self-Reflection: Sidepanel Modularization (Issue #46)
+
+**Execution Summary:**
+- 成功将 800 余行的单体文件 `Sidepanel.vue` 重构为模块化架构。
+- 提取了 5 个领域驱动的 Composables (`useSidepanelData`, `useUIState`, `useTagActions`, `useMarkActions`, `useStorageMonitor`)，实现了业务逻辑与组件生命周期的深度解耦。
+- 拆分了 5 个功能单一的 UI 组件 (`SidepanelHeader`, `TagFolder`, `PageSection`, `MarkItem`, `StorageManager`)，大幅降低了模板嵌套深度和认知负载。
+- 针对 CR 反馈，将 `refreshAllMarks` 逻辑及消息监听器集成到 `useSidepanelData` 中，确保了消息监听器在组件卸载时能正确清理，防止内存泄漏。
+- 补齐了 `buildTagTree` 的核心逻辑单元测试 (`src/tests/tagTree.spec.ts`) 及所有 Composables 的单元测试。
+
+**Key Challenges & Lessons:**
+1. **生命周期安全性**：在 Composables 中管理全局消息监听器（如 `runtime.onMessage`）时，必须严格遵守 `onMounted`/`onUnmounted` 对称性，尤其是在涉及响应式数据修改（如 `marksByUrl.value = ...`）时。
+2. **状态正交性**：最初误将“标签选择”和“备注编辑”的状态混用，通过引入独立的 `editingMarkId` 实现了交互状态的清晰隔离。
+3. **组件通信成本**：在深度嵌套的组件树中，事件转发（Emit forwarding）虽然略显繁琐，但相比全局 Store，它提供了更好的 Prop 类型追踪和组件纯净性。
+
+**What Would I Do Differently:**
+- 在重构初期就应考虑到全局消息监听的归属问题，将其作为 Data Composable 的一部分，而不是留在视图容器中。
+- 预先执行更严格的 ESLint 检查，避免在提交阶段因格式问题导致流水线失败。
 
 ---
 
@@ -74,4 +95,3 @@
 1. **数据一致性与软删除**：在 Local-first 系统中，简单的物理删除无法同步到其他离线设备。通过引入 `deletedAt` 时间戳并在拉取合并后执行物理清理，既实现了删除同步又防止了数据无限增长。
 2. **并发控制**：网络请求（Push/Pull）与本地存储写入的异步性可能导致竞争。通过互斥锁和序列化队列的结合，确保了存储状态的确定性。
 3. **环境限制与调试**：由于沙盒环境的网络限制，`gh` 工具在大数据包请求时可能失败，通过拆分任务和本地验证确保了工程质量。
-
