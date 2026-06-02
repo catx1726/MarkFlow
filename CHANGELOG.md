@@ -1,5 +1,9 @@
 # Unreleased
 
+### [2026-06-02] Refactor Sidepanel into Composables and Components (#47)
+Refactor Sidepanel into Composables and Components
+
+
 ### [2026-06-01] fix: storage race condition and data loss prevention (#45)
 fix: storage race condition and data loss prevention
 
