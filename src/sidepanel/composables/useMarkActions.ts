@@ -48,7 +48,17 @@ export function useMarkActions() {
     // eslint-disable-next-line no-alert
     if (!confirm('确定要删除此标记吗？'))
       return
-    const result = await sendMessage('remove-mark', mark, 'background')
+    try {
+      const result = await sendMessage('remove-mark', mark, 'background')
+      if (result && (result as any).success === false) {
+        console.error('Failed to remove mark:', (result as any)?.error)
+        return
+      }
+    }
+    catch (error) {
+      console.error('Failed to send remove-mark message:', error)
+      return
+    }
 
     // Notify content script
     const allTabs = await browser.tabs.query({ currentWindow: true })
@@ -66,7 +76,6 @@ export function useMarkActions() {
     if (tab?.id) {
       sendMessage('remove-mark', mark, { context: 'content-script', tabId: tab.id }).catch(() => {})
     }
-    return result
   }
 
   async function saveNote(markId: string, url: string, note: string) {

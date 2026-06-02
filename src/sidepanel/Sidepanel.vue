@@ -43,7 +43,6 @@ const {
 
 const {
   newTagName,
-  tagPickerUrl,
   editingTagId: _editingTagId,
   editingTagName,
   renameDialogVisible,
@@ -266,7 +265,7 @@ async function handleDeleteTag(tagId: string) {
 
     <!-- Tag Picker Dialog -->
     <div
-      v-if="tagPickerUrl"
+      v-if="tagPickerVisible"
       class="fixed inset-0 bg-black/40 flex items-center justify-center z-50"
       @click.self="closeTagPicker"
     >

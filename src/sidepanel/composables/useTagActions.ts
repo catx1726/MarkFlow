@@ -6,6 +6,7 @@ export function useTagActions() {
   const newTagName = ref('')
   const tagPickerUrl = ref<string | null>(null)
   const tagPickerMarkId = ref<string | null>(null)
+  const tagPickerVisible = ref(false)
 
   const editingTagId = ref<string | null>(null)
   const editingTagName = ref('')
@@ -52,9 +53,11 @@ export function useTagActions() {
   function openTagPicker(url: string, markId: string | null = null) {
     tagPickerUrl.value = url
     tagPickerMarkId.value = markId
+    tagPickerVisible.value = true
   }
 
   function closeTagPicker() {
+    tagPickerVisible.value = false
     tagPickerUrl.value = null
     tagPickerMarkId.value = null
   }
@@ -108,6 +111,7 @@ export function useTagActions() {
     newTagName,
     tagPickerUrl,
     tagPickerMarkId,
+    tagPickerVisible,
     editingTagId,
     editingTagName,
     renameDialogVisible,

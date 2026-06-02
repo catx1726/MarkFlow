@@ -59,6 +59,7 @@
 
 | 2026-05-23 16:35:00 | Implement and Refine GitHub Gist Synchronization | src/logic/sync.ts, src/logic/storage.ts, src/options/Options.vue, src/background/main.ts, src/manifest.ts, docs/user-guide/github-sync.md | Add cross-device sync via GitHub Gist with automated background push/pull, timestamp merging, tombstone deletion, and exponential backoff retry (Issue #41, #42, #43) | HEAD | - |
 | 2026-06-02 08:55:00 | Refactor Sidepanel into modular Composables and Components | src/sidepanel/Sidepanel.vue, src/sidepanel/composables/*, src/sidepanel/components/*, src/tests/tagTree.spec.ts | Modularize monolithic Sidepanel.vue into 5 domain-specific composables and 5 focused UI components to improve maintainability and testability (Issue #46) | e14fd1d | git checkout main && git branch -D issue-46 |
+| 2026-06-02 09:30:00 | Fix Blocking CR issues and sync documents | src/sidepanel/Sidepanel.vue, src/sidepanel/composables/useTagActions.ts, src/sidepanel/composables/useMarkActions.ts, docs/superpowers/* | Resolve tag picker state management bugs, fix race conditions in tagging, improve error handling in deletion, and restore missing spec/plan docs (Issue #46) | HEAD | - |
 
 ---
 

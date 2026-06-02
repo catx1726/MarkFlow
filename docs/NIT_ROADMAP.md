@@ -9,9 +9,9 @@
 | 建议项目 | 来源 | 成本 | 收益 | 推荐等级 | 评估理由 |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | **Sidepanel 逻辑拆分 (Composables)** | PR #37 | 中 | 高 | [已完成] | 成功将 800+ 琛?Sidepanel.vue 拆分为 5 个 Composables 和 5 个组件。 |
+| **`structuredMarks` 性能优化 (shallowRef)** | CR #47 | 低 | 中 | ⭐⭐⭐⭐ | `structuredMarks` 是大型嵌套对象，使用 `shallowRef` 替代 `ref` 可避免深度响应式追踪开销。 |
 | **URL 规范化逻辑提取 (Dedupe)** | CR #47 | 低 | 中 | ⭐⭐⭐⭐ | `getNormalizedUrl` 在多处重复定义。提取到共享的 `~/logic/url.ts` 可提升一致性。 |
-| **UI 交互逻辑完全归位 (useUIState)** | CR #47 | 中 | 中 | ⭐⭐⭐⭐ | 将 `Sidepanel.vue` 中残留的菜单 Toggle 逻辑也移入 `useUIState`，实现视图层彻底无智化。 |
-| **JSDoc 文档补齐** | CR #47 | 低 | 低 | ⭐⭐⭐ | 为所有新增的 Composables 补齐 JSDoc，帮助新开发者理解领域职责。 |
+| **样式辅助函数提取 (StyleHelpers)** | CR #47 | 低 | 低 | ⭐⭐⭐ | 将 `PageSection.vue` 中的 `getLevelClass` 等纯样式逻辑提取为通用工具，符合 DRY 原则。 |
 | **`ensureReady` 守卫解耦** | PR #45 | 中 | 高 | ⭐⭐⭐⭐ | 将守卫逻辑提取到独立模块，方便只读操作复用及单元测试直接引用，减少代码重复。 |
 | **i18n 国际化基础框架** | PR #41 | 中 | 中 | ⭐⭐⭐⭐ | 错误消息目前是硬编码中文。建立标准 i18n 体系是走向社区的基础。 |
 | **数据精简与字段剥离** | 讨论 | 高 | 高 | ⭐⭐⭐⭐ | 剥离冗余的上下文信息，比压缩算法更能提升系统健康度，且保持数据可读性。 |
