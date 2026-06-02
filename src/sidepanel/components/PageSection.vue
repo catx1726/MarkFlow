@@ -57,7 +57,7 @@ function getLevelClass(level: number) {
 }
 
 function getLevelBorderStyle(level: number) {
-  const styles: Record<number, object> = {
+  const styles: Record<number, Record<string, string>> = {
     1: { borderLeft: '4px solid #3B82F6' },
     2: { borderLeft: '3px solid #60A5FA' },
     3: { borderLeft: '2px solid #93C5FD' },

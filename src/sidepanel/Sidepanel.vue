@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, toRaw, watchEffect } from 'vue'
+import { onMounted, onUnmounted, ref, toRaw, watchEffect } from 'vue'
 import { usePreferredDark } from '@vueuse/core'
 import { sendMessage } from 'webext-bridge/options'
 import browser from 'webextension-polyfill'
@@ -36,10 +36,11 @@ const {
   activeUrlMenu,
   activeFolderMenu,
   activeGroupMenu,
-  editingMarkId,
   toggleUrlCollapse,
   closeMenus,
 } = useUIState()
+
+const editingMarkId = ref<string | null>(null)
 
 const {
   newTagName,
@@ -65,6 +66,7 @@ const {
   copyMarkText,
   exportToMarkdown,
   exportTagFolder,
+  exportGroup,
 } = useMarkActions()
 
 const {

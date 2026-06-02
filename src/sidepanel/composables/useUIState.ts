@@ -9,6 +9,7 @@ export function useUIState() {
   const activeUrlMenu = ref<string | null>(null)
   const activeFolderMenu = ref<string | null>(null)
   const activeGroupMenu = ref<string | null>(null)
+  const editingMarkId = ref<string | null>(null)
 
   function toggleUrlCollapse(url: string) {
     collapsedUrls.value[url] = !collapsedUrls.value[url]
@@ -30,6 +31,7 @@ export function useUIState() {
     activeUrlMenu,
     activeFolderMenu,
     activeGroupMenu,
+    editingMarkId,
     toggleUrlCollapse,
     closeMenus,
   }

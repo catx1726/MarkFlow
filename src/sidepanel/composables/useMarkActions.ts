@@ -148,6 +148,27 @@ export function useMarkActions() {
     downloadMarkdown(markdown, folder.tagName)
   }
 
+  function exportGroup(url: string, group: any) {
+    let md = `**分组：${group.title}**\n\n---\n\n`
+    for (const mark of group.marks) {
+      if (mark.html) {
+        try {
+          md += `${turndownService.turndown(mark.html)}\n\n`
+        }
+        catch {
+          md += `> ${mark.text.replace(/>/g, '\\>')}\n\n`
+        }
+      }
+      else {
+        md += `> ${mark.text.replace(/>/g, '\\>')}\n\n`
+      }
+      if (mark.note)
+        md += `**备注**：${mark.note}\n\n`
+      md += `---\n\n`
+    }
+    downloadMarkdown(md, group.title)
+  }
+
   function downloadMarkdown(content: string, fileName: string) {
     const blob = new Blob([content], { type: 'text/markdown;charset=utf-8' })
     const url = URL.createObjectURL(blob)
@@ -166,6 +187,7 @@ export function useMarkActions() {
     copyMarkText,
     exportToMarkdown,
     exportTagFolder,
+    exportGroup,
     getNormalizedUrl,
   }
 }
