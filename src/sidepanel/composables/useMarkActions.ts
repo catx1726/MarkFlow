@@ -1,0 +1,162 @@
+import { sendMessage } from 'webext-bridge/options'
+import browser from 'webextension-polyfill'
+import TurndownService from 'turndown'
+import type { Mark } from '~/logic/storage'
+import type { MarkGroup } from '~/logic/tagTree'
+
+export function useMarkActions() {
+  const turndownService = new TurndownService()
+  turndownService.addRule('strikethrough', {
+    filter: ['del', 's', 'strike' as any],
+    replacement: content => `~~${content}~~`,
+  })
+
+  function getNormalizedUrl(url: string | URL): string {
+    const urlObj = typeof url === 'string' ? new URL(url) : url
+    let path = urlObj.pathname
+    if (path.length > 1 && path.endsWith('/'))
+      path = path.slice(0, -1)
+    return urlObj.origin + path
+  }
+
+  async function gotoMark(mark: Mark) {
+    const allTabs = await browser.tabs.query({ currentWindow: true })
+    const targetUrl = getNormalizedUrl(mark.url)
+    const tab = allTabs.find((t) => {
+      if (!t.url)
+        return false
+      try {
+        return getNormalizedUrl(t.url) === targetUrl
+      }
+      catch {
+        return false
+      }
+    })
+
+    if (tab?.id) {
+      await browser.tabs.update(tab.id, { active: true })
+      sendMessage('goto-mark', { markId: mark.id }, { context: 'content-script', tabId: tab.id })
+    }
+    else {
+      const urlWithHash = new URL(mark.url)
+      urlWithHash.hash = `__highlight-mark__${mark.id}`
+      await browser.tabs.create({ url: urlWithHash.href, active: true })
+    }
+  }
+
+  async function removeMark(mark: Mark) {
+    // eslint-disable-next-line no-alert
+    if (!confirm('确定要删除此标记吗？'))
+      return
+    const result = await sendMessage('remove-mark', mark, 'background')
+
+    // Notify content script
+    const allTabs = await browser.tabs.query({ currentWindow: true })
+    const targetUrl = getNormalizedUrl(mark.url)
+    const tab = allTabs.find((t) => {
+      if (!t.url)
+        return false
+      try {
+        return getNormalizedUrl(t.url) === targetUrl
+      }
+      catch {
+        return false
+      }
+    })
+    if (tab?.id) {
+      sendMessage('remove-mark', mark, { context: 'content-script', tabId: tab.id }).catch(() => {})
+    }
+    return result
+  }
+
+  async function saveNote(markId: string, url: string, note: string) {
+    await sendMessage('update-mark-details', { id: markId, url, note }, 'background')
+  }
+
+  async function copyMarkText(mark: Mark) {
+    try {
+      await navigator.clipboard.writeText(`标记：${mark.text}\n` + `备注：${mark.note}`)
+      return true
+    }
+    catch {
+      return false
+    }
+  }
+
+  function exportToMarkdown(urlData: { pageTitle: string, groups: MarkGroup[] }) {
+    const { pageTitle, groups } = urlData
+    const firstMark = groups.length > 0 && groups[0].marks.length > 0 ? groups[0].marks[0] : null
+    const pageURL = firstMark?.url || ''
+    let markdown = `> 来源：[${pageTitle}](${pageURL})\n\n---\n\n`
+    for (const group of groups) {
+      markdown += `**${group.title}**\n\n`
+      for (const mark of group.marks) {
+        if (mark.html) {
+          try {
+            const contentMd = turndownService.turndown(mark.html)
+            markdown += `${contentMd}\n\n`
+          }
+          catch {
+            markdown += `> ${mark.text.replace(/>/g, '\\>')}\n\n`
+          }
+        }
+        else {
+          markdown += `> ${mark.text.replace(/>/g, '\\>')}\n\n`
+        }
+        if (mark.note)
+          markdown += `**备注**：${mark.note}\n\n`
+        markdown += `---\n\n`
+      }
+    }
+    downloadMarkdown(markdown, pageTitle)
+  }
+
+  function exportTagFolder(folder: { tagName: string, pages: Record<string, any> }) {
+    let markdown = `**标签：${folder.tagName}**\n\n---\n\n`
+    for (const [url, urlData] of Object.entries(folder.pages)) {
+      const { pageTitle, groups } = urlData as any
+      markdown += `**[${pageTitle}](${url})**\n\n`
+      for (const group of groups) {
+        markdown += `*${group.title}*\n\n`
+        for (const mark of group.marks) {
+          if (mark.html) {
+            try {
+              markdown += `${turndownService.turndown(mark.html)}\n\n`
+            }
+            catch {
+              markdown += `> ${mark.text.replace(/>/g, '\\>')}\n\n`
+            }
+          }
+          else {
+            markdown += `> ${mark.text.replace(/>/g, '\\>')}\n\n`
+          }
+          if (mark.note)
+            markdown += `**备注**：${mark.note}\n\n`
+          markdown += `---\n\n`
+        }
+      }
+    }
+    downloadMarkdown(markdown, folder.tagName)
+  }
+
+  function downloadMarkdown(content: string, fileName: string) {
+    const blob = new Blob([content], { type: 'text/markdown;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    const safeFileName = fileName.replace(/[/\\?%*:|"<>]/g, '-')
+    a.download = `${safeFileName}.md`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  return {
+    gotoMark,
+    removeMark,
+    saveNote,
+    copyMarkText,
+    exportToMarkdown,
+    exportTagFolder,
+    getNormalizedUrl,
+  }
+}

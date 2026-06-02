@@ -1,7 +1,7 @@
 <script setup lang="ts">
+import PageSection from './PageSection.vue'
 import type { Mark } from '~/logic/storage'
 import type { TagTree } from '~/logic/tagTree'
-import PageSection from './PageSection.vue'
 
 const props = defineProps<{
   tagId: string

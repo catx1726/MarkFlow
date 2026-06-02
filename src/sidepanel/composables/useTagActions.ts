@@ -1,14 +1,40 @@
 import { ref } from 'vue'
 import { sendMessage } from 'webext-bridge/options'
+import { marksByUrl, tagsMetadata } from '~/logic/storage'
 
 export function useTagActions() {
   const newTagName = ref('')
+  const tagPickerUrl = ref<string | null>(null)
+  const tagPickerMarkId = ref<string | null>(null)
+
+  const editingTagId = ref<string | null>(null)
+  const editingTagName = ref('')
+  const renameDialogVisible = ref(false)
 
   async function createTag() {
     if (!newTagName.value.trim())
       return
     await sendMessage('create-tag', { name: newTagName.value.trim() }, 'background')
     newTagName.value = ''
+  }
+
+  function openRenameDialog(tagId: string) {
+    editingTagId.value = tagId
+    editingTagName.value = tagsMetadata.value[tagId]?.name || ''
+    renameDialogVisible.value = true
+  }
+
+  async function confirmRename() {
+    if (editingTagId.value && editingTagName.value.trim()) {
+      await sendMessage('rename-tag', { tagId: editingTagId.value, name: editingTagName.value.trim() }, 'background')
+    }
+    cancelRename()
+  }
+
+  function cancelRename() {
+    renameDialogVisible.value = false
+    editingTagId.value = null
+    editingTagName.value = ''
   }
 
   async function renameTag(tagId: string, newName: string) {
@@ -23,5 +49,70 @@ export function useTagActions() {
     await sendMessage('delete-tag', { tagId }, 'background')
   }
 
-  return { newTagName, createTag, renameTag, deleteTag }
+  async function togglePageTag(tagId: string) {
+    if (!tagPickerUrl.value)
+      return
+    const url = tagPickerUrl.value
+    const marks = marksByUrl.value[url]
+    if (!marks)
+      return
+
+    const updatePromises: Promise<any>[] = []
+
+    if (tagPickerMarkId.value) {
+      const m = marks.find(m => m.id === tagPickerMarkId.value)
+      if (!m)
+        return
+      const tags = m.tags || []
+      const idx = tags.indexOf(tagId)
+      const newTags = idx >= 0 ? tags.filter(t => t !== tagId) : [...tags, tagId]
+      updatePromises.push(sendMessage('update-mark-details', { id: m.id, url: m.url, tags: newTags }, 'background'))
+    }
+    else {
+      marks.forEach((m) => {
+        const tags = m.tags || []
+        const idx = tags.indexOf(tagId)
+        const newTags = idx >= 0 ? tags.filter(t => t !== tagId) : [...tags, tagId]
+        updatePromises.push(sendMessage('update-mark-details', { id: m.id, url: m.url, tags: newTags }, 'background'))
+      })
+    }
+
+    if (updatePromises.length > 0) {
+      await Promise.all(updatePromises)
+    }
+  }
+
+  function isPageTagChecked(tagId: string): boolean {
+    if (!tagPickerUrl.value)
+      return false
+    const marks = marksByUrl.value[tagPickerUrl.value]
+    if (!marks || marks.length === 0)
+      return false
+    if (tagPickerMarkId.value)
+      return marks.some(m => m.id === tagPickerMarkId.value && (m.tags || []).includes(tagId))
+    return marks.some(m => (m.tags || []).includes(tagId))
+  }
+
+  function openTagPicker(url: string, markId: string | null = null) {
+    tagPickerUrl.value = url
+    tagPickerMarkId.value = markId
+  }
+
+  return {
+    newTagName,
+    tagPickerUrl,
+    tagPickerMarkId,
+    editingTagId,
+    editingTagName,
+    renameDialogVisible,
+    createTag,
+    renameTag,
+    deleteTag,
+    togglePageTag,
+    isPageTagChecked,
+    openTagPicker,
+    openRenameDialog,
+    confirmRename,
+    cancelRename,
+  }
 }
