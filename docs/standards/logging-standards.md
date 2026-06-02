@@ -312,8 +312,8 @@ tracestate: vendor=value
 
 ## 相关标准
 
-- [测试标准](testing-standards.md) - 测试日志输出（或使用 `/testing-guide` 技能）
-- [代码审查清单](code-review-checklist.md) - 审查日志实践
+- 测试标准 - 测试日志输出（或使用 `/testing-guide` 技能）
+- 代码审查清单 - 审查日志实践
 
 ---
 

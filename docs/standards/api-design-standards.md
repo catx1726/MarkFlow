@@ -7,7 +7,7 @@ status: current
 
 # API 设计标准
 
-> **语言**: [English](../../../core/api-design-standards.md) | 简体中文
+> **语言**: English | 简体中文
 
 > 版本: 1.0.0 | 最后更新: 2026-03-18
 
@@ -912,11 +912,11 @@ Content-Security-Policy: default-src 'none'
 
 ## 相关标准
 
-- [错误码标准](error-code-standards.md) - 错误码惯例与目录
+- 错误码标准 - 错误码惯例与目录
 - [安全标准](security-standards.md) - 身份验证、授权与安全实践
 - [日志标准](logging-standards.md) - API 请求/响应日志
-- [测试标准](testing-standards.md) - API 测试策略
-- [文档撰写标准](documentation-writing-standards.md) - 撰写 API 文档
+- 测试标准 - API 测试策略
+- 文档撰写标准 - 撰写 API 文档
 
 ---
 
