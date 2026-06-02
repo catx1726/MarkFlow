@@ -8,6 +8,7 @@ import { marksByUrl, tagsMetadata, tagsReady } from '~/logic/storage'
 import { usePreferredDark } from '@vueuse/core'
 import TurndownService from 'turndown'
 import { buildTagTree, type MarkGroup, type TagTree } from '~/logic/tagTree'
+import TagFolder from './components/TagFolder.vue'
 
 const isDark = usePreferredDark()
 const turndownService = new TurndownService()
@@ -697,375 +698,46 @@ function openGroupTagPicker(url: string, title: string) {
       </div>
       <div v-else>
         <!-- 顶级文件夹层 (Tags / Inbox) -->
-        <details
+        <TagFolder
           v-for="[tagId, folder] in Object.entries(structuredMarks)"
           :key="tagId"
-          name="tag-folder"
-          :open="tagId === 'inbox'"
-          class="mb-6 shadow-sm group/folder"
-        >
-          <summary
-            class="flex items-center gap-2 p-2 bg-gray-200 dark:bg-gray-700 rounded-t-lg cursor-pointer hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors border border-gray-200 dark:border-gray-700 list-none rounded-b-lg group-open/folder:rounded-b-none"
-            :class="{ 'opacity-50 grayscale': folder.totalMarks === 0 }"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              class="h-5 w-5 text-gray-500 transition-transform duration-200 group-open/folder:rotate-0 rotate-[-90deg]"
-              viewBox="0 0 20 20"
-              fill="currentColor"
-            >
-              <path
-                fill-rule="evenodd"
-                d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
-                clip-rule="evenodd"
-              />
-            </svg>
-            <span class="font-bold text-gray-700 dark:text-gray-200 flex-1">{{ folder.tagName }}</span>
-            <span
-              class="px-2 py-0.5 text-xs font-semibold bg-gray-300 dark:bg-gray-600 text-gray-600 dark:text-gray-300 rounded-full mr-2"
-            >
-              {{ folder.totalMarks }}
-            </span>
-            <div class="relative flex-shrink-0" @click.stop>
-              <button
-                class="p-1 text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 rounded-full"
-                @click="toggleFolderMenu(tagId)"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                  <path
-                    d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z"
-                  />
-                </svg>
-              </button>
-              <transition name="fade-scale">
-                <div
-                  v-if="activeFolderMenu === tagId"
-                  class="absolute right-0 mt-2 w-40 bg-white dark:bg-gray-700 rounded-md shadow-lg z-20 border border-gray-200 dark:border-gray-600"
-                >
-                  <ul class="py-1">
-                    <li>
-                      <button
-                        class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 flex items-center gap-2"
-                        @click="exportTagFolder(folder)"
-                      >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          class="h-4 w-4"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
-                          />
-                        </svg>
-                        <span>导出</span>
-                      </button>
-                    </li>
-                    <li>
-                      <button
-                        class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 flex items-center gap-2"
-                        @click="openRenameDialog(tagId)"
-                      >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          class="h-4 w-4"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                          />
-                        </svg>
-                        <span>重命名</span>
-                      </button>
-                    </li>
-                    <li v-if="tagId !== 'inbox'">
-                      <button
-                        class="w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/50 flex items-center gap-2"
-                        @click="removeTagFromAll(tagId)"
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                          <path
-                            fill-rule="evenodd"
-                            d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
-                            clip-rule="evenodd"
-                          />
-                        </svg>
-                        <span>删除标签</span>
-                      </button>
-                    </li>
-                  </ul>
-                </div>
-              </transition>
-            </div>
-          </summary>
-
-          <div
-            class="space-y-4 p-2 border-x border-b border-gray-200 dark:border-gray-700 rounded-b-lg bg-gray-50 dark:bg-gray-800"
-          >
-            <div
-              v-if="Object.keys(folder.pages).length === 0"
-              class="text-center py-8 text-gray-400 dark:text-gray-500 text-sm"
-            >
-              暂无标记
-            </div>
-            <section
-              v-for="[url, urlData] in Object.entries(folder.pages)"
-              :key="url"
-              class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-[12px] border border-gray-100 dark:border-gray-700"
-            >
-              <header
-                class="flex justify-between items-center pb-[8px] mb-[8px] border-b border-gray-200 dark:border-gray-700 cursor-pointer group/page"
-                @click="toggleUrlCollapse(url)"
-              >
-                <div class="flex items-center gap-2 flex-1 min-w-0">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    class="h-[14px] w-[14px] flex-shrink-0 text-gray-400 group-hover/page:text-gray-600 transition-transform duration-200"
-                    :class="{ 'rotate-[-90deg]': isUrlCollapsed(url) }"
-                    viewBox="0 0 20 20"
-                    fill="currentColor"
-                  >
-                    <path
-                      fill-rule="evenodd"
-                      d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
-                      clip-rule="evenodd"
-                    />
-                  </svg>
-                  <h2 class="text-sm font-semibold text-gray-700 dark:text-gray-300 truncate" :title="url">
-                    {{ urlData.pageTitle }}
-                  </h2>
-                </div>
-                <div class="relative flex-shrink-0" @click.stop>
-                  <button
-                    class="p-1 text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 rounded-full"
-                    @click="toggleUrlMenu(url)"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                      <path
-                        d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z"
-                      />
-                    </svg>
-                  </button>
-                  <transition name="fade-scale">
-                    <div
-                      v-if="activeUrlMenu === url"
-                      class="absolute right-0 mt-2 w-32 bg-white dark:bg-gray-700 rounded-md shadow-lg z-20 border border-gray-200 dark:border-gray-600"
-                    >
-                      <ul class="py-1">
-                        <li>
-                          <button
-                            class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 flex items-center gap-2"
-                            @click="exportToMarkdown(urlData)"
-                          >
-                            <span>导出</span>
-                          </button>
-                        </li>
-                        <li>
-                          <button
-                            class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 flex items-center gap-2"
-                            @click="openTagPicker(url)"
-                          >
-                            <span>管理标签</span>
-                          </button>
-                        </li>
-                        <li>
-                          <button
-                            class="w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/50 flex items-center gap-2"
-                            @click="removeAllMarksForUrl(url)"
-                          >
-                            <span>清空标记</span>
-                          </button>
-                        </li>
-                      </ul>
-                    </div>
-                  </transition>
-                </div>
-              </header>
-              <div v-if="!isUrlCollapsed(url)">
-                <div v-for="group in urlData.groups" :key="group.title" class="group group-container mt-1">
-                  <header
-                    class="group-header flex justify-between items-center py-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 -mx-2 px-2 transition-colors"
-                    :style="getLevelBorderStyle(group.level)"
-                    @click="toggleGroup(url, group.title, urlData.totalMarks)"
-                  >
-                    <h3 class="flex-1 min-w-0 truncate" :class="getLevelClass(group.level)">
-                      {{ group.title }}
-                      <span class="font-normal text-gray-400 text-xs">({{ group.count }})</span>
-                    </h3>
-                    <div class="relative flex-shrink-0 ml-2" @click.stop>
-                      <button
-                        class="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                        title="分组操作"
-                        @click="toggleGroupMenu(url, group.title)"
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                          <path
-                            d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z"
-                          />
-                        </svg>
-                      </button>
-                      <transition name="fade-scale">
-                        <div
-                          v-if="activeGroupMenu === `${url}|${group.title}`"
-                          class="absolute right-0 mt-1 w-36 bg-white dark:bg-gray-700 rounded-md shadow-lg z-20 border border-gray-200 dark:border-gray-600"
-                        >
-                          <ul class="py-1">
-                            <li>
-                              <button
-                                class="w-full text-left px-3 py-1.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 flex items-center gap-2"
-                                @click="exportGroup(url, group)"
-                              >
-                                <span>导出</span>
-                              </button>
-                            </li>
-                            <li>
-                              <button
-                                class="w-full text-left px-3 py-1.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 flex items-center gap-2"
-                                @click="openGroupTagPicker(url, group.title)"
-                              >
-                                <span>管理标签</span>
-                              </button>
-                            </li>
-                            <li>
-                              <button
-                                class="w-full text-left px-3 py-1.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/50 flex items-center gap-2"
-                                @click="removeGroupMarks(url, group)"
-                              >
-                                <span>删除标记</span>
-                              </button>
-                            </li>
-                          </ul>
-                        </div>
-                      </transition>
-                    </div>
-                  </header>
-
-                  <ul v-if="!isGroupCollapsed(url, group.title, urlData.totalMarks)" class="space-y-3 pt-2 pl-3">
-                    <li v-for="mark in group.marks" :key="mark.id" class="group flex items-start gap-2 relative">
-                      <div
-                        class="color-indicator w-1 h-[20px] rounded-full flex-shrink-0"
-                        :style="{ backgroundColor: mark.color }"
-                      ></div>
-                      <div class="flex-1 min-w-0">
-                        <div class="cursor-pointer" @click="gotoMark(mark)">
-                          <div
-                            class="rich-text-content text-sm font-medium max-w-none text-gray-800 dark:text-gray-200 overflow-hidden transition-all duration-300 ease-in-out"
-                            :class="expandedTexts.has(mark.id) ? 'max-h-96' : 'max-h-5'"
-                            v-html="mark.html || mark.text"
-                          ></div>
-                        </div>
-                        <div v-if="editingMarkId === mark.id" class="mt-2">
-                          <textarea
-                            v-model="editingNote"
-                            :ref="setEditingRef"
-                            class="w-full border-gray-300 rounded-md p-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600"
-                            @keydown.enter.prevent="saveNote(mark)"
-                            @keydown.esc="cancelEdit"
-                          ></textarea>
-                          <div class="flex justify-end gap-2 mt-2">
-                            <button
-                              class="action-button rounded-md bg-gray-200 px-3 py-1 text-sm font-medium text-gray-800 hover:bg-gray-300 dark:bg-gray-600 dark:text-gray-200 dark:hover:bg-gray-500"
-                              @click.stop="cancelEdit"
-                            >
-                              取消
-                            </button>
-                            <button
-                              class="action-button rounded-md bg-blue-600 px-3 py-1 text-sm font-medium text-white hover:bg-blue-700"
-                              @click.stop="saveNote(mark)"
-                            >
-                              保存
-                            </button>
-                          </div>
-                        </div>
-                        <p
-                          v-else
-                          :title="mark.note"
-                          class="text-xs text-gray-500 mt-1 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 cursor-pointer overflow-hidden transition-all duration-300 ease-in-out"
-                          :class="expandedNotes.has(mark.id) ? 'max-h-96' : 'max-h-5'"
-                          @click.stop="editMark(mark)"
-                        >
-                          {{ mark.note || '点击添加备注...' }}
-                        </p>
-                      </div>
-                      <div class="relative flex-shrink-0">
-                        <button
-                          class="p-1 text-gray-400 hover:text-gray-600 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-                          title="更多操作"
-                          @click.stop="toggleMarkMenu(mark.id)"
-                        >
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            class="h-5 w-5"
-                            viewBox="0 0 20 20"
-                            fill="currentColor"
-                          >
-                            <path
-                              d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z"
-                            />
-                          </svg>
-                        </button>
-
-                        <transition name="fade-scale">
-                          <div
-                            v-if="activeMarkMenu === mark.id"
-                            class="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-700 rounded-md shadow-lg z-30 border border-gray-200 dark:border-gray-600"
-                            @click.stop
-                          >
-                            <div class="py-1">
-                              <button
-                                class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 flex items-center gap-2"
-                                @click="toggleTextExpansion(mark.id)"
-                              >
-                                <span>{{ expandedTexts.has(mark.id) ? '收起标记' : '展开标记' }}</span>
-                              </button>
-                              <button
-                                v-if="mark.note"
-                                class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 flex items-center gap-2"
-                                @click="toggleNoteExpansion(mark.id)"
-                              >
-                                <span>{{ expandedNotes.has(mark.id) ? '收起备注' : '展开备注' }}</span>
-                              </button>
-                              <div class="my-1 border-t border-gray-100 dark:border-gray-600"></div>
-                              <button
-                                class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600"
-                                @click="openMarkTagPicker(url, mark.id)"
-                              >
-                                管理标签
-                              </button>
-
-                              <button
-                                class="w-full text-left text-sm px-4 py-2 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 flex items-center gap-2"
-                                @click="copyMarkText(mark)"
-                              >
-                               
-                                <span>复制标记</span>
-                              </button>
-                              <button
-                                class="w-full text-left text-sm px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/50"
-                                @click="removeMark(mark)"
-                              >
-                                删除标记
-                              </button>
-                            </div>
-                          </div>
-                        </transition>
-                      </div>
-                    </li>
-                  </ul>
-                </div>
-              </div>
-            </section>
-          </div>
-        </details>
+          :tag-id="tagId"
+          :folder="folder"
+          :is-open="tagId === 'inbox'"
+          :collapsed-urls="collapsedUrls"
+          :collapsed-states="collapsedStates"
+          :expanded-texts="expandedTexts"
+          :expanded-notes="expandedNotes"
+          :editing-mark-id="editingMarkId"
+          :active-mark-menu="activeMarkMenu"
+          :active-url-menu="activeUrlMenu"
+          :active-folder-menu="activeFolderMenu"
+          :active-group-menu="activeGroupMenu"
+          @toggle-folder-menu="toggleFolderMenu"
+          @export-tag-folder="exportTagFolder"
+          @open-rename-dialog="openRenameDialog"
+          @remove-tag-from-all="removeTagFromAll"
+          @toggle-url-collapse="toggleUrlCollapse"
+          @toggle-url-menu="toggleUrlMenu"
+          @export-markdown="exportToMarkdown"
+          @open-tag-picker="openTagPicker"
+          @remove-all-marks="removeAllMarksForUrl"
+          @toggle-group="toggleGroup"
+          @toggle-group-menu="toggleGroupMenu"
+          @export-group="exportGroup"
+          @open-group-tag-picker="openGroupTagPicker"
+          @remove-group-marks="removeGroupMarks"
+          @goto-mark="gotoMark"
+          @edit-mark="editMark"
+          @save-note="saveNote"
+          @cancel-edit="cancelEdit"
+          @remove-mark="removeMark"
+          @copy-mark="copyMarkText"
+          @toggle-text-expansion="toggleTextExpansion"
+          @toggle-note-expansion="toggleNoteExpansion"
+          @toggle-mark-menu="toggleMarkMenu"
+          @open-mark-tag-picker="openMarkTagPicker"
+        />
       </div>
     </div>
 
