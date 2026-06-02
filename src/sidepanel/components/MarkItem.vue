@@ -88,7 +88,7 @@ function handleSave() {
     </div>
     <div class="relative flex-shrink-0">
       <button
-        class="text-gray-400 hover:text-gray-600 rounded-full p-1 opacity-0 transition-opacity duration-200 group-hover:opacity-100"
+        class="text-gray-400 hover:text-gray-600 rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
         title="更多操作"
         @click.stop="emit('toggle-menu', mark.id)"
       >

@@ -171,7 +171,7 @@ function isGroupCollapsed(groupTitle: string): boolean {
     <div v-if="!isCollapsed">
       <div v-for="group in urlData.groups" :key="group.title" class="group-container mt-1">
         <header
-          class="group-header hover:bg-gray-100 dark:hover:bg-gray-800 -mx-2 flex cursor-pointer items-center justify-between px-2 py-2 transition-colors"
+          class="group group-header hover:bg-gray-100 dark:hover:bg-gray-800 -mx-2 flex cursor-pointer items-center justify-between px-2 py-2 transition-colors"
           :style="getLevelBorderStyle(group.level)"
           @click="emit('toggle-group', url, group.title, urlData.totalMarks)"
         >

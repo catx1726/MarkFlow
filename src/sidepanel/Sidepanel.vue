@@ -43,6 +43,7 @@ const {
 
 const {
   newTagName,
+  tagPickerVisible,
   editingTagId: _editingTagId,
   editingTagName,
   renameDialogVisible,
