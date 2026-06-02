@@ -26,7 +26,7 @@ watchEffect(() => {
 })
 
 // --- Logic Composables ---
-const { structuredMarks } = useSidepanelData()
+const { structuredMarks, refreshAllMarks } = useSidepanelData()
 const {
   collapsedStates,
   collapsedUrls,
@@ -76,11 +76,6 @@ const {
 } = useStorageMonitor()
 
 // --- Event Handlers ---
-async function refreshAllMarks() {
-  const allMarks = await sendMessage('get-all-marks', {}, 'background')
-  if (allMarks)
-    marksByUrl.value = allMarks
-}
 
 async function removeAllMarksForUrl(url: string) {
   // eslint-disable-next-line no-alert
@@ -109,22 +104,14 @@ async function broadcastRefreshToTabs() {
   }
 }
 
-let unregisterRefreshListener: (() => void) | null = null
-
 onMounted(() => {
   refreshUsage()
+  refreshAllMarks()
   document.addEventListener('click', closeMenus)
-  const refreshListener = (message: any) => {
-    if (message && message.type === 'refresh-sidepanel-data')
-      refreshAllMarks()
-  }
-  browser.runtime.onMessage.addListener(refreshListener)
-  unregisterRefreshListener = () => browser.runtime.onMessage.removeListener(refreshListener)
 })
 
 onUnmounted(() => {
   document.removeEventListener('click', closeMenus)
-  unregisterRefreshListener?.()
 })
 
 function toggleGroup(url: string, groupTitle: string, totalMarks: number) {
