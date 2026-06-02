@@ -13,9 +13,14 @@
 | **URL 规范化逻辑提取 (Dedupe)** | CR #47 | 低 | 中 | ⭐⭐⭐⭐ | `getNormalizedUrl` 在多处重复定义。提取到共享的 `~/logic/url.ts` 可提升一致性。 |
 | **样式辅助函数提取 (StyleHelpers)** | CR #47 | 低 | 低 | ⭐⭐⭐ | 将 `PageSection.vue` 中的 `getLevelClass` 等纯样式逻辑提取为通用工具，符合 DRY 原则。 |
 | **`ensureReady` 守卫解耦** | PR #45 | 中 | 高 | ⭐⭐⭐⭐ | 将守卫逻辑提取到独立模块，方便只读操作复用及单元测试直接引用，减少代码重复。 |
+| **ContentScripts 高亮元数据提取统一化** | 分析 | 中 | 高 | ⭐⭐⭐⭐ | `restorer.ts` 与 `ui.ts` 中存在 3 段几乎相同的 ShadowHost 构建/Rangy 序列化/上下文提取逻辑。提取为 `extractMarkPayload` 纯函数，可减少 60-80 行重复代码。 |
+| **ContentScripts DOM 清理逻辑统一化** | 分析 | 低 | 中 | ⭐⭐⭐⭐ | `unwrapHighlightElements(selector)` 逻辑在 `ui.ts` 和 `restorer.ts` 中重复 4 次。提取为共享工具函数，降低后续维护遗漏风险。 |
 | **i18n 国际化基础框架** | PR #41 | 中 | 中 | ⭐⭐⭐⭐ | 错误消息目前是硬编码中文。建立标准 i18n 体系是走向社区的基础。 |
 | **数据精简与字段剥离** | 讨论 | 高 | 高 | ⭐⭐⭐⭐ | 剥离冗余的上下文信息，比压缩算法更能提升系统健康度，且保持数据可读性。 |
 | **统一消息返回格式** | PR #37 | 中 | 中 | ⭐⭐⭐⭐ | 统一 `{success, data, error}` 格式可简化前端错误处理模板。 |
+| **search.ts `structureBoundaries` 单遍历构建** | 分析 | 中 | 高 | ⭐⭐⭐⭐ | `createSearchContext` 中对每个块级元素都调用 `getAllTextNodes(el)`，导致同一子树被反复扫描，形成 O(n²) 开销。改为一次遍历同时收集文本节点和结构边界。 |
+| **search.ts 去重键替换 `innerHTML`** | 分析 | 低 | 中 | ⭐⭐⭐⭐ | `findCandidateElements` 使用 `candidateElement.innerHTML` 作为 Map 去重键，会触发同步 DOM 序列化。建议改用元素引用或稳定标识符。 |
+| **shadowDom.ts 与 ContentScripts 去重** | 分析 | 低 | 中 | ⭐⭐⭐ | `buildShadowHostSelector` / `resolveShadowHost` 的逻辑在 `contentScripts/ui.ts` 和 `restorer.ts` 中也有几乎相同的实现。统一收口到 `shadowDom.ts`。 |
 
 ## 2. 可观测性与监控类 (New Priority)
 
@@ -41,7 +46,12 @@
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | **导入顺序规范化 (Lint)** | PR #45 | 低 | 中 | ⭐⭐⭐ | 统一脚本的导入分组（外部库、内部模块、别名），提升代码扫描效率和可读性。 |
 | **统一 `catch` 块格式** | PR #45 | 低 | 低 | ⭐⭐ | 全局清理 `catch {}` 为 `catch (error) {}`，保持代码风格一致性，符合现代 TS 实践。 |
+| **ContentScripts 类型安全增强** | 分析 | 低 | 中 | ⭐⭐⭐ | `state.ts` 中 `previewApplier: any` 可收窄为 `rangy.ClassApplier \| null`；`restorer.ts` 中的 `as any` payload 可替换为强类型接口。 |
+| **Monitor 生命周期管理完善** | 分析 | 低 | 低 | ⭐⭐ | `monitor.ts` 的 `destroy()` 方法已定义但从未被调用。在 `index.ts` 中接入 `beforeunload` 监听，确保 `history.pushState` monkey-patch 被正确还原。 |
 | **注释语言国际化** | PR #45 | 低 | 低 | ⭐⭐ | 逐步将 Background 核心逻辑中的中文注释翻译为英文，提升项目的国际化潜力和长期维护性。 |
+| **sync.ts 提取 GitHub API 统一包装** | 分析 | 低 | 中 | ⭐⭐⭐ | `getGists` / `createGist` / `updateGist` 中 401/403 错误处理完全重复，且无网络超时控制。提取 `requestGitHubAPI` 统一处理认证、超时和错误转换。 |
+| **storage.ts Payload 类型收紧** | 分析 | 低 | 中 | ⭐⭐⭐ | `RemoveMarkPayload` / `UpdateMarkNotePayload` 等接口包含 `[key: string]: any`，抹平了类型检查。建议与消息协议类型对齐，移除 `any`。 |
+| **dom.ts rangy 类型断言清理** | 分析 | 低 | 低 | ⭐⭐ | `Highlighter.applyPreciseHighlight` 中 `(rangy as any).createRange` 可替换为正确的 Rangy 类型定义，消除 `as any` 使用。 |
 
 ---
 
@@ -52,5 +62,5 @@
 - **自动聚类算法增强 (TF-IDF)**: 属于重量级特性。在用户量级上升前，手动标签系统已经足够。
 
 ---
-**更新日期**: 2026-05-29
+**更新日期**: 2026-06-02
 **维护者**: Gemini CLI & Driver
