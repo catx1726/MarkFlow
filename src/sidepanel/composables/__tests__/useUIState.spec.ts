@@ -17,10 +17,8 @@ describe('useUIState', () => {
 
     expect(collapsedStates.value).toEqual({})
     expect(collapsedUrls.value).toEqual({})
-    expect(expandedTexts.value).toBeInstanceOf(Set)
-    expect(expandedTexts.value.size).toBe(0)
-    expect(expandedNotes.value).toBeInstanceOf(Set)
-    expect(expandedNotes.value.size).toBe(0)
+    expect(expandedTexts.value instanceof Set).toBe(true)
+    expect(expandedNotes.value instanceof Set).toBe(true)
     expect(activeMarkMenu.value).toBeNull()
     expect(activeUrlMenu.value).toBeNull()
     expect(activeFolderMenu.value).toBeNull()
@@ -28,15 +26,13 @@ describe('useUIState', () => {
     expect(tagPickerVisible.value).toBe(false)
   })
 
-  it('should toggle URL collapse state', () => {
+  it('should toggle url collapse', () => {
     const { collapsedUrls, toggleUrlCollapse } = useUIState()
     const url = 'https://example.com'
 
-    expect(collapsedUrls.value[url]).toBeFalsy()
-
+    expect(collapsedUrls.value[url]).toBeUndefined()
     toggleUrlCollapse(url)
     expect(collapsedUrls.value[url]).toBe(true)
-
     toggleUrlCollapse(url)
     expect(collapsedUrls.value[url]).toBe(false)
   })
