@@ -357,6 +357,15 @@ async function handleDeleteTag(tagId: string) {
 </template>
 
 <style>
+/* Sidepanel-only: always reserve scrollbar space with invisible track */
+html {
+  overflow-y: scroll;
+  background-color: #f3f4f6;
+}
+.dark html {
+  background-color: #111827;
+}
+
 .fade-scale-enter-active,
 .fade-scale-leave-active {
   transition:
