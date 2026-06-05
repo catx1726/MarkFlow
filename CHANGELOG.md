@@ -1,18 +1,51 @@
 # Unreleased
 
-### [2026-06-02] Refactor Sidepanel into Composables and Components (#47)
-Refactor Sidepanel into Composables and Components
-
-
-### [2026-06-01] fix: storage race condition and data loss prevention (#45)
-fix: storage race condition and data loss prevention
-
-
-### [2026-05-25] feat: GitHub Gist Synchronization (#41)
-feat: GitHub Gist Synchronization
-
 
 # Released
+
+## [v0.7.0] - 2026-06-05
+
+### 🛡️ 稳定性
+
+- **Fix**: 修复存储竞态条件，防止极端场景下的数据覆盖与丢失 (#45)。
+- **Fix**: 为 `ensureReady` 守卫增加超时拒绝机制，避免死锁。
+- **Fix**: 优化 `mergeDefaults` 策略，确保关键数据结构的 schema 一致性。
+
+### 🏗️ 架构重构
+
+- **Refactor**: Sidepanel 模块化重构 (#47)。将 800+ 行的单文件拆分为 5 个 Composables (`useSidepanelData`, `useMarkActions`, `useTagActions`, `useUIState` 等) 和 5 个组件，大幅提升可维护性与测试覆盖率。
+- **Feat**: 集成 `refreshAllMarks` 到 `useSidepanelData`，生命周期更安全。
+
+### ☁️ GitHub Gist 同步
+
+- **Feat**: 实现 GitHub Gist 双向同步 (#41)。支持拉取、推送、增量合并。
+- **Feat**: 引入墓碑机制 (tombstoning) 与统一写入队列，彻底消除同步死锁风险。
+- **Feat**: 增加 Token 过期处理与重试逻辑。
+
+### ✨ UI / UX
+
+- **Feat**: StorageManager 全新交互 —— 支持展开/折叠，带动画过渡，实时显示存储配额百分比。
+- **Feat**: Popup 视觉升级 —— 主操作按钮使用品牌蓝色，增加 SVG Logo，提升品牌辨识度。
+- **Fix**: DisambiguationModal 完整适配暗黑模式。
+- **Fix**: 彻底解决滚动条导致的布局抖动问题（WebKit + Firefox 双兼容）。
+- **Fix**: 自定义细滚动条（6px）全局统一，颜色抽取为 CSS 变量。
+- **Fix**: 空状态居中策略优化，不再强制撑满高度。
+- **Fix**: 设置按钮从绝对定位改为行内弹性布局，避免长列表时无法访问。
+- **Chore**: 清理未使用的 `Prompt.vue` 组件，减少维护负担。
+
+### 📊 可观测性
+
+- **Feat**: 高亮恢复失败统计 —— 采集失败 URL 与原因，辅助优化搜索算法。
+- **Feat**: 本地存储配额监控 —— 实时追踪占用率，预防极端崩溃。
+- **Feat**: 同步 Payload 大小预警 —— 实时监控 Gist 同步数据体积。
+
+### 📝 文档
+
+- **Docs**: 重写 README，定位更聚焦："一款能够精准跳转的网页文本标记工具"。
+- **Docs**: Landing Page (`docs/index.html`) 文案与视觉同步更新。
+- **Docs**: 新增 `NIT_ROADMAP.md`，汇总后续迭代建议。
+
+---
 
 ## [v0.6.0] - 2026-05-22
 
@@ -73,44 +106,8 @@ feat: GitHub Gist Synchronization
 
 ## [2025-12-30]
 
-- Merge pull request #9 from catx1726/test/6-options-blacklist (0b1b4cb)
+- Merge pull request #9 from catx1726/task/6-options-blacklist (0b1b4cb)
 
 ## [2025-12-31]
 
 - Merge pull request #11 from catx1726/task/10-side-save (9db9003)
-
-## [2025-12-31]
-
-- doc: 修改插件名称为 MarkFlow (da9a405)
-
-## [2025-12-31]
-
-- Merge branches 'main' and 'main' of github.com:catx1726/Tool-Webext-Tag-Content (83a87c4)
-
-## [2025-12-31]
-
-- Merge branch 'main' of https://github.com/catx1726/MarkFlow (39f9c07)
-
-## [2025-12-31]
-
-- build: 0.5.0 (59dcd09)
-
-## [2025-12-31]
-
-- doc: index.html (ce80904)
-
-## [2025-12-31]
-
-- Merge branch 'main' of github.com:catx1726/MarkFlow (b2812c5)
-
-## [2025-12-31]
-
-- Merge pull request #13 from catx1726/task/12-alt-fix (2438e90)
-
-## [2025-12-31]
-
-- env:update version (f197d9d)
-
-## [2026-03-27]
-
-- Merge branch 'main' of github.com:catx1726/MarkFlow (6824d53)

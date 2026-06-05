@@ -22,3 +22,4 @@
 | 2026-06-05T12:42:00+08:00 | REFACTOR | src/styles/main.css + Sidepanel.vue | 滚动条颜色提取为 CSS 自定义属性集中管理 | 586ee07 | git checkout HEAD -- src/styles/main.css src/sidepanel/Sidepanel.vue |
 | 2026-06-05T12:48:00+08:00 | REFACTOR | main.css + Sidepanel + Tooltip + DisambiguationModal | 代码块与组件滚动条颜色提取为 CSS 变量 | 9125a46 | git checkout HEAD -- src/styles/main.css src/sidepanel/Sidepanel.vue src/contentScripts/views/Tooltip.vue src/contentScripts/views/DisambiguationModal.vue |
 | 2026-06-05T12:55:00+08:00 | DOCS | README.md + docs/TECHNICAL.md | README 重写为简洁宣传风格，技术内容移至 TECHNICAL.md | 6f4cc09 | git checkout HEAD -- README.md docs/TECHNICAL.md |
+| 2026-06-05T13:00:00+08:00 | DOCS | docs/index.html | 落地页 title/hero 文案同步 README 新定位 | c3fe4f1 | git checkout HEAD -- docs/index.html |

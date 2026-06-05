@@ -1,7 +1,7 @@
 {
   "name": "web-marker-extension",
   "displayName": "MarkFlow",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "private": true,
   "packageManager": "pnpm@9.7.1",
   "description": "不仅仅是高亮工具，更是你的网页内容导航仪。智能构建结构化大纲，支持精准回跳。",
