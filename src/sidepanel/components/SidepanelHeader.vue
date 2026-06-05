@@ -16,7 +16,7 @@ const emit = defineEmits<{
       标记管理
     </h1>
 
-    <div class="px-2 mb-6">
+    <div class="px-2">
       <div
         class="flex gap-2 bg-white dark:bg-gray-800 p-2 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700"
       >

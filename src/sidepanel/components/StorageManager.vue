@@ -11,9 +11,15 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: 'cleanup-old'): void
   (e: 'cleanup-useless'): void
+  (e: 'update:expanded', value: boolean): void
 }>()
 
 const isExpanded = ref(false)
+
+function toggleExpanded() {
+  isExpanded.value = !isExpanded.value
+  emit('update:expanded', isExpanded.value)
+}
 
 const barColorClass = computed(() => {
   const p = props.storageUsagePercent
@@ -47,28 +53,29 @@ const barColorClass = computed(() => {
         <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5" />
       </svg>
 
-      <div
-        v-if="!isExpanded"
-        class="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden h-1.5"
-      >
-        <div
-          class="h-full rounded-full transition-all duration-300"
-          :class="barColorClass"
-          :style="{ width: `${storageUsagePercent}%` }"
-        />
+      <!-- 中间区域始终占满，防止按钮位置跳动 -->
+      <div class="flex-1 min-w-0">
+        <div v-if="!isExpanded" class="flex items-center gap-2">
+          <div class="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden h-1.5">
+            <div
+              class="h-full rounded-full transition-all duration-300"
+              :class="barColorClass"
+              :style="{ width: `${storageUsagePercent}%` }"
+            />
+          </div>
+          <span class="text-xs text-gray-500 dark:text-gray-400 font-medium flex-shrink-0">
+            {{ storageUsagePercent.toFixed(0) }}%
+          </span>
+        </div>
+        <div v-else class="text-sm font-medium text-gray-700 dark:text-gray-200 truncate">
+          存储空间
+        </div>
       </div>
 
-      <span
-        v-if="!isExpanded"
-        class="text-xs text-gray-500 dark:text-gray-400 font-medium"
-      >
-        {{ storageUsagePercent.toFixed(0) }}%
-      </span>
-
       <button
-        class="p-1 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
+        class="p-1 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors flex-shrink-0"
         :title="isExpanded ? '收起' : '展开存储管理'"
-        @click="isExpanded = !isExpanded"
+        @click="toggleExpanded"
       >
         <svg
           v-if="!isExpanded"

@@ -78,6 +78,8 @@ const {
   cleanupUselessMarks,
 } = useStorageMonitor()
 
+const isStorageExpanded = ref(false)
+
 // --- Event Handlers ---
 
 async function removeAllMarksForUrl(url: string) {
@@ -180,7 +182,8 @@ async function handleDeleteTag(tagId: string) {
 
 <template>
   <main
-    class="min-h-screen bg-gray-100 dark:bg-gray-900 p-[16px] pb-[144px] font-sans relative text-gray-800 dark:text-gray-200 flex flex-col"
+    class="min-h-screen bg-gray-100 dark:bg-gray-900 p-4 font-sans relative text-gray-800 dark:text-gray-200 flex flex-col gap-4"
+    :class="isStorageExpanded ? 'pb-48' : 'pb-16'"
   >
     <SidepanelHeader
       v-model:new-tag-name="newTagName"
@@ -188,14 +191,17 @@ async function handleDeleteTag(tagId: string) {
       @open-options="handleOpenOptions"
     />
 
-    <div class="flex-1 flex flex-col">
+    <div
+      class="flex-1 flex flex-col min-h-0"
+      :class="Object.keys(marksByUrl).length === 0 && Object.keys(tagsMetadata).length === 0 ? 'items-center justify-center' : ''"
+    >
       <div
         v-if="Object.keys(marksByUrl).length === 0 && Object.keys(tagsMetadata).length === 0"
-        class="flex-1 flex flex-col items-center justify-center text-gray-500 rounded-lg bg-white dark:bg-gray-800 p-6 shadow-md"
+        class="flex flex-col items-center justify-center text-gray-500 rounded-lg bg-white dark:bg-gray-800 p-6 shadow-md py-12"
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"
-          class="w-[64px] h-[64px] text-gray-300"
+          class="w-16 h-16 text-gray-300"
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
@@ -207,10 +213,10 @@ async function handleDeleteTag(tagId: string) {
             d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"
           />
         </svg>
-        <p class="mt-[16px]">
+        <p class="mt-4">
           还没有任何标记
         </p>
-        <p class="text-[14px] text-gray-400">
+        <p class="text-sm text-gray-400">
           在网页上按住ALT，然后选中文本试试看
         </p>
       </div>
@@ -259,6 +265,7 @@ async function handleDeleteTag(tagId: string) {
     </div>
 
     <StorageManager
+      v-model:expanded="isStorageExpanded"
       :storage-usage="storageUsage"
       :storage-quota="storageQuota"
       :storage-usage-percent="storageUsagePercent"
