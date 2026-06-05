@@ -180,7 +180,7 @@ async function handleDeleteTag(tagId: string) {
 
 <template>
   <main
-    class="min-h-screen bg-gray-100 dark:bg-gray-900 p-[16px] pb-[144px] font-sans relative text-gray-800 dark:text-gray-200"
+    class="min-h-screen bg-gray-100 dark:bg-gray-900 p-[16px] pb-[144px] font-sans relative text-gray-800 dark:text-gray-200 flex flex-col"
   >
     <SidepanelHeader
       v-model:new-tag-name="newTagName"
@@ -188,10 +188,10 @@ async function handleDeleteTag(tagId: string) {
       @open-options="handleOpenOptions"
     />
 
-    <div class="space-y-6">
+    <div class="flex-1 flex flex-col">
       <div
         v-if="Object.keys(marksByUrl).length === 0 && Object.keys(tagsMetadata).length === 0"
-        class="flex flex-col items-center justify-center text-gray-500 min-h-[50vh] rounded-lg bg-white dark:bg-gray-800 p-6 shadow-md"
+        class="flex-1 flex flex-col items-center justify-center text-gray-500 rounded-lg bg-white dark:bg-gray-800 p-6 shadow-md"
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -214,7 +214,7 @@ async function handleDeleteTag(tagId: string) {
           在网页上按住ALT，然后选中文本试试看
         </p>
       </div>
-      <div v-else>
+      <div v-else class="space-y-6">
         <TagFolder
           v-for="[tagId, folder] in Object.entries(structuredMarks)"
           :key="tagId"
