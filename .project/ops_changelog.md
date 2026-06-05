@@ -14,3 +14,4 @@
 | 2026-06-05T10:48:00+08:00 | FEAT | src/sidepanel/components/StorageManager.vue | 存储管理器增加展开/折叠，默认仅显示进度条 | fe77205 | git checkout HEAD -- src/sidepanel/components/StorageManager.vue |
 | 2026-06-05T11:20:00+08:00 | RESTORE | src/styles/main.css + Sidepanel.vue + StorageManager.vue | 从被撤回的 commit 694ea52 恢复 UI 修复 | a661ad9 | git checkout HEAD -- src/styles/main.css src/sidepanel/Sidepanel.vue src/sidepanel/components/StorageManager.vue |
 | 2026-06-05T11:33:00+08:00 | FIX | src/styles/main.css + Sidepanel.vue | 6px半透明滚动条替代预留gutter、空状态flex-1铺满 | 5acfbb6 | git checkout HEAD -- src/styles/main.css src/sidepanel/Sidepanel.vue |
+| 2026-06-05T12:20:00+08:00 | FIX | StorageManager + Sidepanel + SidepanelHeader | 按钮跳动修复、空状态高度动态化、边距统一 | 35c2fe5 | git checkout HEAD~2 -- src/sidepanel/ src/sidepanel/components/SidepanelHeader.vue |
