@@ -87,8 +87,8 @@ async function openSidePanel() {
 <template>
   <main class="w-[300px] px-4 py-5 text-center text-gray-700 dark:text-gray-200">
     <div class="flex items-center justify-center gap-[12px] mb-[24px]">
-      <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8 text-blue-600" viewBox="0 0 24 24" fill="currentColor">
-        <path d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+      <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8 text-blue-600" width="24" height="24" viewBox="0 0 24 24">
+        <path fill="currentColor" d="M18 2h-2v2h-2v2h-2v2h-2v2H8v2H6v2H4v2H2v6h6v-2h2v-2h2v-2h2v-2h2v-2h2v-2h2V8h2V6h-2V4h-2zm0 8h-2v2h-2v2h-2v2h-2v2H8v-2H6v-2h2v-2h2v-2h2V8h2V6h2v2h2zM6 16H4v4h4v-2H6z" />
       </svg>
       <h1 class="text-xl font-bold">
         MarkFlow
@@ -106,7 +106,7 @@ async function openSidePanel() {
         设置
       </button>
       <button
-        class="px-4 py-2 rounded-md bg-blue-600 text-white text-sm font-medium shadow-sm transition-colors hover:bg-blue-700"
+        class="px-4 py-2 rounded-md bg-blue-600 text-white font-medium shadow-sm transition-colors hover:bg-blue-700"
         @click="openSidePanel"
       >
         打开侧边栏

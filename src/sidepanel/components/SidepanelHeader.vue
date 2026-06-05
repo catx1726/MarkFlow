@@ -11,9 +11,9 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <header>
+  <header class="sticky top-0 z-40">
     <button
-      class="fixed top-[16px] right-[16px] p-[8px] text-gray-500 hover:text-gray-800 z-50"
+      class="absolute top-[16px] right-[16px] p-[8px] text-gray-500 hover:text-gray-800 dark:hover:text-gray-200"
       title="打开设置"
       @click="emit('open-options')"
     >
