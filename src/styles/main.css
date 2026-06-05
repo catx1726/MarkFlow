@@ -7,9 +7,18 @@ body,
   padding: 0;
 }
 
-/* Reserve scrollbar space at all times to prevent layout shift */
+/*
+  Strategy: always show a transparent scrollbar track so the scrollbar
+  never "appears" and shifts content. The track is invisible (transparent)
+  and matches the page background, so there is no white gutter.
+  Only the thumb shows when there is scrollable content.
+*/
 html {
-  scrollbar-gutter: stable;
+  overflow-y: scroll;
+  background-color: #f3f4f6;
+}
+.dark html {
+  background-color: #111827;
 }
 
 .btn {
