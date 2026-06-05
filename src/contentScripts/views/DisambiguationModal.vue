@@ -192,10 +192,16 @@ watch(
   background: transparent;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: #e5e7eb;
+  background: var(--component-scrollbar-thumb);
   border-radius: 10px;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: #d1d5db;
+  background: var(--component-scrollbar-thumb-hover);
+}
+.dark .custom-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--component-scrollbar-thumb);
+}
+.dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: var(--component-scrollbar-thumb-hover);
 }
 </style>

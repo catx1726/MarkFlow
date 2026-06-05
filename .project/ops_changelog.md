@@ -19,3 +19,4 @@
 | 2026-06-05T12:27:00+08:00 | FIX | src/styles/main.css + Sidepanel.vue | 透明滚动条轨道替代预留空间，背景色限定在 sidepanel | 7ecf8db | git checkout HEAD -- src/styles/main.css src/sidepanel/Sidepanel.vue |
 | 2026-06-05T12:32:00+08:00 | FIX | src/sidepanel/Sidepanel.vue | Firefox 滚动条颜色与宽度（scrollbar-width + scrollbar-color） | baad8c3 | git checkout HEAD -- src/sidepanel/Sidepanel.vue |
 | 2026-06-05T12:38:00+08:00 | FIX | src/sidepanel/Sidepanel.vue | Firefox 滚动条 track 改用实色背景替代 transparent | 75d2413 | git checkout HEAD -- src/sidepanel/Sidepanel.vue |
+| 2026-06-05T12:42:00+08:00 | REFACTOR | src/styles/main.css + Sidepanel.vue | 滚动条颜色提取为 CSS 自定义属性集中管理 | 586ee07 | git checkout HEAD -- src/styles/main.css src/sidepanel/Sidepanel.vue |

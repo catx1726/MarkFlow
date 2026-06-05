@@ -393,25 +393,18 @@ html {
 }
 .rich-text-content :where(code):not(pre *) {
   font-size: 0.875em;
-  background-color: #f3f4f6;
-  color: #111827;
+  background-color: var(--code-inline-bg);
+  color: var(--code-inline-text);
   padding: 0.125rem 0.375rem;
   border-radius: 0.25rem;
   font-weight: 400;
 }
-.dark .rich-text-content :where(code):not(pre *) {
-  background-color: #374151;
-  color: #f9fafb;
-}
 .rich-text-content :where(pre) {
-  background-color: #f3f4f6;
+  background-color: var(--code-block-bg);
   padding: 0.75rem;
   border-radius: 0.375rem;
   overflow-x: auto;
   font-size: 0.875em;
-}
-.dark .rich-text-content :where(pre) {
-  background-color: #1f2937;
 }
 .rich-text-content :where(pre code) {
   background-color: transparent;

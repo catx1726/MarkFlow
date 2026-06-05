@@ -1,9 +1,233 @@
 <!-- src/contentScripts/views/Tooltip.vue -->
+<script setup lang="ts">
+import { computed, nextTick, onMounted, onUnmounted, reactive, ref, toRaw, watch } from 'vue'
+import { sendMessage } from 'webext-bridge/content-script'
+import { getMaxZIndex } from '../../logic/dom'
+import { settings } from '~/logic/settings'
+import type { Tag } from '~/logic/storage'
+
+const emit = defineEmits<{
+  (e: 'save', note: string, color: string, tags: string[]): void
+  (e: 'delete'): void
+  (e: 'colorChange', color: string, isExisting: boolean): void
+  (e: 'clearPreview'): void
+}>()
+const visible = ref(false)
+const position = reactive({ x: 0, y: 0 })
+const isHighlighted = ref(false)
+const noteValue = ref('')
+const selectedTags = ref<string[]>([])
+const selectedColor = ref(settings.value.defaultHighlightColor)
+const highlightColors = computed(() => settings.value.highlightColors)
+const defaultHighlightColor = computed(() => settings.value.defaultHighlightColor)
+const textareaRef = ref<HTMLTextAreaElement | null>(null)
+const textToCopy = ref('')
+const copySuccess = ref(false)
+const zIndex = ref(0)
+
+const newTagInput = ref('')
+const allTags = ref<Tag[]>([])
+
+async function handleCreateTag() {
+  const name = newTagInput.value.trim()
+  if (!name)
+    return
+  const result = await sendMessage('create-tag', { name }, 'background')
+  // 适配后台新的返回格式：成功返回 Tag 对象，失败返回 { success: false, error }
+  const newTag = result && 'id' in result ? result : null
+  if (newTag) {
+    // 重新从 SSOT 获取所有标签，避免本地缓存不一致
+    const tags = await sendMessage('get-all-tags', {}, 'background')
+    allTags.value = Object.values(tags || {}).sort((a, b) => b.createdAt - a.createdAt)
+    selectedTags.value.push(newTag.id)
+  }
+  newTagInput.value = ''
+}
+
+function toggleTag(tagId: string) {
+  const index = selectedTags.value.indexOf(tagId)
+  if (index > -1) {
+    selectedTags.value.splice(index, 1)
+  }
+  else {
+    selectedTags.value.push(tagId)
+  }
+}
+
+watch(selectedColor, (newColor) => {
+  emit('colorChange', newColor, isHighlighted.value)
+})
+
+const isMac = /mac/i.test(navigator.platform)
+
+function handleKeydown(event: KeyboardEvent) {
+  if (!visible.value)
+    return
+
+  if (event.key === 'Escape') {
+    event.preventDefault()
+    event.stopPropagation()
+    if (!isHighlighted.value)
+      emit('clearPreview')
+    hide()
+    return
+  }
+
+  const isPrimaryModifierOnly
+    = (isMac ? event.metaKey : event.ctrlKey)
+    && !event.altKey
+    && !event.shiftKey
+    && (isMac ? !event.ctrlKey : !event.metaKey)
+
+  if (event.key.toLowerCase() === 'c' && isPrimaryModifierOnly) {
+    if (event.target === textareaRef.value)
+      return
+    event.preventDefault()
+    event.stopPropagation()
+    onCopyClick()
+    if (!isHighlighted.value)
+      emit('clearPreview')
+    hide()
+    return
+  }
+
+  const formatShortcut = (shortcut: string) => {
+    const parts = shortcut
+      .toLowerCase()
+      .split('+')
+      .map(p => p.trim())
+    const key = parts.pop() || ''
+    return {
+      key,
+      alt: parts.includes('alt'),
+      ctrl: parts.includes('ctrl') || parts.includes('control'),
+      meta: parts.includes('meta') || parts.includes('cmd') || parts.includes('command'),
+      shift: parts.includes('shift'),
+    }
+  }
+
+  const match = (shortcut: ReturnType<typeof formatShortcut>) => {
+    const keyMatches
+      = isMac && shortcut.alt && shortcut.key.length === 1 && shortcut.key >= 'a' && shortcut.key <= 'z'
+        ? event.code.toLowerCase() === `key${shortcut.key}`
+        : event.key.toLowerCase() === shortcut.key
+    if (!keyMatches)
+      return false
+    if (event.altKey !== shortcut.alt)
+      return false
+    if (event.shiftKey !== shortcut.shift)
+      return false
+    if (shortcut.meta !== event.metaKey)
+      return false
+    if (shortcut.ctrl !== event.ctrlKey)
+      return false
+    return true
+  }
+
+  if (match(formatShortcut(settings.value.shortcutSave))) {
+    event.preventDefault()
+    event.stopPropagation()
+    onSaveClick()
+  }
+  else if (isHighlighted.value && match(formatShortcut(settings.value.shortcutDelete))) {
+    event.preventDefault()
+    event.stopPropagation()
+    onDeleteClick()
+  }
+}
+
+async function onCopyClick() {
+  if (!textToCopy.value)
+    return
+  try {
+    await navigator.clipboard.writeText(textToCopy.value)
+    copySuccess.value = true
+    setTimeout(() => {
+      copySuccess.value = false
+    }, 1500)
+  }
+  catch (err) {
+    console.error('Failed to copy text: ', err)
+  }
+}
+
+function onSaveClick() {
+  emit('save', noteValue.value, selectedColor.value, toRaw(selectedTags.value))
+  hide()
+}
+
+function onDeleteClick() {
+  emit('delete')
+  hide()
+}
+
+async function show(
+  x: number,
+  y: number,
+  highlighted: boolean,
+  initialNote = '',
+  initialColor: string | undefined,
+  initialTextToCopy = '',
+  initialTags: string[] = [],
+) {
+  // 异步获取最新标签，遵循 SSOT，不使用本地缓存
+  try {
+    const tags = await sendMessage('get-all-tags', {}, 'background')
+    allTags.value = Object.values(tags || {}).sort((a, b) => b.createdAt - a.createdAt)
+  }
+  catch (error) {
+    console.error('[Tooltip] Failed to fetch tags:', error)
+    allTags.value = []
+  }
+
+  zIndex.value = getMaxZIndex() + 100
+  const tooltipWidth = 320
+  const tooltipHeight = 340
+  const margin = 10
+  if (x + tooltipWidth > window.innerWidth)
+    x = window.innerWidth - tooltipWidth - margin
+  if (y + tooltipHeight > window.innerHeight)
+    y = window.innerHeight - tooltipHeight - margin
+  if (x < margin)
+    x = margin
+  if (y < margin)
+    y = margin
+  position.x = x
+  position.y = y
+  isHighlighted.value = highlighted
+  noteValue.value = initialNote
+  selectedTags.value = [...initialTags]
+  selectedColor.value = initialColor || defaultHighlightColor.value
+  textToCopy.value = initialTextToCopy
+  visible.value = true
+  nextTick(() => {
+    textareaRef.value?.focus()
+  })
+}
+
+function hide() {
+  if (visible.value && !isHighlighted.value) {
+    emit('clearPreview')
+  }
+  visible.value = false
+}
+
+onMounted(() => {
+  window.addEventListener('keydown', handleKeydown, true)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', handleKeydown, true)
+})
+
+defineExpose({ show, hide })
+</script>
+
 <template>
   <div
     v-if="visible"
     class="tooltip-card fixed z-[9999] w-[320px] rounded-lg bg-white p-[12px] font-sans shadow-xl border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200"
-    :style="{ top: `${position.y}px`, left: `${position.x}px`, zIndex: zIndex }"
+    :style="{ top: `${position.y}px`, left: `${position.x}px`, zIndex }"
     @mousedown.stop
   >
     <div class="tooltip-content flex flex-col gap-[12px]">
@@ -18,7 +242,9 @@
             @click="selectedColor = color"
           />
         </div>
-        <div class="text-[10px] text-gray-400 font-medium">MarkFlow</div>
+        <div class="text-[10px] text-gray-400 font-medium">
+          MarkFlow
+        </div>
       </div>
 
       <!-- 标签管理区 -->
@@ -50,7 +276,7 @@
             placeholder="+ 新建标签"
             class="flex-1 px-2 py-1 text-[10px] border border-gray-200 dark:border-gray-600 rounded dark:bg-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
             @keydown.enter.prevent="handleCreateTag"
-          />
+          >
           <button
             class="px-2 py-1 text-[10px] bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
             :disabled="!newTagInput.trim()"
@@ -117,214 +343,6 @@
   </div>
 </template>
 
-<script setup lang="ts">
-import { computed, nextTick, onMounted, onUnmounted, reactive, ref, toRaw, watch } from 'vue'
-import { sendMessage } from 'webext-bridge/content-script'
-import { settings } from '~/logic/settings'
-import type { Tag } from '~/logic/storage'
-import { getMaxZIndex } from '../../logic/dom'
-
-const visible = ref(false)
-const position = reactive({ x: 0, y: 0 })
-const isHighlighted = ref(false)
-const noteValue = ref('')
-const selectedTags = ref<string[]>([])
-const selectedColor = ref(settings.value.defaultHighlightColor)
-const highlightColors = computed(() => settings.value.highlightColors)
-const defaultHighlightColor = computed(() => settings.value.defaultHighlightColor)
-const textareaRef = ref<HTMLTextAreaElement | null>(null)
-const textToCopy = ref('')
-const copySuccess = ref(false)
-const zIndex = ref(0)
-
-const newTagInput = ref('')
-const allTags = ref<Tag[]>([])
-
-async function handleCreateTag() {
-  const name = newTagInput.value.trim()
-  if (!name) return
-  const result = await sendMessage('create-tag', { name }, 'background')
-  // 适配后台新的返回格式：成功返回 Tag 对象，失败返回 { success: false, error }
-  const newTag = result && 'id' in result ? result : null
-  if (newTag) {
-    // 重新从 SSOT 获取所有标签，避免本地缓存不一致
-    const tags = await sendMessage('get-all-tags', {}, 'background')
-    allTags.value = Object.values(tags || {}).sort((a, b) => b.createdAt - a.createdAt)
-    selectedTags.value.push(newTag.id)
-  }
-  newTagInput.value = ''
-}
-
-function toggleTag(tagId: string) {
-  const index = selectedTags.value.indexOf(tagId)
-  if (index > -1) {
-    selectedTags.value.splice(index, 1)
-  } else {
-    selectedTags.value.push(tagId)
-  }
-}
-
-const emit = defineEmits<{
-  (e: 'save', note: string, color: string, tags: string[]): void
-  (e: 'delete'): void
-  (e: 'color-change', color: string, isExisting: boolean): void
-  (e: 'clear-preview'): void
-}>()
-
-watch(selectedColor, (newColor) => {
-  emit('color-change', newColor, isHighlighted.value)
-})
-
-const isMac = /mac/i.test(navigator.platform)
-
-const handleKeydown = (event: KeyboardEvent) => {
-  if (!visible.value) return
-
-  if (event.key === 'Escape') {
-    event.preventDefault()
-    event.stopPropagation()
-    if (!isHighlighted.value) emit('clear-preview')
-    hide()
-    return
-  }
-
-  const isPrimaryModifierOnly =
-    (isMac ? event.metaKey : event.ctrlKey) &&
-    !event.altKey &&
-    !event.shiftKey &&
-    (isMac ? !event.ctrlKey : !event.metaKey)
-
-  if (event.key.toLowerCase() === 'c' && isPrimaryModifierOnly) {
-    if (event.target === textareaRef.value) return
-    event.preventDefault()
-    event.stopPropagation()
-    onCopyClick()
-    if (!isHighlighted.value) emit('clear-preview')
-    hide()
-    return
-  }
-
-  const formatShortcut = (shortcut: string) => {
-    const parts = shortcut
-      .toLowerCase()
-      .split('+')
-      .map(p => p.trim())
-    const key = parts.pop() || ''
-    return {
-      key,
-      alt: parts.includes('alt'),
-      ctrl: parts.includes('ctrl') || parts.includes('control'),
-      meta: parts.includes('meta') || parts.includes('cmd') || parts.includes('command'),
-      shift: parts.includes('shift')
-    }
-  }
-
-  const match = (shortcut: ReturnType<typeof formatShortcut>) => {
-    const keyMatches =
-      isMac && shortcut.alt && shortcut.key.length === 1 && shortcut.key >= 'a' && shortcut.key <= 'z'
-        ? event.code.toLowerCase() === `key${shortcut.key}`
-        : event.key.toLowerCase() === shortcut.key
-    if (!keyMatches) return false
-    if (event.altKey !== shortcut.alt) return false
-    if (event.shiftKey !== shortcut.shift) return false
-    if (shortcut.meta !== event.metaKey) return false
-    if (shortcut.ctrl !== event.ctrlKey) return false
-    return true
-  }
-
-  if (match(formatShortcut(settings.value.shortcutSave))) {
-    event.preventDefault()
-    event.stopPropagation()
-    onSaveClick()
-  }
-  else if (isHighlighted.value && match(formatShortcut(settings.value.shortcutDelete))) {
-    event.preventDefault()
-    event.stopPropagation()
-    onDeleteClick()
-  }
-}
-
-async function onCopyClick() {
-  if (!textToCopy.value) return
-  try {
-    await navigator.clipboard.writeText(textToCopy.value)
-    copySuccess.value = true
-    setTimeout(() => {
-      copySuccess.value = false
-    }, 1500)
-  } catch (err) {
-    console.error('Failed to copy text: ', err)
-  }
-}
-
-function onSaveClick() {
-  emit('save', noteValue.value, selectedColor.value, toRaw(selectedTags.value))
-  hide()
-}
-
-function onDeleteClick() {
-  emit('delete')
-  hide()
-}
-
-async function show(
-  x: number,
-  y: number,
-  highlighted: boolean,
-  initialNote = '',
-  initialColor: string | undefined,
-  initialTextToCopy = '',
-  initialTags: string[] = []
-) {
-  // 异步获取最新标签，遵循 SSOT，不使用本地缓存
-  try {
-    const tags = await sendMessage('get-all-tags', {}, 'background')
-    allTags.value = Object.values(tags || {}).sort((a, b) => b.createdAt - a.createdAt)
-  }
-  catch (error) {
-    console.error('[Tooltip] Failed to fetch tags:', error)
-    allTags.value = []
-  }
-
-  zIndex.value = getMaxZIndex() + 100
-  const tooltipWidth = 320
-  const tooltipHeight = 340
-  const margin = 10
-  if (x + tooltipWidth > window.innerWidth) x = window.innerWidth - tooltipWidth - margin
-  if (y + tooltipHeight > window.innerHeight) y = window.innerHeight - tooltipHeight - margin
-  if (x < margin) x = margin
-  if (y < margin) y = margin
-  position.x = x
-  position.y = y
-  isHighlighted.value = highlighted
-  noteValue.value = initialNote
-  selectedTags.value = [...initialTags]
-  selectedColor.value = initialColor || defaultHighlightColor.value
-  textToCopy.value = initialTextToCopy
-  visible.value = true
-  nextTick(() => {
-    textareaRef.value?.focus()
-  })
-}
-
-function hide() {
-  if (visible.value && !isHighlighted.value) {
-    emit('clear-preview')
-  }
-  visible.value = false
-}
-
-onMounted(() => {
-  window.addEventListener('keydown', handleKeydown, true)
-})
-
-onUnmounted(() => {
-  window.removeEventListener('keydown', handleKeydown, true)
-})
-
-defineExpose({ show, hide })
-</script>
-
 <style scoped>
 .custom-scrollbar::-webkit-scrollbar {
   width: 4px;
@@ -333,10 +351,10 @@ defineExpose({ show, hide })
   background: transparent;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
+  background: var(--component-scrollbar-thumb);
   border-radius: 10px;
 }
 .dark .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: #475569;
+  background: var(--component-scrollbar-thumb);
 }
 </style>

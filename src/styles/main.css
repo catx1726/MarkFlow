@@ -13,11 +13,27 @@ body,
   --scrollbar-thumb-hover: rgba(107, 114, 128, 0.7);
   --scrollbar-track: transparent;
   --scrollbar-page-bg: #f3f4f6;
+
+  /* Code blocks in rich text */
+  --code-inline-bg: #f3f4f6;
+  --code-inline-text: #111827;
+  --code-block-bg: #f3f4f6;
+
+  /* Component-level scrollbars (modal, tooltip, etc.) */
+  --component-scrollbar-thumb: #cbd5e1;
+  --component-scrollbar-thumb-hover: #94a3b8;
 }
 .dark {
   --scrollbar-thumb: rgba(75, 85, 99, 0.5);
   --scrollbar-thumb-hover: rgba(55, 65, 81, 0.7);
   --scrollbar-page-bg: #111827;
+
+  --code-inline-bg: #374151;
+  --code-inline-text: #f9fafb;
+  --code-block-bg: #1f2937;
+
+  --component-scrollbar-thumb: #475569;
+  --component-scrollbar-thumb-hover: #64748b;
 }
 
 /*
