@@ -48,8 +48,8 @@ const barColorClass = computed(() => {
       </svg>
 
       <div
-        class="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden transition-all duration-200"
-        :class="isExpanded ? 'h-2' : 'h-1.5'"
+        v-if="!isExpanded"
+        class="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden h-1.5"
       >
         <div
           class="h-full rounded-full transition-all duration-300"

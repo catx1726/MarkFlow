@@ -13,3 +13,4 @@
 | 2026-06-05T10:30:00+08:00 | FIX | src/sidepanel/components/SidepanelHeader.vue | 将设置按钮从 absolute 右上角移入创建标签 flex 行，彻底解决重叠 | 4fe7c12 | git checkout HEAD -- src/sidepanel/components/SidepanelHeader.vue |
 | 2026-06-05T10:48:00+08:00 | FEAT | src/sidepanel/components/StorageManager.vue | 存储管理器增加展开/折叠，默认仅显示进度条 | fe77205 | git checkout HEAD -- src/sidepanel/components/StorageManager.vue |
 | 2026-06-05T11:20:00+08:00 | RESTORE | src/styles/main.css + Sidepanel.vue + StorageManager.vue | 从被撤回的 commit 694ea52 恢复 UI 修复 | a661ad9 | git checkout HEAD -- src/styles/main.css src/sidepanel/Sidepanel.vue src/sidepanel/components/StorageManager.vue |
+| 2026-06-05T11:33:00+08:00 | FIX | src/styles/main.css + Sidepanel.vue | 6px半透明滚动条替代预留gutter、空状态flex-1铺满 | 5acfbb6 | git checkout HEAD -- src/styles/main.css src/sidepanel/Sidepanel.vue |
