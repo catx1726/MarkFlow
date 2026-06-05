@@ -17,3 +17,4 @@
 | 2026-06-05T12:20:00+08:00 | FIX | StorageManager + Sidepanel + SidepanelHeader | 按钮跳动修复、空状态高度动态化、边距统一 | 35c2fe5 | git checkout HEAD~2 -- src/sidepanel/ src/sidepanel/components/SidepanelHeader.vue |
 | 2026-06-05T12:22:00+08:00 | FIX | src/styles/main.css | 使用 scrollbar-gutter: stable 消除滚动条导致的布局抖动 | 26be3f3 | git checkout HEAD -- src/styles/main.css |
 | 2026-06-05T12:27:00+08:00 | FIX | src/styles/main.css + Sidepanel.vue | 透明滚动条轨道替代预留空间，背景色限定在 sidepanel | 7ecf8db | git checkout HEAD -- src/styles/main.css src/sidepanel/Sidepanel.vue |
+| 2026-06-05T12:32:00+08:00 | FIX | src/sidepanel/Sidepanel.vue | Firefox 滚动条颜色与宽度（scrollbar-width + scrollbar-color） | baad8c3 | git checkout HEAD -- src/sidepanel/Sidepanel.vue |

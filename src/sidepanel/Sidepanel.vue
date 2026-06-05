@@ -362,11 +362,12 @@ html {
   overflow-y: scroll;
   background-color: #f3f4f6;
   scrollbar-width: thin;
-  scrollbar-color: rgba(156, 163, 175, 0.5) transparent;
+  /* Firefox: thumb color + track color (must be opaque, not transparent) */
+  scrollbar-color: rgba(156, 163, 175, 0.5) #f3f4f6;
 }
 .dark html {
   background-color: #111827;
-  scrollbar-color: rgba(75, 85, 99, 0.5) transparent;
+  scrollbar-color: rgba(75, 85, 99, 0.5) #111827;
 }
 
 .fade-scale-enter-active,
