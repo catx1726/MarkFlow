@@ -361,9 +361,12 @@ async function handleDeleteTag(tagId: string) {
 html {
   overflow-y: scroll;
   background-color: #f3f4f6;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(156, 163, 175, 0.5) transparent;
 }
 .dark html {
   background-color: #111827;
+  scrollbar-color: rgba(75, 85, 99, 0.5) transparent;
 }
 
 .fade-scale-enter-active,
