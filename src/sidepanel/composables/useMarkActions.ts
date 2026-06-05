@@ -1,3 +1,4 @@
+import { toRaw } from 'vue'
 import { sendMessage } from 'webext-bridge/options'
 import browser from 'webextension-polyfill'
 import TurndownService from 'turndown'
@@ -49,7 +50,7 @@ export function useMarkActions() {
     if (!confirm('确定要删除此标记吗？'))
       return
     try {
-      const result = await sendMessage('remove-mark', mark, 'background')
+      const result = await sendMessage('remove-mark', toRaw(mark), 'background')
       if (result && (result as any).success === false) {
         console.error('Failed to remove mark:', (result as any)?.error)
         return
@@ -74,7 +75,7 @@ export function useMarkActions() {
       }
     })
     if (tab?.id) {
-      sendMessage('remove-mark', mark, { context: 'content-script', tabId: tab.id }).catch(() => {})
+      sendMessage('remove-mark', toRaw(mark), { context: 'content-script', tabId: tab.id }).catch(() => {})
     }
   }
 
