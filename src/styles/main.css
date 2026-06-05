@@ -7,6 +7,19 @@ body,
   padding: 0;
 }
 
+/* ── Scrollbar color tokens (centralized) ── */
+:root {
+  --scrollbar-thumb: rgba(156, 163, 175, 0.5);
+  --scrollbar-thumb-hover: rgba(107, 114, 128, 0.7);
+  --scrollbar-track: transparent;
+  --scrollbar-page-bg: #f3f4f6;
+}
+.dark {
+  --scrollbar-thumb: rgba(75, 85, 99, 0.5);
+  --scrollbar-thumb-hover: rgba(55, 65, 81, 0.7);
+  --scrollbar-page-bg: #111827;
+}
+
 /*
   Global scrollbar track is transparent so it never shows a visible gutter.
   Per-page overflow strategy is applied in the respective entry component
@@ -40,15 +53,15 @@ body,
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(156, 163, 175, 0.5);
+  background: var(--scrollbar-thumb);
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(107, 114, 128, 0.7);
+  background: var(--scrollbar-thumb-hover);
 }
 .dark ::-webkit-scrollbar-thumb {
-  background: rgba(75, 85, 99, 0.5);
+  background: var(--scrollbar-thumb);
 }
 .dark ::-webkit-scrollbar-thumb:hover {
-  background: rgba(55, 65, 81, 0.7);
+  background: var(--scrollbar-thumb-hover);
 }

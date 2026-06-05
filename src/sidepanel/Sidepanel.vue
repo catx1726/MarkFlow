@@ -360,14 +360,13 @@ async function handleDeleteTag(tagId: string) {
 /* Sidepanel-only: always reserve scrollbar space with invisible track */
 html {
   overflow-y: scroll;
-  background-color: #f3f4f6;
+  background-color: var(--scrollbar-page-bg);
   scrollbar-width: thin;
   /* Firefox: thumb color + track color (must be opaque, not transparent) */
-  scrollbar-color: rgba(156, 163, 175, 0.5) #f3f4f6;
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-page-bg);
 }
 .dark html {
-  background-color: #111827;
-  scrollbar-color: rgba(75, 85, 99, 0.5) #111827;
+  background-color: var(--scrollbar-page-bg);
 }
 
 .fade-scale-enter-active,
