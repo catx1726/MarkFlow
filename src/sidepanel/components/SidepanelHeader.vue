@@ -13,7 +13,7 @@ const emit = defineEmits<{
 <template>
   <header>
     <button
-      class="absolute top-[16px] right-[16px] p-[8px] text-gray-500 hover:text-gray-800"
+      class="fixed top-[16px] right-[16px] p-[8px] text-gray-500 hover:text-gray-800 z-50"
       title="打开设置"
       @click="emit('open-options')"
     >

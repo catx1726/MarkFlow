@@ -39,12 +39,12 @@
 | **Token 自动重连机制** | 讨论 | 中 | 中 | ⭐⭐⭐ | 针对 401 错误区分“暂时性网络故障”与“永久性失效”，提升连通率。 |
 | **日志记录器 (Logger) 封装** | PR #41 | 中 | 中 | ⭐⭐⭐ | 统一管理日志，支持生产环境自动静默，解决 `console.log` 滥用与 Lint 冲突。 |
 | **类型安全增强 (Protocol Types)** | PR #37 | 中 | 中 | ⭐⭐⭐ | 为所有消息定义明确的 Payload 接口，减少弱断言使用。 |
-| **清理未使用的 Prompt.vue 组件** | UI Review | 低 | 中 | ⭐⭐⭐⭐ | `src/contentScripts/views/Prompt.vue` 无任何引用，且使用纯手写 CSS 与项目风格脱节，建议直接删除以减少维护负担。 |
-| **DisambiguationModal.vue 暗黑模式适配** | UI Review | 低 | 高 | ⭐⭐⭐⭐⭐ | 搜索框、列表、底部背景均未适配暗黑模式，与 Tooltip 的精致感形成反差。 |
-| **Popup 视觉层次与品牌感优化** | UI Review | 低 | 中 | ⭐⭐⭐⭐ | 当前仅文字统计 + 三个等权灰色按钮，缺乏 Logo 和视觉重点。建议主操作（打开侧边栏）使用主色按钮。 |
+| **清理未使用的 Prompt.vue 组件** | UI Review | 低 | 中 | [已完成] | `src/contentScripts/views/Prompt.vue` 无任何引用，且使用纯手写 CSS 与项目风格脱节，建议直接删除以减少维护负担。 |
+| **DisambiguationModal.vue 暗黑模式适配** | UI Review | 低 | 高 | [已完成] | 搜索框、列表、底部背景均未适配暗黑模式，与 Tooltip 的精致感形成反差。 |
+| **Popup 视觉层次与品牌感优化** | UI Review | 低 | 中 | [已完成] | 当前仅文字统计 + 三个等权灰色按钮，缺乏 Logo 和视觉重点。建议主操作（打开侧边栏）使用主色按钮。 |
 | **统一模态框替代原生 confirm/alert** | UI Review | 中 | 中 | ⭐⭐⭐⭐ | Sidepanel 删除操作多处使用原生 `confirm()`/`alert()`，样式不统一且阻塞执行。建议复用自定义 Dialog。 |
 | **图标系统统一化** | UI Review | 中 | 中 | ⭐⭐⭐ | 内联 SVG 与 UnoCSS Iconify（`i-carbon-*`）混用，增加维护负担。建议统一为单一方案。 |
-| **Sidepanel 设置按钮固定定位** | UI Review | 低 | 低 | ⭐⭐⭐ | 当前设置按钮在 Header 内随页面滚动，长列表时难以访问。建议改为 `fixed`/`sticky`。 |
+| **Sidepanel 设置按钮固定定位** | UI Review | 低 | 低 | [已完成] | 当前设置按钮在 Header 内随页面滚动，长列表时难以访问。建议改为 `fixed`/`sticky`。 |
 | **Tooltip 动态高度边界检测** | UI Review | 低 | 低 | ⭐⭐ | `tooltipHeight = 340` 为硬编码，标签过多时实际高度可能溢出，建议用 `getBoundingClientRect()` 动态计算。 |
 
 ## 4. 代码质量与规范类 (Low Hanging Fruits)
