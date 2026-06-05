@@ -5,6 +5,7 @@
 *.crx
 *.local
 *.log
+*.timestamp-*.mjs
 *.pem
 *.xpi
 *.zip
