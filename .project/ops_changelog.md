@@ -11,3 +11,4 @@
 | 2026-06-05T10:25:00+08:00 | FIX | src/sidepanel/components/SidepanelHeader.vue | 设置按钮 fixed 导致重叠和 hover 消失，改回 absolute + header sticky | f69136a | git checkout HEAD -- src/sidepanel/components/SidepanelHeader.vue |
 | 2026-06-05T10:25:00+08:00 | FIX | src/popup/Popup.vue | 字体大小不统一(text-sm)、Logo 非品牌图标 | f69136a | git checkout HEAD -- src/popup/Popup.vue |
 | 2026-06-05T10:30:00+08:00 | FIX | src/sidepanel/components/SidepanelHeader.vue | 将设置按钮从 absolute 右上角移入创建标签 flex 行，彻底解决重叠 | 4fe7c12 | git checkout HEAD -- src/sidepanel/components/SidepanelHeader.vue |
+| 2026-06-05T10:48:00+08:00 | FEAT | src/sidepanel/components/StorageManager.vue | 存储管理器增加展开/折叠，默认仅显示进度条 | fe77205 | git checkout HEAD -- src/sidepanel/components/StorageManager.vue |
