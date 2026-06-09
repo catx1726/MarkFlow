@@ -15,44 +15,44 @@ export async function getManifest() {
     description: pkg.description,
     action: {
       default_icon: 'assets/icon-512.png',
-      default_popup: 'dist/popup/index.html'
+      default_popup: 'dist/popup/index.html',
     },
     options_ui: {
       page: 'dist/options/index.html',
-      open_in_tab: true
+      open_in_tab: true,
     },
     background: isFirefox
       ? {
           scripts: ['dist/background/index.mjs'],
-          type: 'module'
+          type: 'module',
         }
       : {
-          service_worker: 'dist/background/index.mjs'
+          service_worker: 'dist/background/index.mjs',
         },
     icons: {
       16: 'assets/icon-16.png',
       48: 'assets/icon-48.png',
-      128: 'assets/icon-128.png'
+      128: 'assets/icon-128.png',
     },
     permissions: ['tabs', 'storage', 'activeTab', 'sidePanel', 'unlimitedStorage'],
     host_permissions: ['*://*/*'],
     content_scripts: [
       {
         matches: ['<all_urls>'],
-        js: ['dist/contentScripts/index.global.js']
-      }
+        js: ['dist/contentScripts/index.global.js'],
+      },
     ],
     web_accessible_resources: [
       {
         resources: ['dist/contentScripts/style.css'],
-        matches: ['<all_urls>']
-      }
+        matches: ['<all_urls>'],
+      },
     ],
     content_security_policy: {
       extension_pages: isDev
         ? `script-src \'self\' http://localhost:${port}; object-src \'self\'` // this is required on dev for Vite script to load
-        : "script-src 'self'; object-src 'self'"
-    }
+        : 'script-src \'self\'; object-src \'self\'',
+    },
   }
 
   if (isFirefox) {
@@ -72,15 +72,15 @@ export async function getManifest() {
           denied: [
             {
               api: 'host_permissions',
-              text: '此扩展程序仅使用 Storage API 在本地存储用户的高亮内容和设置数据。不收集、不存储、也不向任何外部服务器传输任何个人身份信息。'
+              text: '此扩展程序仅使用 Storage API 在本地存储用户的高亮内容和设置数据。不收集、不存储、也不向任何外部服务器传输任何个人身份信息。',
             },
             {
               api: 'storage',
-              text: '本地存储仅用于在本地缓存用户设置和高亮数据。'
-            }
-          ]
-        }
-      }
+              text: '本地存储仅用于在本地缓存用户设置和高亮数据。',
+            },
+          ],
+        },
+      },
     }
   }
 
@@ -89,15 +89,17 @@ export async function getManifest() {
   // add sidepanel
   if (isFirefox) {
     manifest.sidebar_action = {
-      default_panel: 'dist/sidepanel/index.html'
-    }
-  } else {
-    // the sidebar_action does not work for chromium based
-    ;(manifest as any).side_panel = {
-      default_path: 'dist/sidepanel/index.html'
+      default_panel: 'dist/sidepanel/index.html',
+      default_icon: 'assets/icon-16.png',
+      default_title: manifest.name,
     }
   }
-
+  else {
+    // the sidebar_action does not work for chromium based
+    ;(manifest as any).side_panel = {
+      default_path: 'dist/sidepanel/index.html',
+    }
+  }
 
   return manifest
 }
