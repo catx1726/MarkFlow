@@ -66,14 +66,7 @@ async function initialize() {
     ui.ensureMounted()
     window.addEventListener('keydown', handleKeyDown)
     attachListenersToShadowRoots(document)
-    const ambiguous = await restorer.restoreHighlights()
-    if (ambiguous.length > 0 && !state.modalState.visible) {
-      setTimeout(() => {
-        if (state.ambiguousMarksQueue.value.length > 0 && !state.modalState.visible) {
-          state.disambiguationModalApp?.show(state.ambiguousMarksQueue.value)
-        }
-      }, 1000)
-    }
+    await restorer.restoreHighlights()
     {
       const hash = window.location.hash
       if (hash.startsWith('#__highlight-mark__')) {
@@ -163,7 +156,7 @@ function findContainingBlock(node: Node): HTMLElement {
   return node as HTMLElement
 }
 
-function processSelection(event: {
+async function processSelection(event: {
   target: EventTarget | null
   path: EventTarget[]
   clientX: number
@@ -192,6 +185,24 @@ function processSelection(event: {
   const isNewSelectionAction = event.altKey && !initialSelection.isCollapsed
 
   if (isNewSelectionAction) {
+    // 重新选择模式：用当前选区更新已有 mark
+    if (state.isRecalibrationMode && state.recalibrationMarkId) {
+      const freshSelection = rangy.getSelection()
+      if (freshSelection.rangeCount > 0 && !freshSelection.isCollapsed) {
+        const range = freshSelection.getRangeAt(0)
+        const capturedText = range.toString().trim()
+        if (capturedText) {
+          try {
+            await ui.updateMarkFromRecalibration(state.recalibrationMarkId, range, capturedText)
+            ui.exitRecalibrationMode()
+          } catch (e) {
+            console.error('[WebMarker] Error during recalibration:', e)
+          }
+        }
+      }
+      return
+    }
+
     ui.clearPreviewHighlight()
     let range: rangy.RangyRange | null = null
     if (event.detail >= 3) {
@@ -274,7 +285,9 @@ async function showTooltipForExistingMark(markId: string, x: number, y: number) 
   const color = mark ? mark.color : settings.value.defaultHighlightColor
   const tags = mark ? mark.tags : undefined
   ui.setOriginalColorForChange(color)
-  state.tooltipApp?.show(x, y, true, note, color, mark?.text ?? '', tags)
+  // 根据 recoveryStatus 决定 tooltip 模式
+  const mode = mark?.recoveryStatus === 'pending-confirm' ? 'pending-confirm' : 'edit'
+  ui.showTooltip(x, y, true, note, color, mark?.text ?? '', tags || [], mode, markId)
 }
 
 // #endregion
@@ -312,5 +325,16 @@ onMessage('goto-chapter', ({ data }) => {
       }, 1500)
     }
   }
+})
+onMessage('recalibrate-mark', async ({ data }) => {
+  const { markId, originalText, contextSelector } = data
+  // 先尝试滚动到原标记上下文附近
+  if (contextSelector) {
+    const element = querySelectorDeep(contextSelector)
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }
+  }
+  ui.enterRecalibrationMode(markId, originalText)
 })
 // #endregion

@@ -16,6 +16,7 @@ import SidepanelHeader from './components/SidepanelHeader.vue'
 import TagFolder from './components/TagFolder.vue'
 import StorageManager from './components/StorageManager.vue'
 import { marksByUrl, tagsMetadata } from '~/logic/storage'
+import type { Mark } from '~/logic/storage'
 
 // --- Setup ---
 const isDark = usePreferredDark()
@@ -67,6 +68,7 @@ const {
   exportToMarkdown,
   exportTagFolder,
   exportGroup,
+  getNormalizedUrl,
 } = useMarkActions()
 
 const {
@@ -79,6 +81,50 @@ const {
 } = useStorageMonitor()
 
 const isStorageExpanded = ref(false)
+
+// --- Pending Recalibration ---
+const isPendingExpanded = ref(true)
+
+const pendingRecalibrationMarks = computed(() => {
+  const result: Mark[] = []
+  for (const marks of Object.values(marksByUrl.value)) {
+    for (const mark of marks) {
+      if (!mark.deletedAt && mark.recoveryStatus === 'needs-recalibration') {
+        result.push(mark)
+      }
+    }
+  }
+  // 按创建时间倒序，最新的在前面
+  return result.sort((a, b) => b.createdAt - a.createdAt)
+})
+
+async function startRecalibration(mark: Mark) {
+  const allTabs = await browser.tabs.query({ currentWindow: true })
+  const targetUrl = getNormalizedUrl(mark.url)
+  const tab = allTabs.find((t) => {
+    if (!t.url) return false
+    try {
+      return getNormalizedUrl(t.url) === targetUrl
+    } catch {
+      return false
+    }
+  })
+
+  if (tab?.id) {
+    await browser.tabs.update(tab.id, { active: true })
+    sendMessage('recalibrate-mark', { markId: mark.id, originalText: mark.text, contextSelector: mark.contextSelector }, { context: 'content-script', tabId: tab.id })
+  } else {
+    const urlWithHash = new URL(mark.url)
+    urlWithHash.hash = `__highlight-mark__${mark.id}`
+    await browser.tabs.create({ url: urlWithHash.href, active: true })
+  }
+}
+
+async function discardPendingMark(mark: Mark) {
+  if (!confirm('确定要彻底丢弃此标记吗？')) return
+  await sendMessage('remove-mark-by-id', { id: mark.id, url: mark.url }, 'background')
+  broadcastRefreshToTabs()
+}
 
 // --- Event Handlers ---
 
@@ -221,6 +267,70 @@ async function handleDeleteTag(tagId: string) {
         </p>
       </div>
       <div v-else class="space-y-6">
+        <!-- 待恢复标记区域 -->
+        <div
+          v-if="pendingRecalibrationMarks.length > 0"
+          class="bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800 rounded-lg overflow-hidden"
+        >
+          <div
+            class="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-amber-100 dark:hover:bg-amber-900/20 transition-colors"
+            @click="isPendingExpanded = !isPendingExpanded"
+          >
+            <div class="flex items-center gap-2">
+              <div class="group relative">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-amber-600 dark:text-amber-400 cursor-help" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+                </svg>
+                <!-- hover tooltip -->
+                <div class="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-56 hidden group-hover:block z-50">
+                  <div class="bg-gray-800 dark:bg-gray-700 text-white text-xs rounded-md py-2 px-3 shadow-lg">
+                    <p class="mb-1 font-medium">什么是待恢复标记？</p>
+                    <p class="text-gray-300 leading-relaxed">这些标记对应的内容已被删除或大幅修改，系统无法自动定位到准确位置。你可以点击"重新选择"在页面中手动找回对应文本。</p>
+                    <div class="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent border-t-gray-800 dark:border-t-gray-700" />
+                  </div>
+                </div>
+              </div>
+              <h3 class="text-sm font-semibold text-amber-800 dark:text-amber-300">
+                待恢复标记 ({{ pendingRecalibrationMarks.length }})
+              </h3>
+            </div>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="w-4 h-4 text-amber-600 dark:text-amber-400 transition-transform"
+              :class="isPendingExpanded ? 'rotate-180' : ''"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+            >
+              <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+            </svg>
+          </div>
+          <div v-if="isPendingExpanded" class="px-4 pb-3 space-y-2">
+            <div
+              v-for="mark in pendingRecalibrationMarks"
+              :key="mark.id"
+              class="bg-white dark:bg-gray-800 rounded-md p-3 border border-amber-100 dark:border-amber-900/30"
+            >
+              <p class="text-xs text-gray-500 dark:text-gray-400 mb-2 line-clamp-2">
+                {{ mark.text }}
+              </p>
+              <div class="flex gap-2 justify-end">
+                <button
+                  class="px-2 py-1 text-[10px] text-gray-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
+                  @click="discardPendingMark(mark)"
+                >
+                  丢弃
+                </button>
+                <button
+                  class="px-3 py-1 text-[10px] font-medium text-white bg-amber-600 hover:bg-amber-700 rounded transition-colors"
+                  @click="startRecalibration(mark)"
+                >
+                  重新选择
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <TagFolder
           v-for="[tagId, folder] in Object.entries(structuredMarks)"
           :key="tagId"

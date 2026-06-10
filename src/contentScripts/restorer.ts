@@ -1,7 +1,7 @@
 import { sendMessage } from 'webext-bridge/content-script'
 import rangy from 'rangy/lib/rangy-core'
 import type { Mark } from '~/logic/storage'
-import { highlightDefaultStyle } from '~/logic/config'
+import { highlightDefaultStyle, highlightPendingConfirmStyle } from '~/logic/config'
 import { settings } from '~/logic/settings'
 import {
   applyPreciseHighlight,
@@ -39,6 +39,7 @@ function reportRestoreFailure(mark: Mark, reason: string, detail?: any) {
 
 interface SearchRestoreResult {
   success: boolean
+  confidence?: 'high' | 'medium' | 'low'
   candidates?: Candidate[]
 }
 
@@ -47,13 +48,16 @@ export class HighlightRestorer {
     private state: HighlightStateManager,
   ) {}
 
-  async restoreHighlights(): Promise<Candidate[]> {
-    if (this.state.isRestoring) return this.state.ambiguousMarksQueue.value
+  async restoreHighlights(): Promise<void> {
+    if (this.state.isRestoring) return
     this.state.isRestoring = true
     try {
       const canonicalUrl = getCanonicalUrlForMark()
       const marks = await sendMessage('get-marks-for-url', { url: canonicalUrl }, 'background')
-      if (!marks || marks.length === 0) return this.state.ambiguousMarksQueue.value
+      if (!marks || marks.length === 0) return
+
+      // 健康检查：清理已损坏的高亮，允许重新恢复
+      this.sanitizeRestoredHighlights(marks)
 
       const now = Date.now()
       const marksToRestore = marks.filter((mark) => {
@@ -75,8 +79,6 @@ export class HighlightRestorer {
       })
 
       if (marksToRestore.length > 0) await this.applyMarksTwoPhases(marksToRestore)
-
-      return this.state.ambiguousMarksQueue.value
     } finally {
       this.state.isRestoring = false
     }
@@ -103,7 +105,8 @@ export class HighlightRestorer {
           applier.applyToRange(range)
           this.state.restoredMarkIds.add(mark.id)
           this.state.failedRestoreCooldowns.delete(mark.id)
-          this.state.removeFromAmbiguousQueue(mark.id)
+          // L1 路径还原成功 → 高可信
+          await this.persistRecoveryStatus(mark, 'restored')
           continue
         }
       } catch {
@@ -124,12 +127,40 @@ export class HighlightRestorer {
       if (this.state.restoredMarkIds.has(mark.id)) continue
 
       const result = await this.restoreBySearch(mark)
-      if (!result.success && result.candidates) {
-        this.state.addToAmbiguousQueue(result.candidates)
+
+      if (result.success) {
+        if (result.confidence === 'high') {
+          this.state.restoredMarkIds.add(mark.id)
+          this.state.failedRestoreCooldowns.delete(mark.id)
+          await this.persistRecoveryStatus(mark, 'restored')
+        } else if (result.confidence === 'medium') {
+          this.state.restoredMarkIds.add(mark.id)
+          this.state.failedRestoreCooldowns.delete(mark.id)
+          await this.persistRecoveryStatus(mark, 'pending-confirm')
+        }
+      } else {
+        // low confidence / no candidates / multiple candidates → 需要重新校准
+        await this.persistRecoveryStatus(mark, 'needs-recalibration')
+        if (result.candidates && result.candidates.length === 0) {
+          this.state.failedRestoreCooldowns.set(mark.id, Date.now() + 3000)
+        }
       }
 
       // 每处理两个标记让出一次主线程，确保页面交互流畅
       if (i % 2 === 0) await new Promise((resolve) => requestAnimationFrame(resolve))
+    }
+  }
+
+  private async persistRecoveryStatus(mark: Mark, status: Mark['recoveryStatus']) {
+    if (mark.recoveryStatus === status) return
+    try {
+      await sendMessage('update-mark-details', {
+        id: mark.id,
+        url: mark.url,
+        recoveryStatus: status,
+      } as any, 'background')
+    } catch (e) {
+      console.warn(`[HighlightRestorer] Failed to persist recoveryStatus for ${mark.id}:`, e)
     }
   }
 
@@ -166,15 +197,11 @@ export class HighlightRestorer {
   }
 
   private async restoreBySearch(mark: Mark): Promise<SearchRestoreResult> {
-    const applier = rangy.createClassApplier(`webext-highlight-${mark.id}`, {
-      elementTagName: 'span',
-      elementAttributes: { style: highlightDefaultStyle(mark.color) },
-    })
     const deserializationRoot = this.getDeserializationRoot(mark)
     if (mark.shadowHostSelector && !deserializationRoot) {
       console.warn(`[HighlightRestorer] Shadow host not found for ${mark.id}, skipping search fallback.`)
       reportRestoreFailure(mark, 'Shadow host missing', { selector: mark.shadowHostSelector })
-      return { success: false }
+      return { success: false, confidence: 'low' }
     }
     const root = deserializationRoot || document.documentElement
 
@@ -193,7 +220,12 @@ export class HighlightRestorer {
         ? calculateSimilarity(candidate.surroundingSnippet, mark.surroundingSnippet)
         : 100
 
-      if (similarity >= L3_SIMILARITY_THRESHOLD) {
+      if (similarity >= 95) {
+        // 高可信：应用默认样式
+        const applier = rangy.createClassApplier(`webext-highlight-${mark.id}`, {
+          elementTagName: 'span',
+          elementAttributes: { style: highlightDefaultStyle(mark.color) },
+        })
         const rangeResult = applyPreciseHighlight(
           candidate.candidateElement,
           candidate.displayTextSnippet,
@@ -201,57 +233,74 @@ export class HighlightRestorer {
           candidate.matchIndex,
         )
         if (rangeResult) {
-          // ... 成功逻辑 ...
-          const { range } = rangeResult
-          this.state.restoredMarkIds.add(mark.id)
-          this.state.failedRestoreCooldowns.delete(mark.id)
-          this.state.removeFromAmbiguousQueue(mark.id)
-          
-          const root = candidate.candidateElement.getRootNode()
-          const newSerialized = rangy.serializeRange(range, true, root instanceof ShadowRoot ? root : undefined)
-          const { contextTitle, contextSelector, contextLevel, contextOrder, surroundingSnippet } = getHighlightContext(range)
-          let shadowHostSelector: string | undefined
-          if (root instanceof ShadowRoot) {
-            const chain: string[] = []
-            let currRoot: Node = root
-            while (currRoot instanceof ShadowRoot) {
-              chain.unshift(getElementSelector(currRoot.host))
-              currRoot = currRoot.host.getRootNode()
-            }
-            shadowHostSelector = chain.join('|>>>|')
-          }
-          const content = range.cloneContents()
-          stripHighlights(content)
-          const tempDiv = document.createElement('div')
-          tempDiv.appendChild(content)
-          const actualHtml = content.constructor === DocumentFragment ? tempDiv.innerHTML : range.toString()
-
-          if (similarity >= 90) {
-            const newDomIndex = DOMScanner.calculatePreciseOffset(range, root instanceof ShadowRoot ? root : document.body)
-            await sendMessage('update-mark-details', {
-              id: mark.id, url: mark.url, text: candidate.displayTextSnippet,
-              html: actualHtml, rangySerialized: newSerialized,
-              shadowHostSelector: shadowHostSelector || null,
-              contextTitle, contextSelector, contextLevel, contextOrder, surroundingSnippet,
-              domIndex: newDomIndex,
-            } as any, 'background')
-          }
-          return { success: true }
+          await this.persistSearchSuccess(mark, candidate, rangeResult.range, similarity)
+          return { success: true, confidence: 'high' }
         }
-        // applyPreciseHighlight 失败
         reportRestoreFailure(mark, 'Apply highlight failed', { similarity })
-        return { success: false, candidates: [candidate] }
+        return { success: false, confidence: 'low', candidates: [candidate] }
+      } else if (similarity >= 85) {
+        // 中可信：应用 pending-confirm 样式
+        const applier = rangy.createClassApplier(`webext-highlight-${mark.id}`, {
+          elementTagName: 'span',
+          elementAttributes: { style: highlightPendingConfirmStyle(mark.color) },
+        })
+        const rangeResult = applyPreciseHighlight(
+          candidate.candidateElement,
+          candidate.displayTextSnippet,
+          applier,
+          candidate.matchIndex,
+        )
+        if (rangeResult) {
+          await this.persistSearchSuccess(mark, candidate, rangeResult.range, similarity)
+          return { success: true, confidence: 'medium' }
+        }
+        reportRestoreFailure(mark, 'Apply highlight failed (pending-confirm)', { similarity })
+        return { success: false, confidence: 'low', candidates: [candidate] }
       }
-      // similarity 不足
-      reportRestoreFailure(mark, 'Similarity too low', { similarity, threshold: L3_SIMILARITY_THRESHOLD })
-      return { success: false, candidates: [candidate] }
+      // similarity < 85，低可信
+      reportRestoreFailure(mark, 'Similarity too low', { similarity, threshold: 85 })
+      return { success: false, confidence: 'low', candidates: [candidate] }
     } else if (ambiguityLevel === 'multiple') {
-      return { success: false, candidates }
+      return { success: false, confidence: 'low', candidates }
     } else {
       reportRestoreFailure(mark, 'No candidates found')
-      this.state.failedRestoreCooldowns.set(mark.id, Date.now() + 3000)
-      return { success: false }
+      return { success: false, confidence: 'low' }
     }
+  }
+
+  private async persistSearchSuccess(
+    mark: Mark,
+    candidate: Candidate,
+    range: rangy.RangyRange,
+    similarity: number,
+  ) {
+    const root = candidate.candidateElement.getRootNode()
+    const newSerialized = rangy.serializeRange(range, true, root instanceof ShadowRoot ? root : undefined)
+    const { contextTitle, contextSelector, contextLevel, contextOrder, surroundingSnippet } = getHighlightContext(range)
+    let shadowHostSelector: string | undefined
+    if (root instanceof ShadowRoot) {
+      const chain: string[] = []
+      let currRoot: Node = root
+      while (currRoot instanceof ShadowRoot) {
+        chain.unshift(getElementSelector(currRoot.host))
+        currRoot = currRoot.host.getRootNode()
+      }
+      shadowHostSelector = chain.join('|>>>|')
+    }
+    const content = range.cloneContents()
+    stripHighlights(content)
+    const tempDiv = document.createElement('div')
+    tempDiv.appendChild(content)
+    const actualHtml = content.constructor === DocumentFragment ? tempDiv.innerHTML : range.toString()
+
+    const newDomIndex = DOMScanner.calculatePreciseOffset(range, root instanceof ShadowRoot ? root : document.body)
+    await sendMessage('update-mark-details', {
+      id: mark.id, url: mark.url, text: candidate.displayTextSnippet,
+      html: actualHtml, rangySerialized: newSerialized,
+      shadowHostSelector: shadowHostSelector || null,
+      contextTitle, contextSelector, contextLevel, contextOrder, surroundingSnippet,
+      domIndex: newDomIndex,
+    } as any, 'background')
   }
 
   /**
@@ -260,6 +309,37 @@ export class HighlightRestorer {
   async applyMarks(marks: Mark[]) {
     // 此方法已废弃，保留用于向后兼容，内部重定向到两阶段逻辑
     await this.applyMarksTwoPhases(marks)
+  }
+
+  /**
+   * 健康检查：遍历已恢复的标记，若高亮元素残缺（文本相似度 < 90%），则清理旧高亮并允许重新恢复。
+   */
+  private sanitizeRestoredHighlights(marks: Mark[]) {
+    for (const mark of marks) {
+      if (!this.state.restoredMarkIds.has(mark.id)) continue
+      const existingHighlights = querySelectorAllDeep(`.webext-highlight-${mark.id}`)
+      if (existingHighlights.length === 0) {
+        this.state.restoredMarkIds.delete(mark.id)
+        continue
+      }
+      const currentText = existingHighlights.map(el => el.textContent || '').join('').trim()
+      const markText = mark.text.trim()
+      const similarity = calculateSimilarity(currentText, markText)
+      if (similarity < 90) {
+        const parentsToNormalize = new Set<Node>()
+        existingHighlights.forEach((el) => {
+          if (el.classList.contains('webext-highlight-preview')) return
+          const parent = el.parentNode
+          if (parent) {
+            parentsToNormalize.add(parent)
+            while (el.firstChild) parent.insertBefore(el.firstChild, el)
+            parent.removeChild(el)
+          }
+        })
+        parentsToNormalize.forEach((parent) => parent.normalize())
+        this.state.restoredMarkIds.delete(mark.id)
+      }
+    }
   }
 
   async refreshHighlights() {

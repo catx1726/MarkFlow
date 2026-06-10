@@ -11,7 +11,13 @@ const emit = defineEmits<{
   (e: 'delete'): void
   (e: 'colorChange', color: string, isExisting: boolean): void
   (e: 'clearPreview'): void
+  (e: 'confirmPosition', markId: string): void
+  (e: 'recalibrate', markId: string): void
 }>()
+
+type TooltipMode = 'create' | 'edit' | 'pending-confirm'
+const mode = ref<TooltipMode>('create')
+const currentMarkId = ref('')
 const visible = ref(false)
 const position = reactive({ x: 0, y: 0 })
 const isHighlighted = ref(false)
@@ -169,7 +175,11 @@ async function show(
   initialColor: string | undefined,
   initialTextToCopy = '',
   initialTags: string[] = [],
+  initialMode: TooltipMode = 'create',
+  markId = '',
 ) {
+  mode.value = initialMode
+  currentMarkId.value = markId
   // 异步获取最新标签，遵循 SSOT，不使用本地缓存
   try {
     const tags = await sendMessage('get-all-tags', {}, 'background')
@@ -200,6 +210,13 @@ async function show(
   selectedColor.value = initialColor || defaultHighlightColor.value
   textToCopy.value = initialTextToCopy
   visible.value = true
+  if (mode.value === 'pending-confirm') {
+    // pending-confirm 模式下不需要聚焦 textarea
+    nextTick(() => {
+      // 不聚焦任何输入框
+    })
+    return
+  }
   nextTick(() => {
     textareaRef.value?.focus()
   })
@@ -231,7 +248,7 @@ defineExpose({ show, hide })
     @mousedown.stop
   >
     <div class="tooltip-content flex flex-col gap-[12px]">
-      <div class="tooltip-header flex justify-between items-center mb-[-4px]">
+      <div v-if="mode !== 'pending-confirm'" class="tooltip-header flex justify-between items-center mb-[-4px]">
         <div class="tooltip-colors flex gap-[4px] items-center">
           <button
             v-for="color in highlightColors"
@@ -249,6 +266,7 @@ defineExpose({ show, hide })
 
       <!-- 标签管理区 -->
       <div
+        v-if="mode !== 'pending-confirm'"
         class="tag-section bg-gray-50 dark:bg-gray-900/50 p-2 rounded-md border border-gray-100 dark:border-gray-700"
       >
         <p class="text-[10px] text-gray-400 uppercase font-bold mb-1.5 flex justify-between">
@@ -287,7 +305,18 @@ defineExpose({ show, hide })
         </div>
       </div>
 
+      <!-- pending-confirm 模式提示 -->
+      <div v-if="mode === 'pending-confirm'" class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-md p-3">
+        <p class="text-xs text-amber-800 dark:text-amber-300 flex items-start gap-2">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 flex-shrink-0 mt-0.5" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+          </svg>
+          <span>此标记位置可能已变化，请确认是否准确</span>
+        </p>
+      </div>
+
       <textarea
+        v-if="mode !== 'pending-confirm'"
         ref="textareaRef"
         v-model="noteValue"
         class="tooltip-textarea min-h-[80px] w-full resize-y rounded-md border border-gray-300 p-[8px] text-[14px] leading-relaxed focus:border-blue-500 focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:placeholder-gray-400 dark:focus:border-blue-400 dark:focus:ring-blue-400"
@@ -299,6 +328,7 @@ defineExpose({ show, hide })
       <div class="tooltip-actions flex justify-between items-center w-full">
         <div class="flex gap-2">
           <button
+            v-if="mode !== 'pending-confirm'"
             class="action-button p-[6px] text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-md transition-colors"
             title="复制文本"
             @click="onCopyClick"
@@ -324,19 +354,36 @@ defineExpose({ show, hide })
         </div>
 
         <div class="flex gap-2">
-          <button
-            v-if="isHighlighted"
-            class="px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/30 rounded-md transition-colors"
-            @click="onDeleteClick"
-          >
-            删除
-          </button>
-          <button
-            class="px-4 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-md hover:bg-blue-700 transition-colors shadow-sm"
-            @click="onSaveClick"
-          >
-            {{ isHighlighted ? '保存修改' : '确认高亮' }}
-          </button>
+          <!-- pending-confirm 模式按钮 -->
+          <template v-if="mode === 'pending-confirm'">
+            <button
+              class="px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700 rounded-md transition-colors whitespace-nowrap flex-shrink-0"
+              @click="emit('recalibrate', currentMarkId); hide()"
+            >
+              重新选择
+            </button>
+            <button
+              class="px-4 py-1.5 bg-green-600 text-white text-xs font-medium rounded-md hover:bg-green-700 transition-colors shadow-sm whitespace-nowrap flex-shrink-0"
+              @click="emit('confirmPosition', currentMarkId); hide()"
+            >
+              位置正确
+            </button>
+          </template>
+          <template v-else>
+            <button
+              v-if="isHighlighted"
+              class="px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/30 rounded-md transition-colors"
+              @click="onDeleteClick"
+            >
+              删除
+            </button>
+            <button
+              class="px-4 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-md hover:bg-blue-700 transition-colors shadow-sm"
+              @click="onSaveClick"
+            >
+              {{ isHighlighted ? '保存修改' : '确认高亮' }}
+            </button>
+          </template>
         </div>
       </div>
     </div>

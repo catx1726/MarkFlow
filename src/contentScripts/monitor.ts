@@ -21,8 +21,10 @@ export class ContentChangeMonitor {
 
   setupBodyObserver() {
     this.observer = new MutationObserver((mutations) => {
-      const hasAddedNodes = mutations.some((m) => m.addedNodes.length > 0)
-      if (!hasAddedNodes) return
+      const hasStructuralChange = mutations.some((m) =>
+        m.addedNodes.length > 0 || m.removedNodes.length > 0,
+      )
+      if (!hasStructuralChange) return
       this.debouncedRestore()
     })
     this.observer.observe(document.body, { childList: true, subtree: true })
