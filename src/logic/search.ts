@@ -99,8 +99,12 @@ class ConsensusMatchStrategy implements SearchStrategy {
     const suggestedRange = anchorManager.suggestRange(context.fullText)
     if (!suggestedRange) return []
 
+    const clampedRange = {
+      start: Math.max(0, Math.min(suggestedRange.start, context.fullText.length)),
+      end: Math.max(suggestedRange.start, Math.min(suggestedRange.end, context.fullText.length))
+    }
     const aligner = new LocalAligner(mark.text, context)
-    const alignedRange = aligner.refineBoundary(suggestedRange.start, suggestedRange.end)
+    const alignedRange = aligner.refineBoundary(clampedRange.start, clampedRange.end)
 
     // 核心优化：如果模糊匹配分数过低，直接放弃该候选者，避免干扰歧义判断
     const actualText = context.fullText.substring(alignedRange.start, alignedRange.end)
@@ -215,27 +219,40 @@ class LocalAligner {
     let bestSim = 0, finalStart = Math.max(0, suggestedStart), finalEnd = Math.max(0, suggestedEnd)
     
     const startMin = Math.max(0, suggestedStart - 40), startMax = Math.min(fullText.length, suggestedStart + 40)
-    const endMin = Math.max(finalStart + 1, suggestedEnd - 40), endMax = Math.min(fullText.length, suggestedEnd + 40)
+    const endMin = Math.min(Math.max(finalStart + 1, suggestedEnd - 40), fullText.length)
+    const endMax = Math.min(fullText.length, suggestedEnd + 40)
 
-    for (let i = startMin; i < startMax; i++) {
-      // 检查起始点是否跨越了原本不该跨越的结构边界
-      if (structureBoundaries.some(b => i > b.index && i < b.end && !this.markText.includes(b.text))) continue
-      
-      for (let j = endMin; j < endMax; j++) {
-        const sub = fullText.substring(i, j)
+    const searchWithBoundaries = (ignoreBoundaries: boolean) => {
+      for (let i = startMin; i < startMax; i++) {
+        if (!ignoreBoundaries) {
+          // 起点不应落在 mark.text 原本不包含的"小块级"元素内部（排除大容器）
+          const BLOCK_SIZE_LIMIT = this.markText.length * 2
+          if (structureBoundaries.some(b => i > b.index && i < b.end && !this.markText.includes(b.text) && (b.end - b.index) < BLOCK_SIZE_LIMIT)) continue
+        }
         
-        // 核心约束：如果原本标记中不包含特定的块级标签内容，则不应跨越新出现的块级边界
-        const crossesBoundary = structureBoundaries.some(b => b.index > i && b.index < j && !this.markText.includes(b.text))
-        if (crossesBoundary) continue
+        for (let j = endMin; j < endMax; j++) {
+          if (!ignoreBoundaries) {
+            const crossesBoundary = structureBoundaries.some(b => b.index > i && b.index < j && !this.markText.includes(b.text))
+            if (crossesBoundary) continue
+          }
 
-        const sim = calculateSimilarity(sub, this.markText)
-        const lengthRatio = Math.min(sub.length, this.markText.length) / Math.max(sub.length, this.markText.length)
-        const weightedSim = sim * (0.8 + 0.2 * lengthRatio)
-        
-        if (weightedSim > bestSim) { bestSim = weightedSim; finalStart = i; finalEnd = j }
-        if (sim === 100 && lengthRatio > 0.98) break
+          const sub = fullText.substring(i, j)
+          const sim = calculateSimilarity(sub, this.markText)
+          const lengthRatio = Math.min(sub.length, this.markText.length) / Math.max(sub.length, this.markText.length)
+          const weightedSim = sim * (0.8 + 0.2 * lengthRatio)
+          
+          if (weightedSim > bestSim) { bestSim = weightedSim; finalStart = i; finalEnd = j }
+          if (sim === 100 && lengthRatio > 0.98) break
+        }
+        if (bestSim > 99) break
       }
-      if (bestSim > 99) break
+    }
+
+    searchWithBoundaries(false)
+    if (bestSim === 0) {
+      console.log(`[WebMarker-Search] L3 Fallback: all combinations filtered by structureBoundaries (${structureBoundaries.length} boundaries). Retrying without boundary checks.`)
+      searchWithBoundaries(true)
+      console.log(`[WebMarker-Search] L3 Fallback result: score=${bestSim.toFixed(1)}, range=[${finalStart}-${finalEnd}]`)
     }
     // Trim
     while (finalStart < finalEnd && /\s/.test(fullText[finalStart]) && !/\s/.test(this.markText[0] || '')) finalStart++
@@ -307,7 +324,8 @@ function createSearchContext(searchRoot: Node): SearchContext {
   cumulativeOffsets.push(currentOffset)
   const structureBoundaries: { index: number, end: number, text: string, type: string }[] = []
   if (searchRoot instanceof HTMLElement || searchRoot instanceof ShadowRoot) {
-    const elements = (searchRoot as HTMLElement).querySelectorAll('h1, h2, h3, h4, h5, h6, div, p, li, section, article')
+    // 注：排除 div，因为真实页面中大量布局/样式 div 会过度分割搜索空间
+    const elements = (searchRoot as HTMLElement).querySelectorAll('h1, h2, h3, h4, h5, h6, p, li, section, article')
     elements.forEach((el) => {
       const txt = el.textContent?.trim()
       if (txt && txt.length > 2) {

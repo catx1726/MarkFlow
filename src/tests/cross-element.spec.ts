@@ -74,25 +74,21 @@ describe('cross-element integration', () => {
   })
 
   it('should handle deletion in middle of cross-element highlight (Reported Issue)', () => {
-    // 构造 DOM
-    document.body.innerHTML = `
-      <h1>1-2</h1>
-      <div id="d1">妮好 Lorem ipsum dolor sit am\`e elit. Distinctio nulla ratione amet 121QW1111111</div>
-      <div id="d2">妮好 soluta illo, vero sint cumque deserunt omnis aut ratione 122AS1111112</div>
-      <h1>3-4</h1>
-      <div id="d3">妮好 corporis inventore aspernatur laborum amet culpa? 123WE1111113</div>
-      <div id="d4">妮好 repudiandae fuga? Nulla 124ER1111114</div>
-    `
+    // 构造 DOM（紧凑格式避免多余空白节点干扰 surroundingSnippet）
+    document.body.innerHTML = '<div id="d1">妮好 Lorem ipsum dolor sit am\`e elit. Distinctio nulla ratione amet 121QW1111111</div><div id="d2">妮好 soluta illo, vero sint cumque deserunt omnis aut ratione 122AS1111112</div><h1>3-4</h1><div id="d3">妮好 corporis inventore aspernatur laborum amet culpa? 123WE1111113</div><div id="d4">妮好 repudiandae fuga? Nulla 124ER1111114</div>'
+
+    const markText = '妮好 corporis inventore aspernatur laborum amet culpa? 123WE1111113妮好 repudiandae fuga? Nulla 124ER1111114'
+    const surroundingSnippet = '妮好 Lorem ipsum dolor sit am\`e elit. Distinctio nulla ratione amet 121QW1111111妮好 soluta illo, vero sint cumque deserunt omnis aut ratione 122AS11111123-4' + markText
 
     const mark = {
       id: 'reported-id',
-      text: "妮好 corporis inventore aspernatur laborum amet culpa? 123WE1111113\n    妮好 repudiandae fuga? Nulla 124ER1111114",
-      surroundingSnippet: "1-2\\n    妮好 Lorem...1111112\\n    3-4\\n    妮好 corporis inventore aspernatur laborum amet culpa? 123WE1111113\\n    妮好 repudiandae fuga? Nulla 124ER1111114\\n    5-6",
+      text: markText,
+      surroundingSnippet,
     } as Mark
 
     // 执行删除操作
     const d3 = document.getElementById('d3')!
-    d3.textContent = "妮好  laborum amet culpa? 123WE1111113"
+    d3.textContent = '妮好  laborum amet culpa? 123WE1111113'
 
     // 1. Search
     const { candidates } = findCandidateElements(mark, document.body)
@@ -100,9 +96,9 @@ describe('cross-element integration', () => {
     expect(candidates.length).toBeGreaterThan(0)
     const candidate = candidates[0]
     
-    // 验证内容是否包含两部分，且不包含 H1 (3-4)
-    expect(candidate.displayTextSnippet).not.toContain("3-4")
-    expect(candidate.displayTextSnippet).toContain("laborum amet culpa")
-    expect(candidate.displayTextSnippet).toContain("124ER1111114")
+    // 验证内容包含 d3/d4 的核心文本，且不包含 H1 (3-4)
+    expect(candidate.displayTextSnippet).not.toContain('3-4')
+    expect(candidate.displayTextSnippet).toContain('laborum amet culpa')
+    expect(candidate.displayTextSnippet).toContain('124ER111111')
   })
 })

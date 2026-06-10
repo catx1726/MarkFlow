@@ -25,6 +25,9 @@ import { defaultSettings } from './settings'
 export const highlightDefaultStyle = (color: string | Ref<string> = defaultSettings.defaultHighlightColor) =>
   `box-shadow: inset 0 -5px 0 0 ${color}; cursor: pointer;`
 
+export const highlightPendingConfirmStyle = (color: string | Ref<string> = defaultSettings.defaultHighlightColor) =>
+  `box-shadow: inset 0 -5px 0 0 ${color}; cursor: pointer; border-bottom: 2px dashed ${color}; opacity: 0.85;`
+
 // --- Shortcuts ---
 export const shortcuts = {
   openSidePanel: 'Alt+S'

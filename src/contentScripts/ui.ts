@@ -52,6 +52,8 @@ export class UIManager {
       onDelete: () => this.handleDelete(),
       onColorChange: (color: string, isExisting: boolean) => this.handleColorChange(color, isExisting),
       onClearPreview: () => this.clearPreviewWithColorRestore(),
+      onConfirmPosition: (markId: string) => this.handleConfirmPosition(markId),
+      onRecalibrate: (markId: string) => this.handleRecalibrate(markId),
     }).mount(tooltipRoot)
 
     const modalRoot = document.createElement('div')
@@ -112,6 +114,131 @@ export class UIManager {
       }
     })
     parentsToNormalize.forEach((parent) => parent.normalize())
+  }
+
+  async updateMarkFromRecalibration(markId: string, range: rangy.RangyRange, capturedText: string): Promise<void> {
+    const mark = await sendMessage('get-mark-by-id', { id: markId, url: getCanonicalUrlForMark() }, 'background')
+    if (!mark) return
+
+    // 先移除旧的高亮
+    await this.removeMarkById(markId)
+
+    // 应用新的高亮
+    const applier = rangy.createClassApplier(`webext-highlight-${markId}`, {
+      elementTagName: 'span',
+      elementAttributes: { style: highlightDefaultStyle(mark.color) },
+    })
+    applier.applyToRange(range)
+
+    // 序列化新的路径
+    const root = range.commonAncestorContainer.getRootNode()
+    const newSerialized = rangy.serializeRange(range, true, root instanceof ShadowRoot ? root : undefined)
+    const { contextTitle, contextSelector, contextLevel, contextOrder, surroundingSnippet } = getHighlightContext(range)
+    const domIndex = DOMScanner.calculatePreciseOffset(range, root instanceof ShadowRoot ? root : document.body)
+
+    let shadowHostSelector: string | undefined
+    if (root instanceof ShadowRoot) {
+      const chain: string[] = []
+      let currRoot: Node = root
+      while (currRoot instanceof ShadowRoot) {
+        chain.unshift(getElementSelector(currRoot.host))
+        currRoot = currRoot.host.getRootNode()
+      }
+      shadowHostSelector = chain.join('|>>>|')
+    }
+
+    const content = range.cloneContents()
+    stripHighlights(content)
+    const tempDiv = document.createElement('div')
+    tempDiv.appendChild(content)
+    const selectedHtml = content.constructor === DocumentFragment ? tempDiv.innerHTML : range.toString()
+
+    await sendMessage('update-mark-details', {
+      id: markId,
+      url: mark.url,
+      text: capturedText,
+      html: selectedHtml,
+      rangySerialized: newSerialized,
+      shadowHostSelector: shadowHostSelector || null,
+      domIndex,
+      contextTitle,
+      contextSelector,
+      contextLevel,
+      contextOrder,
+      surroundingSnippet,
+      recoveryStatus: 'restored',
+    } as any, 'background')
+  }
+
+  private async handleConfirmPosition(markId: string) {
+    // 用户确认 pending-confirm 标记位置正确 → 恢复为默认样式并更新状态
+    const mark = await sendMessage('get-mark-by-id', { id: markId, url: getCanonicalUrlForMark() }, 'background')
+    if (!mark) return
+    // 更新样式为默认样式
+    querySelectorAllDeep(`.webext-highlight-${markId}`).forEach((el) => {
+      if (el instanceof HTMLElement) {
+        el.style.boxShadow = `inset 0 -5px 0 0 ${mark.color}`
+        el.style.borderBottom = ''
+        el.style.opacity = ''
+      }
+    })
+    await sendMessage('update-mark-details', {
+      id: markId,
+      url: mark.url,
+      recoveryStatus: 'restored',
+    } as any, 'background')
+  }
+
+  private async handleRecalibrate(markId: string) {
+    const mark = await sendMessage('get-mark-by-id', { id: markId, url: getCanonicalUrlForMark() }, 'background')
+    if (!mark) return
+    // 进入重新选择模式
+    this.enterRecalibrationMode(markId, mark.text)
+  }
+
+  enterRecalibrationMode(markId: string, originalText: string): void {
+    this.state.isRecalibrationMode = true
+    this.state.recalibrationMarkId = markId
+    // 显示浮动提示
+    this.showRecalibrationPrompt(originalText)
+  }
+
+  exitRecalibrationMode(): void {
+    this.state.isRecalibrationMode = false
+    this.state.recalibrationMarkId = null
+    this.hideRecalibrationPrompt()
+  }
+
+  private recalibrationPromptEl: HTMLElement | null = null
+
+  private showRecalibrationPrompt(originalText: string): void {
+    this.hideRecalibrationPrompt()
+    const el = document.createElement('div')
+    el.className = 'webext-recalibration-prompt'
+    el.style.cssText = `
+      position: fixed; top: 16px; left: 50%; transform: translateX(-50%);
+      z-index: 2147483647; background: #1e40af; color: white;
+      padding: 10px 20px; border-radius: 8px; font-size: 14px;
+      font-family: sans-serif; box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      display: flex; align-items: center; gap: 12px; max-width: 80%;
+    `
+    const snippet = originalText.length > 40 ? originalText.substring(0, 40) + '...' : originalText
+    el.innerHTML = `
+      <span>📝 请选中原标记「${snippet}」对应的文本，然后按 Alt+点击确认</span>
+      <button class="webext-recalibration-cancel" style="background:rgba(255,255,255,0.2);border:none;color:white;padding:4px 10px;border-radius:4px;cursor:pointer;font-size:12px;">取消</button>
+    `
+    el.querySelector('.webext-recalibration-cancel')?.addEventListener('click', () => {
+      this.exitRecalibrationMode()
+    })
+    document.body.appendChild(el)
+    this.recalibrationPromptEl = el
+  }
+
+  private hideRecalibrationPrompt(): void {
+    if (this.recalibrationPromptEl && this.recalibrationPromptEl.parentNode) {
+      this.recalibrationPromptEl.parentNode.removeChild(this.recalibrationPromptEl)
+    }
+    this.recalibrationPromptEl = null
   }
 
   private async handleDiscardMark(markId: string) {
@@ -246,11 +373,11 @@ export class UIManager {
     parentsToNormalize.forEach((parent) => parent.normalize())
   }
 
-  showTooltip(x: number, y: number, isHighlighted: boolean, note: string, color: string, text: string, tags: string[] = []): void {
+  showTooltip(x: number, y: number, isHighlighted: boolean, note: string, color: string, text: string, tags: string[] = [], mode: 'create' | 'edit' | 'pending-confirm' = 'create', markId = ''): void {
     clearTimeout(this._tooltipDebounceTimer)
     this._tooltipDebounceTimer = window.setTimeout(() => {
       this.ensureMounted()
-      this.state.tooltipApp?.show(x, y, isHighlighted, note, color, text, tags)
+      this.state.tooltipApp?.show(x, y, isHighlighted, note, color, text, tags, mode, markId)
     }, 50)
   }
 

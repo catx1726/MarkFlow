@@ -26,6 +26,8 @@ export class HighlightStateManager {
   currentMarkIdForColorChange: string | null = null
   originalColorForChange: string | null = null
   previewApplier: any = null
+  isRecalibrationMode = false
+  recalibrationMarkId: string | null = null
 
   isRestored(id: string): boolean {
     return this.restoredMarkIds.has(id)
