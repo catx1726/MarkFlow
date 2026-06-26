@@ -69,5 +69,15 @@
 - **自动聚类算法增强 (TF-IDF)**: 属于重量级特性。在用户量级上升前，手动标签系统已经足够。
 
 ---
-**更新日期**: 2026-06-05
-**维护者**: Gemini CLI & Driver
+
+## 6. 当前任务跟踪 (Active Work)
+
+| 项目 | 来源 | 状态 | 关联 Issue/PR |
+| :--- | :--- | :--- | :--- |
+| 跳过 Level 3/4 恢复算法，侧边栏提示上下文 | `.temp/detail.md` | 进行中 | Issue #50, Branch `feat/2026-06-26-ux-improvements` |
+| 高亮标记高度自定义 (`highlightHeight`) | `.temp/detail.md` | 进行中 | Issue #50, Branch `feat/2026-06-26-ux-improvements` |
+| 高亮标记 `padding-bottom` 边距控制 | `.temp/detail.md` | 进行中 | Issue #50, Branch `feat/2026-06-26-ux-improvements` |
+
+---
+**更新日期**: 2026-06-26
+**维护者**: OpenCode & Driver
