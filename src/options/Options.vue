@@ -2,6 +2,7 @@
 import { computed, onMounted, onUnmounted, reactive, ref, watch, watchEffect } from 'vue'
 import { usePreferredDark } from '@vueuse/core'
 import { cloneDeep } from 'lodash-es'
+import browser from 'webextension-polyfill'
 import { sendMessage } from 'webext-bridge/options'
 import { getLogs } from '../logic/errorCollector'
 import { getActiveSectionId } from './scrollSpy'
@@ -80,7 +81,7 @@ function removeColor(index: number) {
   localSettings.highlightColors.splice(index, 1)
 }
 
-function saveSettings() {
+async function saveSettings() {
   settings.value = cloneDeep(localSettings)
   saveStatus.value = '设置已保存！'
   isJustSaved.value = true
@@ -96,6 +97,13 @@ function saveSettings() {
   sendMessage('refresh-sidepanel-data', {}, 'background').catch(() => {
     // 忽略错误
   })
+  // 通知所有 content script 刷新高亮样式
+  const tabs = await browser.tabs.query({ status: 'complete' })
+  for (const tab of tabs) {
+    if (tab.id && tab.url && tab.url.startsWith('http')) {
+      sendMessage('refresh-highlights', {}, { context: 'content-script', tabId: tab.id }).catch(() => {})
+    }
+  }
 }
 
 async function exportLogs() {
