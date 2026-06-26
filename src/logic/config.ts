@@ -22,12 +22,13 @@
 
 import { defaultSettings } from './settings'
 
-export const highlightDefaultStyle = (color: string | Ref<string> = defaultSettings.defaultHighlightColor) =>
-  `box-shadow: inset 0 -5px 0 0 ${color}; cursor: pointer;`
+export function highlightDefaultStyle(color: string | Ref<string> = defaultSettings.defaultHighlightColor, height: number = defaultSettings.highlightHeight) {
+  return `box-shadow: inset 0 -${height}px 0 0 ${color}; padding-bottom: ${height}px; cursor: pointer;`
+}
 
 // --- Shortcuts ---
 export const shortcuts = {
-  openSidePanel: 'Alt+S'
+  openSidePanel: 'Alt+S',
 }
 
 // --- Cleanup ---
