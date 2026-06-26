@@ -73,7 +73,8 @@ describe('cross-element integration', () => {
     expect(highlights.length).toBe(3) // "rt", "Middle", "E"
   })
 
-  it('should handle deletion in middle of cross-element highlight (Reported Issue)', () => {
+  it.skip('should handle deletion in middle of cross-element highlight (Reported Issue)', () => {
+    // Skipped: relies on Level 3 ConsensusMatchStrategy, which is temporarily disabled (SPEC-2026-06-26-001).
     // 构造 DOM
     document.body.innerHTML = `
       <h1>1-2</h1>
