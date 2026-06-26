@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { nextTick, ref, watch } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import type { Mark } from '~/logic/storage'
 
 const props = defineProps<{
@@ -25,6 +25,9 @@ const emit = defineEmits<{
 
 const editingNote = ref(props.mark.note)
 const textareaRef = ref<HTMLTextAreaElement | null>(null)
+const showContext = ref(false)
+const hasContext = computed(() => !!props.mark.contextTitle || !!props.mark.surroundingSnippet)
+const contextHint = computed(() => props.mark.restoreFailedAt ? '原位置已变化' : '')
 
 watch(() => props.isEditing, async (newVal) => {
   if (newVal) {
@@ -52,6 +55,59 @@ function handleSave() {
           :class="isExpanded ? 'max-h-96' : 'max-h-5'"
           v-html="mark.html || mark.text"
         />
+      </div>
+      <div
+        v-if="mark.restoreFailedAt && hasContext"
+        class="mt-1"
+      >
+        <button
+          class="inline-flex items-center gap-1 rounded px-2 py-0.5 text-xs font-medium text-amber-600 bg-amber-50 hover:bg-amber-100 dark:text-amber-400 dark:bg-amber-900/20 dark:hover:bg-amber-900/30"
+          @click.stop="showContext = !showContext"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="h-3.5 w-3.5"
+            viewBox="0 0 20 20"
+            fill="currentColor"
+          >
+            <path
+              fill-rule="evenodd"
+              d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+              clip-rule="evenodd"
+            />
+          </svg>
+          <span>{{ contextHint }}</span>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="h-3 w-3 transition-transform duration-200"
+            :class="showContext ? 'rotate-180' : ''"
+            viewBox="0 0 20 20"
+            fill="currentColor"
+          >
+            <path
+              fill-rule="evenodd"
+              d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+              clip-rule="evenodd"
+            />
+          </svg>
+        </button>
+        <div
+          v-if="showContext"
+          class="mt-1 rounded border border-amber-200 bg-amber-50 p-2 text-amber-800 dark:border-amber-800/50 dark:bg-amber-900/20 dark:text-amber-200"
+        >
+          <p
+            v-if="mark.contextTitle"
+            class="text-xs font-medium"
+          >
+            章节：{{ mark.contextTitle }}
+          </p>
+          <p
+            v-if="mark.surroundingSnippet"
+            class="mt-1 text-xs italic"
+          >
+            “{{ mark.surroundingSnippet }}”
+          </p>
+        </div>
       </div>
       <div v-if="isEditing" class="mt-2">
         <textarea
