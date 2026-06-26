@@ -91,7 +91,7 @@ class RegexMatchStrategy implements SearchStrategy {
   }
 }
 
-class ConsensusMatchStrategy implements SearchStrategy {
+export class ConsensusMatchStrategy implements SearchStrategy {
   readonly name = 'ConsensusMatch'
   execute(mark: Mark, context: SearchContext): Candidate[] {
     if (!mark.surroundingSnippet) return []
@@ -122,7 +122,7 @@ class ConsensusMatchStrategy implements SearchStrategy {
 
 // --- Components ---
 
-class ConsensusAnchorManager {
+export class ConsensusAnchorManager {
   private markStartInSnippet: number
   constructor(private snippet: string, private markText: string) {
     this.markStartInSnippet = this.calculateMarkStartInSnippet()
@@ -208,7 +208,7 @@ class ConsensusAnchorManager {
   }
 }
 
-class LocalAligner {
+export class LocalAligner {
   constructor(private markText: string, private context: SearchContext) {}
   refineBoundary(suggestedStart: number, suggestedEnd: number): { start: number, end: number, score: number } {
     const { fullText, structureBoundaries } = this.context
@@ -249,7 +249,7 @@ class LocalAligner {
 export function findCandidateElements(mark: Mark, searchRoot: Node, _extLen: number = 10): { ambiguityLevel: AmbiguityLevel, candidates: Candidate[] } {
   console.log(`[WebMarker-Search] Searching ID: ${mark.id}`)
   const context = createSearchContext(searchRoot)
-  const strategies: SearchStrategy[] = [new ExactMatchStrategy(), new RegexMatchStrategy(), new ConsensusMatchStrategy()]
+  const strategies: SearchStrategy[] = [new ExactMatchStrategy(), new RegexMatchStrategy()]
   let candidates: Candidate[] = []
   for (const strategy of strategies) {
     const results = strategy.execute(mark, context)
