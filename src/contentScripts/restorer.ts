@@ -90,7 +90,7 @@ export class HighlightRestorer {
     for (const mark of marks) {
       const applier = rangy.createClassApplier(`webext-highlight-${mark.id}`, {
         elementTagName: 'span',
-        elementAttributes: { style: highlightDefaultStyle(mark.color) },
+        elementAttributes: { style: highlightDefaultStyle(mark.color, settings.value.highlightHeight) },
       })
       const root = this.getDeserializationRoot(mark)
       if (!root) {
@@ -181,7 +181,7 @@ export class HighlightRestorer {
   private async restoreBySearch(mark: Mark): Promise<boolean> {
     const applier = rangy.createClassApplier(`webext-highlight-${mark.id}`, {
       elementTagName: 'span',
-      elementAttributes: { style: highlightDefaultStyle(mark.color) },
+      elementAttributes: { style: highlightDefaultStyle(mark.color, settings.value.highlightHeight) },
     })
     const deserializationRoot = this.getDeserializationRoot(mark)
     if (mark.shadowHostSelector && !deserializationRoot) {
@@ -319,9 +319,11 @@ export class HighlightRestorer {
         if (!(el instanceof HTMLElement))
           return
         el.style.transition = 'box-shadow 0.5s ease-in-out'
-        el.style.boxShadow = `inset 0 -5px 0 0 ${settings.value.highlightColors[1]}`
+        el.style.boxShadow = `inset 0 -${settings.value.highlightHeight}px 0 0 ${settings.value.highlightColors[1]}`
+        el.style.paddingBottom = `${settings.value.highlightHeight}px`
         setTimeout(() => {
-          el.style.boxShadow = `inset 0 -5px 0 0 ${mark.color}`
+          el.style.boxShadow = `inset 0 -${settings.value.highlightHeight}px 0 0 ${mark.color}`
+          el.style.paddingBottom = `${settings.value.highlightHeight}px`
         }, 1000)
       })
     }

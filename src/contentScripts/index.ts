@@ -63,7 +63,7 @@ async function initialize() {
     rangy.init()
     state.previewApplier = rangy.createClassApplier('webext-highlight-preview', {
       elementTagName: 'span',
-      elementAttributes: { style: `${highlightDefaultStyle(settings.value.defaultHighlightColor)} ` },
+      elementAttributes: { style: `${highlightDefaultStyle(settings.value.defaultHighlightColor, settings.value.highlightHeight)} ` },
       normalize: false,
     })
     ui.ensureMounted()
