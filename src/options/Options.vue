@@ -154,6 +154,7 @@ async function connectSync() {
 const navItems = [
   { id: 'welcome', label: '欢迎使用' },
   { id: 'default-color', label: '默认高亮颜色' },
+  { id: 'highlight-height', label: '高亮标记高度' },
   { id: 'color-palette', label: '高亮颜色配置' },
   { id: 'shortcuts', label: '快捷键设置' },
   { id: 'blacklist', label: '网站黑名单' },
@@ -381,6 +382,35 @@ onUnmounted(() => {
               >
               <span class="h-[24px] w-[24px] rounded-full border border-gray-300" :style="{ backgroundColor: color }" />
             </label>
+          </div>
+        </div>
+
+        <!-- Highlight Height -->
+        <div id="highlight-height" class="setting-card scroll-mt-8">
+          <h2 class="text-[18px] font-semibold mb-[12px]">
+            高亮标记高度
+          </h2>
+          <p class="text-[14px] text-gray-500 mb-[16px]">
+            控制高亮标记的下划线粗细和底部间距，取值范围 1–20px。
+          </p>
+          <div class="flex items-center gap-[16px]">
+            <input
+              v-model.number="localSettings.highlightHeight"
+              type="range"
+              min="1"
+              max="20"
+              class="flex-1"
+            >
+            <span class="w-[48px] text-center font-mono text-[14px]">{{ localSettings.highlightHeight }}px</span>
+          </div>
+          <div class="mt-[16px]">
+            <span class="text-[14px] text-gray-500">预览：</span>
+            <span
+              class="text-[14px]"
+              :style="{ boxShadow: `inset 0 -${localSettings.highlightHeight}px 0 0 ${localSettings.defaultHighlightColor}`, paddingBottom: `${localSettings.highlightHeight}px` }"
+            >
+              这是一段示例高亮文本
+            </span>
           </div>
         </div>
 
