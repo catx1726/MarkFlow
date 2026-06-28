@@ -1,4 +1,4 @@
-import type { Mark, Tag } from './storage'
+import type { Mark, SyncConfig, SyncStatus, Tag } from './storage'
 
 export interface SyncData {
   marks: Record<string, Mark[]>
@@ -58,6 +58,34 @@ export function mergeTags(local: Record<string, Tag>, remote: Record<string, Tag
     }
   }
   return result
+}
+
+/**
+ * 判断当前状态是否允许执行推送
+ */
+export function canPush(config: SyncConfig, status: SyncStatus): boolean {
+  return config.enabled
+    && !!config.token
+    && !!config.gistId
+    && status.lastSyncStatus !== 'none'
+}
+
+/**
+ * 解析远程 Gist 文件内容并合并到本地数据
+ */
+export function mergeWithRemoteFile(
+  localMarks: Record<string, Mark[]>,
+  localTags: Record<string, Tag>,
+  fileContent: string | undefined,
+): { marks: Record<string, Mark[]>, tags: Record<string, Tag> } {
+  if (!fileContent?.trim()) {
+    return { marks: localMarks, tags: localTags }
+  }
+  const remoteData = JSON.parse(fileContent) as Partial<SyncData>
+  return {
+    marks: mergeMarks(localMarks, remoteData.marks || {}),
+    tags: mergeTags(localTags, remoteData.tags || {}),
+  }
 }
 
 /**
