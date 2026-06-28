@@ -9,6 +9,7 @@ import {
   type GetMarkByIdPayload,
   type Mark,
   type RemoveMarkPayload,
+  type SyncConfig,
   type UpdateMarkNotePayload,
   dataReady,
   marksByUrl,
@@ -19,7 +20,7 @@ import {
   tagsMetadata,
   tagsReady,
 } from '~/logic/storage'
-import { getGists, mergeMarks, mergeTags, updateGist } from '~/logic/sync'
+import { canPush, getGists, mergeMarks, mergeTags, updateGist } from '~/logic/sync'
 
 // only on dev mode
 if (import.meta.hot) {
@@ -405,7 +406,7 @@ onMessage('open-options-page', async () => {
 })
 
 onMessage('trigger-sync', async () => {
-  await performPull()
+  await performPull(3, { force: true })
 })
 
 onMessage('report-error', async ({ data, context: _context }) => {
@@ -512,7 +513,7 @@ async function purgeTombstones() {
 }
 
 const performPush = debounce(async () => {
-  if (isSyncing || !syncConfig.value.enabled || !syncConfig.value.token || !syncConfig.value.gistId)
+  if (isSyncing || !canPush(syncConfig.value, syncStatus.value))
     return
 
   await enqueueSync(async () => {
@@ -582,11 +583,14 @@ const performPush = debounce(async () => {
   })
 }, 10000)
 
-async function performPull(retries = 3) {
+async function performPull(retries = 3, { force = false } = {}) {
   if (isSyncing)
     return
   await ensureReady()
-  if (!syncConfig.value.enabled || !syncConfig.value.token || !syncConfig.value.gistId)
+  const hasRequired = syncConfig.value.token && syncConfig.value.gistId
+  if (!hasRequired)
+    return
+  if (!force && !syncConfig.value.enabled)
     return
 
   await enqueueSync(async () => {
