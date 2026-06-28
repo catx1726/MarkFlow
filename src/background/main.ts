@@ -20,7 +20,7 @@ import {
   tagsMetadata,
   tagsReady,
 } from '~/logic/storage'
-import { canPush, getGists, mergeMarks, mergeTags, updateGist } from '~/logic/sync'
+import { canPush, getGists, mergeWithRemoteFile, updateGist } from '~/logic/sync'
 
 // only on dev mode
 if (import.meta.hot) {
@@ -605,11 +605,15 @@ async function performPull(retries = 3, { force = false } = {}) {
           const file = gist?.files['markflow_sync.json']
 
           if (file && file.content) {
-            const remoteData = JSON.parse(file.content)
+            const { marks: mergedMarks, tags: mergedTags } = mergeWithRemoteFile(
+              toRaw(marksByUrl.value),
+              toRaw(tagsMetadata.value),
+              file.content,
+            )
 
             await enqueueWrite(async () => {
-              marksByUrl.value = mergeMarks(toRaw(marksByUrl.value), remoteData.marks || {})
-              tagsMetadata.value = mergeTags(toRaw(tagsMetadata.value), remoteData.tags || {})
+              marksByUrl.value = mergedMarks
+              tagsMetadata.value = mergedTags
               syncStatus.value.lastSyncTime = Date.now()
               syncStatus.value.lastSyncStatus = 'success'
               syncStatus.value.errorMessage = ''
