@@ -140,7 +140,8 @@ async function connectSync() {
       // 等待 storage 变更传播到 background，再触发拉取
       await new Promise(resolve => setTimeout(resolve, 100))
       // 强制拉取并合并远程数据，防止本地空数据覆盖远程
-      await sendMessage('trigger-sync', {}, 'background').catch((err: any) => {
+      // webext-bridge 在 MV3 下有时不返回响应，使用 fire-and-forget 避免卡住 UI
+      sendMessage('trigger-sync', {}, 'background').catch((err: any) => {
         console.error('[Options] trigger-sync failed:', err)
       })
       showAlert('已成功连接到现有的同步 Gist！')
@@ -157,7 +158,7 @@ async function connectSync() {
       syncConfig.value.lastSyncTime = Date.now()
       showAlert('已创建新的同步 Gist 并开启同步！')
       // 新 Gist 创建后拉取一次，以将 lastSyncStatus 置为 success，后续推送才能正常进行
-      await sendMessage('trigger-sync', {}, 'background').catch((err: any) => {
+      sendMessage('trigger-sync', {}, 'background').catch((err: any) => {
         console.error('[Options] trigger-sync failed:', err)
       })
     }
