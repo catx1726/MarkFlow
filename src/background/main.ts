@@ -29,8 +29,10 @@ if (import.meta.hot) {
   // load latest content script
   import('./contentScriptHMR')
 }
-window.addEventListener('error', event => collectError(event.error, 'background'))
-window.addEventListener('unhandledrejection', event => collectError(event.reason, 'background'))
+if (typeof window !== 'undefined') {
+  window.addEventListener('error', event => collectError(event.error, 'background'))
+  window.addEventListener('unhandledrejection', event => collectError(event.reason, 'background'))
+}
 
 // remove or turn this off if you don't use side panel
 const USE_SIDE_PANEL = true
