@@ -9,7 +9,6 @@ import {
   type GetMarkByIdPayload,
   type Mark,
   type RemoveMarkPayload,
-  type SyncConfig,
   type UpdateMarkNotePayload,
   dataReady,
   marksByUrl,
@@ -407,8 +406,9 @@ onMessage('open-options-page', async () => {
   browser.runtime.openOptionsPage()
 })
 
-onMessage('trigger-sync', async () => {
-  await performPull(3, { force: true })
+onMessage('trigger-sync', async ({ data }) => {
+  const force = (data as any)?.force ?? false
+  await performPull(3, { force })
 })
 
 onMessage('report-error', async ({ data, context: _context }) => {
@@ -517,6 +517,13 @@ async function purgeTombstones() {
 const performPush = debounce(async () => {
   if (isSyncing || !canPush(syncConfig.value, syncStatus.value))
     return
+
+  // 如果上次同步失败，先拉取远程数据合并后再推送，避免覆盖远程较新的数据
+  if (syncStatus.value.lastSyncStatus === 'error') {
+    await performPull(3, { force: false })
+    if (syncStatus.value.lastSyncStatus !== 'success')
+      return
+  }
 
   await enqueueSync(async () => {
     isSyncing = true
@@ -685,16 +692,6 @@ async function performPull(retries = 3, { force = false } = {}) {
 browser.storage.onChanged.addListener((changes) => {
   if (changes['marks-by-url-storage'] || changes['webmarker-tags-metadata']) {
     performPush()
-  }
-
-  // 监听同步配置变更，仅处理启用状态切换。
-  // 初次连接时的拉取由 Options 页面主动触发，避免竞态。
-  if (changes['webmarker-sync-config']) {
-    const newValue = changes['webmarker-sync-config'].newValue as SyncConfig
-    const oldValue = changes['webmarker-sync-config'].oldValue as SyncConfig
-    if (newValue?.enabled && !oldValue?.enabled && newValue?.gistId) {
-      performPull()
-    }
   }
 })
 

@@ -134,15 +134,17 @@ async function connectSync() {
 
     if (existingGist) {
       syncConfig.value.gistId = existingGist.id
-      // 先启用同步，让 trigger-sync 能够强制拉取
-      syncConfig.value.enabled = true
-      // 等待 storage 变更传播到 background，再触发拉取
-      await new Promise(resolve => setTimeout(resolve, 100))
-      // 强制拉取并合并远程数据，防止本地空数据覆盖远程
-      // webext-bridge 在 MV3 下有时不返回响应，使用 fire-and-forget 避免卡住 UI
-      sendMessage('trigger-sync', {}, 'background').catch((err: any) => {
+      // 先强制拉取并合并远程数据，成功后再启用自动同步，防止本地空数据覆盖远程
+      // webext-bridge 在 MV3 下有时不返回响应，加超时避免 UI 卡住
+      await withTimeout(
+        sendMessage('trigger-sync', { force: true }, 'background'),
+        8000,
+        'trigger-sync timeout',
+      ).catch((err: any) => {
         console.error('[Options] trigger-sync failed:', err)
+        throw new Error('同步拉取超时或失败，请检查网络后重试')
       })
+      syncConfig.value.enabled = true
       showAlert('已成功连接到现有的同步 Gist！')
     }
     else {
@@ -156,7 +158,7 @@ async function connectSync() {
       syncConfig.value.enabled = true
       showAlert('已创建新的同步 Gist 并开启同步！')
       // 新 Gist 创建后拉取一次，以将 lastSyncStatus 置为 success，后续推送才能正常进行
-      sendMessage('trigger-sync', {}, 'background').catch((err: any) => {
+      sendMessage('trigger-sync', { force: true }, 'background').catch((err: any) => {
         console.error('[Options] trigger-sync failed:', err)
       })
     }

@@ -59,6 +59,12 @@
 | **sync.ts 提取 GitHub API 统一包装** | 分析 | 低 | 中 | ⭐⭐⭐ | `getGists` / `createGist` / `updateGist` 中 401/403 错误处理完全重复，且无网络超时控制。提取 `requestGitHubAPI` 统一处理认证、超时和错误转换。 |
 | **storage.ts Payload 类型收紧** | 分析 | 低 | 中 | ⭐⭐⭐ | `RemoveMarkPayload` / `UpdateMarkNotePayload` 等接口包含 `[key: string]: any`，抹平了类型检查。建议与消息协议类型对齐，移除 `any`。 |
 | **dom.ts rangy 类型断言清理** | 分析 | 低 | 低 | ⭐⭐ | `Highlighter.applyPreciseHighlight` 中 `(rangy as any).createRange` 可替换为正确的 Rangy 类型定义，消除 `as any` 使用。 |
+| **sync.ts `mergeWithRemoteFile` 命名优化** | PR #51 | 低 | 低 | ⭐⭐ | 函数名暗示类方法，建议改为 `mergeRemoteFileContent` 或 `parseAndMergeRemoteFile` 以清晰表达纯函数语义。 |
+| **background/main.ts 日志级别控制** | PR #51 | 低 | 低 | ⭐⭐ | `performPull` 中 `[Sync] Pull data` 等日志在每次拉取时输出，建议使用 `console.debug` 或添加日志级别控制，减少生产环境日志。 |
+| **测试文件命名风格统一** | PR #51 | 低 | 低 | ⭐⭐ | `sync.spec.ts` 使用 `describe('sync Logic', ...)`，与 `restorer.spec.ts`/`ui.spec.ts` 的大小写风格不一致，建议统一。 |
+| **theme-init.ts 添加 CSP 注释说明** | PR #51 | 低 | 低 | ⭐⭐ | 将内联脚本提取到外部模块是好的做法，建议在 `index.html` 中添加注释说明原因，帮助未来维护者理解。 |
+| **Popup.vue sidePanel.open 类型守卫** | PR #51 | 低 | 低 | ⭐⭐⭐ | 当前使用 `(browser as any).sidePanel`，建议创建类型定义文件扩展 `browser` 类型，避免 `as any`。 |
+| **search.ts 保留策略类注释** | PR #51 | 低 | 低 | ⭐⭐ | `ConsensusMatchStrategy` 等类已保留但不再使用，建议添加注释说明保留原因（如 SPEC-2026-06-26-001）。 |
 
 ---
 
