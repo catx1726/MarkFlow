@@ -108,6 +108,16 @@ describe('sync Logic', () => {
       expect(result.tags.t1.name).toBe('local')
     })
 
+    it('远程文件内容损坏时应保持本地数据不变', () => {
+      const localMarks = { url1: [{ id: '1', text: 'local', createdAt: 100 } as Mark] }
+      const localTags = { t1: { id: 't1', name: 'local', createdAt: 10 } as Tag }
+
+      const result = mergeWithRemoteFile(localMarks, localTags, 'not-valid-json{')
+
+      expect(result.marks.url1[0].id).toBe('1')
+      expect(result.tags.t1.name).toBe('local')
+    })
+
     it('远程字段缺失时应视为空对象', () => {
       const localMarks = { url1: [{ id: '1', text: 'local', createdAt: 100 } as Mark] }
       const result = mergeWithRemoteFile(localMarks, {}, JSON.stringify({ lastSync: 1 }))

@@ -65,6 +65,8 @@
 | **theme-init.ts 添加 CSP 注释说明** | PR #51 | 低 | 低 | ⭐⭐ | 将内联脚本提取到外部模块是好的做法，建议在 `index.html` 中添加注释说明原因，帮助未来维护者理解。 |
 | **Popup.vue sidePanel.open 类型守卫** | PR #51 | 低 | 低 | ⭐⭐⭐ | 当前使用 `(browser as any).sidePanel`，建议创建类型定义文件扩展 `browser` 类型，避免 `as any`。 |
 | **search.ts 保留策略类注释** | PR #51 | 低 | 低 | ⭐⭐ | `ConsensusMatchStrategy` 等类已保留但不再使用，建议添加注释说明保留原因（如 SPEC-2026-06-26-001）。 |
+| **`mergeWithRemoteFile` 在 `performPull` 中未使用** | PR #51 | 低 | 低 | ⭐⭐ | `sync.ts` 中设计和测试了 `mergeWithRemoteFile`，但 `performPull` 仍直接用 `mergeMarks`/`mergeTags`。建议统一使用辅助函数或移除死代码。 |
+| **`withTimeout` 实现简化** | PR #51 | 低 | 低 | ⭐⭐ | 当前实现带 `clearTimeout`，CR 建议可简化为不带 `clearTimeout` 的 `Promise.race` 版本，避免微妙时序问题。 |
 
 ---
 
@@ -85,5 +87,5 @@
 | 高亮标记 `padding-bottom` 边距控制 | `.temp/detail.md` | 进行中 | Issue #50, Branch `feat/2026-06-26-ux-improvements` |
 
 ---
-**更新日期**: 2026-06-26
+**更新日期**: 2026-06-29
 **维护者**: OpenCode & Driver

@@ -136,6 +136,14 @@ async function connectSync() {
   try {
     await Promise.all([dataReady, tagsReady, syncReady])
 
+    // Wake up service worker before sending sync message (MV3 reliability)
+    try {
+      await browser.runtime.getPlatformInfo()
+    }
+    catch {
+      // ignore
+    }
+
     const gists = await getGists(syncConfig.value.token)
     // 查找包含 markflow_sync.json 的 Gist
     const existingGist = gists.find(g => g.files && g.files['markflow_sync.json'])
@@ -144,14 +152,7 @@ async function connectSync() {
       syncConfig.value.gistId = existingGist.id
       // 先强制拉取并合并远程数据，成功后再启用自动同步，防止本地空数据覆盖远程
       // webext-bridge 在 MV3 下有时不返回响应，加超时避免 UI 卡住
-      await withTimeout(
-        sendMessage('trigger-sync', { force: true }, 'background'),
-        8000,
-        'trigger-sync timeout',
-      ).catch((err: any) => {
-        console.error('[Options] trigger-sync failed:', err)
-        throw new Error('同步拉取超时或失败，请检查网络后重试')
-      })
+      await triggerPull({ force: true, token: syncConfig.value.token, gistId: existingGist.id })
       syncConfig.value.enabled = true
       showAlert('已成功连接到现有的同步 Gist！')
     }
@@ -166,7 +167,7 @@ async function connectSync() {
       syncConfig.value.enabled = true
       showAlert('已创建新的同步 Gist 并开启同步！')
       // 新 Gist 创建后拉取一次，以将 lastSyncStatus 置为 success，后续推送才能正常进行
-      sendMessage('trigger-sync', { force: true }, 'background').catch((err: any) => {
+      triggerPull({ force: true, token: syncConfig.value.token, gistId: newGist.id }).catch((err: any) => {
         console.error('[Options] trigger-sync failed:', err)
       })
     }
@@ -176,6 +177,30 @@ async function connectSync() {
   }
   finally {
     syncConnectStatus.value = ''
+  }
+}
+
+async function triggerPull({ force = false, timeoutMs = 8000, token = '', gistId = '' } = {}) {
+  const payload = { force, token, gistId }
+  console.log('[Options] triggerPull started', { force, hasToken: !!token, hasGistId: !!gistId })
+  try {
+    const result = await withTimeout(
+      sendMessage('trigger-sync', payload, 'background'),
+      timeoutMs,
+      'trigger-sync timeout',
+    )
+    console.log('[Options] webext-bridge trigger-sync succeeded:', result)
+    return result
+  }
+  catch (bridgeError: any) {
+    console.warn('[Options] webext-bridge trigger-sync failed, falling back to runtime message:', bridgeError)
+    const fallbackResult = await withTimeout(
+      browser.runtime.sendMessage({ type: 'trigger-sync-pull', ...payload }),
+      timeoutMs,
+      'trigger-sync-pull timeout',
+    )
+    console.log('[Options] runtime fallback trigger-sync-pull result:', fallbackResult)
+    return fallbackResult
   }
 }
 

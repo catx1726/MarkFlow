@@ -21,6 +21,12 @@ import {
 } from '~/logic/storage'
 import { canPush, getGistById, mergeMarks, mergeTags, updateGist } from '~/logic/sync'
 
+interface TriggerSyncPayload {
+  force?: boolean
+  token?: string
+  gistId?: string
+}
+
 // only on dev mode
 if (import.meta.hot) {
   // @ts-expect-error for background HMR
@@ -407,8 +413,44 @@ onMessage('open-options-page', async () => {
 })
 
 onMessage('trigger-sync', async ({ data }) => {
-  const force = (data as any)?.force ?? false
-  await performPull(3, { force })
+  console.log('[Sync] webext-bridge trigger-sync received', data)
+  const payload = data as TriggerSyncPayload
+  const force = payload?.force ?? false
+  const token = payload?.token || syncConfig.value.token
+  const gistId = payload?.gistId || syncConfig.value.gistId
+  try {
+    const success = await performPull(3, { force, token, gistId })
+    console.log('[Sync] webext-bridge trigger-sync completed', { success })
+    return { success }
+  }
+  catch (error: any) {
+    console.error('[Sync] trigger-sync failed:', error)
+    return { success: false, error: error.message }
+  }
+})
+
+// MV3 fallback: native runtime message to wake up service worker when webext-bridge fails
+browser.runtime.onMessage.addListener((message: any, _sender, sendResponse) => {
+  console.log('[Sync] runtime.onMessage received', message)
+  if (message?.type === 'trigger-sync-pull') {
+    const payload = message as TriggerSyncPayload
+    const force = payload?.force ?? false
+    const token = payload?.token || syncConfig.value.token
+    const gistId = payload?.gistId || syncConfig.value.gistId
+    // Return true to indicate async response
+    performPull(3, { force, token, gistId })
+      .then((success) => {
+        console.log('[Sync] runtime trigger-sync-pull completed', { success })
+        sendResponse({ success })
+      })
+      .catch((error: any) => {
+        console.error('[Sync] trigger-sync-pull failed:', error)
+        sendResponse({ success: false, error: error.message })
+      })
+    return true
+  }
+  // Let other listeners handle unknown messages
+  return false
 })
 
 onMessage('report-error', async ({ data, context: _context }) => {
@@ -520,8 +562,8 @@ const performPush = debounce(async () => {
 
   // 如果上次同步失败，先拉取远程数据合并后再推送，避免覆盖远程较新的数据
   if (syncStatus.value.lastSyncStatus === 'error') {
-    await performPull(3, { force: false })
-    if (syncStatus.value.lastSyncStatus !== 'success')
+    const pullSuccess = await performPull(3, { force: false })
+    if (!pullSuccess)
       return
   }
 
@@ -592,17 +634,20 @@ const performPush = debounce(async () => {
   })
 }, 10000)
 
-async function performPull(retries = 3, { force = false } = {}) {
+async function performPull(retries = 3, { force = false, token = '', gistId = '' } = {}): Promise<boolean> {
+  const pullToken = token || syncConfig.value.token
+  const pullGistId = gistId || syncConfig.value.gistId
+  console.log('[Sync] performPull called', { retries, force, isSyncing, hasToken: !!pullToken, hasGistId: !!pullGistId, enabled: syncConfig.value.enabled })
   if (isSyncing)
-    return
+    return false
   await ensureReady()
-  const hasRequired = syncConfig.value.token && syncConfig.value.gistId
+  const hasRequired = pullToken && pullGistId
   if (!hasRequired)
-    return
+    return false
   if (!force && !syncConfig.value.enabled)
-    return
+    return false
 
-  await enqueueSync(async () => {
+  return enqueueSync(async () => {
     isSyncing = true
     try {
       for (let i = 0; i < retries; i++) {
@@ -610,11 +655,11 @@ async function performPull(retries = 3, { force = false } = {}) {
           // eslint-disable-next-line no-console
           console.log(`[Sync] Starting initial pull (attempt ${i + 1})...`)
           // 列表接口不包含文件内容，必须单独获取 Gist 详情才能读取 content
-          const gist = await getGistById(syncConfig.value.token, syncConfig.value.gistId)
+          const gist = await getGistById(pullToken, pullGistId)
           const file = gist.files?.['markflow_sync.json']
 
           if (!file) {
-            console.error('[Sync] markflow_sync.json not found in Gist:', syncConfig.value.gistId)
+            console.error('[Sync] markflow_sync.json not found in Gist:', pullGistId)
             throw new Error('同步 Gist 中未找到 markflow_sync.json 文件')
           }
 
@@ -625,7 +670,7 @@ async function performPull(retries = 3, { force = false } = {}) {
               syncStatus.value.lastSyncStatus = 'success'
               syncStatus.value.errorMessage = '云端同步文件为空，本地数据将在下次变更时上传。'
             })
-            return
+            return true
           }
 
           const remoteData = JSON.parse(file.content)
@@ -655,7 +700,7 @@ async function performPull(retries = 3, { force = false } = {}) {
 
           // eslint-disable-next-line no-console
           console.log('[Sync] Initial pull and merge successful')
-          return // 成功则退出
+          return true // 成功则退出
         }
         catch (error: any) {
           if (error.message.includes('身份验证失败')) {
@@ -664,7 +709,7 @@ async function performPull(retries = 3, { force = false } = {}) {
               syncStatus.value.lastSyncStatus = 'error'
               syncStatus.value.errorMessage = error.message
             })
-            return // 认证失败无需重试
+            return false // 认证失败无需重试
           }
 
           if (i === retries - 1) {
@@ -673,6 +718,7 @@ async function performPull(retries = 3, { force = false } = {}) {
               syncStatus.value.lastSyncStatus = 'error'
               syncStatus.value.errorMessage = error.message
             })
+            return false
           }
           else {
             const delay = 2 ** i * 1000
@@ -682,6 +728,7 @@ async function performPull(retries = 3, { force = false } = {}) {
           }
         }
       }
+      return false
     }
     finally {
       isSyncing = false

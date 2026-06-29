@@ -81,10 +81,16 @@ export function mergeWithRemoteFile(
   if (!fileContent?.trim()) {
     return { marks: localMarks, tags: localTags }
   }
-  const remoteData = JSON.parse(fileContent) as Partial<SyncData>
-  return {
-    marks: mergeMarks(localMarks, remoteData.marks || {}),
-    tags: mergeTags(localTags, remoteData.tags || {}),
+  try {
+    const remoteData = JSON.parse(fileContent) as Partial<SyncData>
+    return {
+      marks: mergeMarks(localMarks, remoteData.marks || {}),
+      tags: mergeTags(localTags, remoteData.tags || {}),
+    }
+  }
+  catch (error: any) {
+    console.error('[Sync] Failed to parse remote file content:', error)
+    return { marks: localMarks, tags: localTags }
   }
 }
 
