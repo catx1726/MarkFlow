@@ -66,17 +66,24 @@ function openOptionsPage() {
 
 async function openSidePanel() {
   try {
-    // For Firefox, sidebarAction.open() must be called from a user-input handler.
-    // The popup's context is such a handler.
+    // Firefox: sidebarAction.open() 必须在用户输入处理程序中调用
     if (browser.sidebarAction && typeof browser.sidebarAction.open === 'function') {
       await browser.sidebarAction.open()
+      return
     }
-    else {
-      // For Chrome, we still need to message the background script
-      // because sidePanel.open() needs a tabId.
-      const [currentTab] = await browser.tabs.query({ active: true, currentWindow: true })
-      await sendMessage('open-sidepanel', { tabId: currentTab?.id }, 'background')
+
+    // Chrome: sidePanel.open() 必须在用户手势上下文中直接调用，
+    // 通过 background 中转会失去手势上下文导致调用失败
+    const sidePanel = (browser as any).sidePanel
+    if (sidePanel && typeof sidePanel.open === 'function') {
+      const currentWindow = await browser.windows.getCurrent()
+      if (currentWindow.id != null) {
+        await sidePanel.open({ windowId: currentWindow.id })
+      }
+      return
     }
+
+    console.error('Side panel/Sidebar API not found.')
   }
   catch (e) {
     console.error('Failed to open side panel:', e)
