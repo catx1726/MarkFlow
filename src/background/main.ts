@@ -612,11 +612,11 @@ async function performPull(retries = 3, { force = false } = {}) {
           }
 
           if (!file.content) {
-            console.warn('[Sync] markflow_sync.json exists but has no content, treating as empty remote data')
+            console.warn('[Sync] Remote markflow_sync.json is empty, treating as no remote data')
             await enqueueWrite(async () => {
               syncStatus.value.lastSyncTime = Date.now()
               syncStatus.value.lastSyncStatus = 'success'
-              syncStatus.value.errorMessage = ''
+              syncStatus.value.errorMessage = '云端同步文件为空，本地数据将在下次变更时上传。'
             })
             return
           }
