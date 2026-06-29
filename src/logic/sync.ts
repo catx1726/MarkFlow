@@ -1,4 +1,4 @@
-import type { Mark, Tag } from './storage'
+import type { Mark, SyncConfig, SyncStatus, Tag } from './storage'
 
 export interface SyncData {
   marks: Record<string, Mark[]>
@@ -42,7 +42,7 @@ export function mergeMarks(local: Record<string, Mark[]>, remote: Record<string,
     })
     result[url] = Array.from(localMarksMap.values())
   }
-  
+
   return result
 }
 
@@ -61,14 +61,43 @@ export function mergeTags(local: Record<string, Tag>, remote: Record<string, Tag
 }
 
 /**
+ * 判断当前状态是否允许执行推送
+ */
+export function canPush(config: SyncConfig, status: SyncStatus): boolean {
+  return config.enabled
+    && !!config.token
+    && !!config.gistId
+    && status.lastSyncStatus !== 'none'
+}
+
+/**
+ * 解析远程 Gist 文件内容并合并到本地数据
+ */
+export function mergeWithRemoteFile(
+  localMarks: Record<string, Mark[]>,
+  localTags: Record<string, Tag>,
+  fileContent: string | undefined,
+): { marks: Record<string, Mark[]>, tags: Record<string, Tag> } {
+  if (!fileContent?.trim()) {
+    return { marks: localMarks, tags: localTags }
+  }
+  const remoteData = JSON.parse(fileContent) as Partial<SyncData>
+  return {
+    marks: mergeMarks(localMarks, remoteData.marks || {}),
+    tags: mergeTags(localTags, remoteData.tags || {}),
+  }
+}
+
+/**
  * 获取用户的 Gists 列表
  */
 export async function getGists(token: string): Promise<GistResponse[]> {
   const res = await fetch('https://api.github.com/gists', {
-    headers: { Authorization: `token ${token}` }
+    headers: { Authorization: `token ${token}` },
   })
   if (!res.ok) {
-    if (res.status === 401 || res.status === 403) throw new Error('身份验证失败或权限不足，请检查 Token 配置')
+    if (res.status === 401 || res.status === 403)
+      throw new Error('身份验证失败或权限不足，请检查 Token 配置')
     throw new Error(`GitHub API 请求失败: ${res.status}`)
   }
   return res.json()
@@ -84,11 +113,12 @@ export async function createGist(token: string, data: SyncData): Promise<GistRes
     body: JSON.stringify({
       description: 'Highlight-Mark-Flow Sync Data',
       public: false,
-      files: { 'markflow_sync.json': { content: JSON.stringify(data) } }
-    })
+      files: { 'markflow_sync.json': { content: JSON.stringify(data) } },
+    }),
   })
   if (!res.ok) {
-    if (res.status === 401 || res.status === 403) throw new Error('身份验证失败或权限不足，请检查 Token 配置')
+    if (res.status === 401 || res.status === 403)
+      throw new Error('身份验证失败或权限不足，请检查 Token 配置')
     throw new Error(`请求失败: ${res.status}`)
   }
   return res.json()
@@ -102,11 +132,12 @@ export async function updateGist(token: string, gistId: string, data: SyncData):
     method: 'PATCH',
     headers: { Authorization: `token ${token}` },
     body: JSON.stringify({
-      files: { 'markflow_sync.json': { content: JSON.stringify(data) } }
-    })
+      files: { 'markflow_sync.json': { content: JSON.stringify(data) } },
+    }),
   })
   if (!res.ok) {
-    if (res.status === 401 || res.status === 403) throw new Error('身份验证失败或权限不足，请检查 Token 配置')
+    if (res.status === 401 || res.status === 403)
+      throw new Error('身份验证失败或权限不足，请检查 Token 配置')
     throw new Error(`请求失败: ${res.status}`)
   }
   return res.ok

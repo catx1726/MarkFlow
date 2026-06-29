@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { mergeMarks, mergeTags } from '../logic/sync'
-import type { Mark, Tag } from '../logic/storage'
+import { canPush, mergeMarks, mergeTags, mergeWithRemoteFile } from '../logic/sync'
+import type { Mark, SyncConfig, SyncStatus, Tag } from '../logic/storage'
 
-describe('Sync Logic', () => {
+describe('sync Logic', () => {
   describe('mergeMarks', () => {
     it('应该合并不同 URL 的标记', () => {
       const local = { url1: [{ id: '1', text: 'm1', createdAt: 10 } as Mark] }
@@ -49,6 +49,65 @@ describe('Sync Logic', () => {
       const remote = { t1: { id: 't1', name: '新名称', createdAt: 20 } as Tag }
       const result = mergeTags(local, remote)
       expect(result.t1.name).toBe('新名称')
+    })
+  })
+
+  describe('canPush', () => {
+    const baseConfig: SyncConfig = { enabled: true, token: 'tok', gistId: 'gist', autoSync: true }
+    const baseStatus: SyncStatus = { lastSyncTime: 0, lastSyncStatus: 'success', errorMessage: '' }
+
+    it('未启用同步时不应推送', () => {
+      expect(canPush({ ...baseConfig, enabled: false }, baseStatus)).toBe(false)
+    })
+
+    it('缺少 token 时不应推送', () => {
+      expect(canPush({ ...baseConfig, token: '' }, baseStatus)).toBe(false)
+    })
+
+    it('缺少 gistId 时不应推送', () => {
+      expect(canPush({ ...baseConfig, gistId: '' }, baseStatus)).toBe(false)
+    })
+
+    it('从未成功同步过时不应推送', () => {
+      expect(canPush(baseConfig, { ...baseStatus, lastSyncStatus: 'none' })).toBe(false)
+    })
+
+    it('启用、配置完整且已成功同步过时可以推送', () => {
+      expect(canPush(baseConfig, baseStatus)).toBe(true)
+    })
+  })
+
+  describe('mergeWithRemoteFile', () => {
+    it('应把远程数据合并到本地', () => {
+      const localMarks = { url1: [{ id: '1', text: 'local', createdAt: 100 } as Mark] }
+      const localTags = { t1: { id: 't1', name: 'local', createdAt: 10 } as Tag }
+      const remoteContent = JSON.stringify({
+        marks: { url2: [{ id: '2', text: 'remote', createdAt: 200 } as Mark] },
+        tags: { t2: { id: 't2', name: 'remote', createdAt: 20 } as Tag },
+        lastSync: Date.now(),
+      })
+
+      const result = mergeWithRemoteFile(localMarks, localTags, remoteContent)
+
+      expect(Object.keys(result.marks)).toHaveLength(2)
+      expect(result.marks.url2[0].id).toBe('2')
+      expect(result.tags.t2.name).toBe('remote')
+    })
+
+    it('远程文件内容为空时应保持本地数据不变', () => {
+      const localMarks = { url1: [{ id: '1', text: 'local', createdAt: 100 } as Mark] }
+      const localTags = { t1: { id: 't1', name: 'local', createdAt: 10 } as Tag }
+
+      const result = mergeWithRemoteFile(localMarks, localTags, '')
+
+      expect(result.marks.url1[0].id).toBe('1')
+      expect(result.tags.t1.name).toBe('local')
+    })
+
+    it('远程字段缺失时应视为空对象', () => {
+      const localMarks = { url1: [{ id: '1', text: 'local', createdAt: 100 } as Mark] }
+      const result = mergeWithRemoteFile(localMarks, {}, JSON.stringify({ lastSync: 1 }))
+      expect(result.marks.url1[0].id).toBe('1')
     })
   })
 })

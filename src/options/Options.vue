@@ -132,6 +132,8 @@ async function connectSync() {
 
     if (existingGist) {
       syncConfig.value.gistId = existingGist.id
+      // 先强制拉取并合并远程数据，再启用自动同步，防止本地空数据覆盖远程
+      await sendMessage('trigger-sync', {}, 'background')
       syncConfig.value.enabled = true
       showAlert('已成功连接到现有的同步 Gist！')
     }
@@ -145,10 +147,9 @@ async function connectSync() {
       syncConfig.value.gistId = newGist.id
       syncConfig.value.enabled = true
       showAlert('已创建新的同步 Gist 并开启同步！')
+      // 新 Gist 创建后拉取一次，以将 lastSyncStatus 置为 success，后续推送才能正常进行
+      await sendMessage('trigger-sync', {}, 'background')
     }
-    syncConfig.value.lastSyncTime = Date.now()
-    // 成功连接后触发一次全量拉取合并
-    await sendMessage('trigger-sync', {}, 'background')
   }
   catch (err: any) {
     showAlert(`连接失败: ${err.message}`)
