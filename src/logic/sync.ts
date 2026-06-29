@@ -89,15 +89,50 @@ export function mergeWithRemoteFile(
 }
 
 /**
- * 获取用户的 Gists 列表
+ * 获取用户的 Gists 列表，支持分页直到找到目标 Gist 或没有更多数据
+ *
+ * 注意：列表接口返回的 Gist 文件对象不包含 content，需要读取内容时请用 getGistById。
  */
-export async function getGists(token: string): Promise<GistResponse[]> {
-  const res = await fetch('https://api.github.com/gists', {
+export async function getGists(token: string, targetGistId?: string): Promise<GistResponse[]> {
+  const perPage = 100
+  let page = 1
+  const allGists: GistResponse[] = []
+
+  while (true) {
+    const res = await fetch(`https://api.github.com/gists?per_page=${perPage}&page=${page}`, {
+      headers: { Authorization: `token ${token}` },
+    })
+    if (!res.ok) {
+      if (res.status === 401 || res.status === 403)
+        throw new Error('身份验证失败或权限不足，请检查 Token 配置')
+      throw new Error(`GitHub API 请求失败: ${res.status}`)
+    }
+
+    const gists: GistResponse[] = await res.json()
+    allGists.push(...gists)
+
+    if (targetGistId && gists.some(g => g.id === targetGistId))
+      return allGists
+
+    if (gists.length < perPage)
+      return allGists
+
+    page++
+  }
+}
+
+/**
+ * 根据 ID 获取单个 Gist，包含完整的文件内容
+ */
+export async function getGistById(token: string, gistId: string): Promise<GistResponse> {
+  const res = await fetch(`https://api.github.com/gists/${gistId}`, {
     headers: { Authorization: `token ${token}` },
   })
   if (!res.ok) {
     if (res.status === 401 || res.status === 403)
       throw new Error('身份验证失败或权限不足，请检查 Token 配置')
+    if (res.status === 404)
+      throw new Error('未找到指定的同步 Gist，请检查 Gist ID')
     throw new Error(`GitHub API 请求失败: ${res.status}`)
   }
   return res.json()

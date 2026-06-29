@@ -20,7 +20,7 @@ import {
   tagsMetadata,
   tagsReady,
 } from '~/logic/storage'
-import { canPush, getGists, mergeWithRemoteFile, updateGist } from '~/logic/sync'
+import { canPush, getGistById, mergeMarks, mergeTags, updateGist } from '~/logic/sync'
 
 // only on dev mode
 if (import.meta.hot) {
@@ -602,31 +602,52 @@ async function performPull(retries = 3, { force = false } = {}) {
         try {
           // eslint-disable-next-line no-console
           console.log(`[Sync] Starting initial pull (attempt ${i + 1})...`)
-          const gists = await getGists(syncConfig.value.token)
-          const gist = gists.find(g => g.id === syncConfig.value.gistId)
-          const file = gist?.files['markflow_sync.json']
+          // 列表接口不包含文件内容，必须单独获取 Gist 详情才能读取 content
+          const gist = await getGistById(syncConfig.value.token, syncConfig.value.gistId)
+          const file = gist.files?.['markflow_sync.json']
 
-          if (file && file.content) {
-            const { marks: mergedMarks, tags: mergedTags } = mergeWithRemoteFile(
-              toRaw(marksByUrl.value),
-              toRaw(tagsMetadata.value),
-              file.content,
-            )
+          if (!file) {
+            console.error('[Sync] markflow_sync.json not found in Gist:', syncConfig.value.gistId)
+            throw new Error('同步 Gist 中未找到 markflow_sync.json 文件')
+          }
 
+          if (!file.content) {
+            console.warn('[Sync] markflow_sync.json exists but has no content, treating as empty remote data')
             await enqueueWrite(async () => {
-              marksByUrl.value = mergedMarks
-              tagsMetadata.value = mergedTags
               syncStatus.value.lastSyncTime = Date.now()
               syncStatus.value.lastSyncStatus = 'success'
               syncStatus.value.errorMessage = ''
-
-              await purgeTombstones()
-              browser.runtime.sendMessage({ type: 'refresh-sidepanel-data' }).catch(() => {})
             })
-
-            // eslint-disable-next-line no-console
-            console.log('[Sync] Initial pull and merge successful')
+            return
           }
+
+          const remoteData = JSON.parse(file.content)
+          const localMarks = toRaw(marksByUrl.value)
+          const localTags = toRaw(tagsMetadata.value)
+          const remoteMarks = remoteData.marks || {}
+          const remoteTags = remoteData.tags || {}
+
+          // eslint-disable-next-line no-console
+          console.log('[Sync] Pull data', {
+            localMarkCount: Object.keys(localMarks).length,
+            remoteMarkCount: Object.keys(remoteMarks).length,
+            localTagCount: Object.keys(localTags).length,
+            remoteTagCount: Object.keys(remoteTags).length,
+          })
+
+          await enqueueWrite(async () => {
+            marksByUrl.value = mergeMarks(localMarks, remoteMarks)
+            tagsMetadata.value = mergeTags(localTags, remoteTags)
+            syncStatus.value.lastSyncTime = Date.now()
+            syncStatus.value.lastSyncStatus = 'success'
+            syncStatus.value.errorMessage = ''
+
+            await purgeTombstones()
+            browser.runtime.sendMessage({ type: 'refresh-sidepanel-data' }).catch(() => {})
+          })
+
+          // eslint-disable-next-line no-console
+          console.log('[Sync] Initial pull and merge successful')
           return // 成功则退出
         }
         catch (error: any) {
@@ -677,8 +698,17 @@ browser.storage.onChanged.addListener((changes) => {
   }
 })
 
-// 启动时拉取
-performPull()
+browser.runtime.onStartup.addListener(() => {
+  // eslint-disable-next-line no-console
+  console.log('[Sync] Browser started, waiting for storage ready then pulling if enabled')
+  Promise.all([dataReady, tagsReady, syncReady]).then(() => {
+    if (syncConfig.value.enabled && syncConfig.value.gistId) {
+      // eslint-disable-next-line no-console
+      console.log('[Sync] Startup pull triggered')
+      performPull()
+    }
+  })
+})
 
 onMessage<{ tagId: string }>('delete-tag', async ({ data }) => {
   await ensureReady()

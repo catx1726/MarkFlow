@@ -20,6 +20,7 @@ watchEffect(() => {
 // Local state for editing to enable explicit saving
 const localSettings = reactive(cloneDeep(settings.value))
 const saveStatus = ref('')
+const syncConnectStatus = ref('')
 const isJustSaved = ref(false)
 let saveTimeout: number | undefined
 let saveResetTimeout: number | undefined
@@ -122,8 +123,9 @@ async function connectSync() {
     return
   }
 
+  syncConnectStatus.value = '正在连接 GitHub...'
+
   try {
-    saveStatus.value = '正在连接 GitHub...'
     await Promise.all([dataReady, tagsReady, syncReady])
 
     const gists = await getGists(syncConfig.value.token)
@@ -132,9 +134,15 @@ async function connectSync() {
 
     if (existingGist) {
       syncConfig.value.gistId = existingGist.id
-      // 先强制拉取并合并远程数据，再启用自动同步，防止本地空数据覆盖远程
-      await sendMessage('trigger-sync', {}, 'background')
+      // 先启用同步，让 trigger-sync 能够强制拉取
       syncConfig.value.enabled = true
+      syncConfig.value.lastSyncTime = Date.now()
+      // 等待 storage 变更传播到 background，再触发拉取
+      await new Promise(resolve => setTimeout(resolve, 100))
+      // 强制拉取并合并远程数据，防止本地空数据覆盖远程
+      await sendMessage('trigger-sync', {}, 'background').catch((err: any) => {
+        console.error('[Options] trigger-sync failed:', err)
+      })
       showAlert('已成功连接到现有的同步 Gist！')
     }
     else {
@@ -146,16 +154,19 @@ async function connectSync() {
       })
       syncConfig.value.gistId = newGist.id
       syncConfig.value.enabled = true
+      syncConfig.value.lastSyncTime = Date.now()
       showAlert('已创建新的同步 Gist 并开启同步！')
       // 新 Gist 创建后拉取一次，以将 lastSyncStatus 置为 success，后续推送才能正常进行
-      await sendMessage('trigger-sync', {}, 'background')
+      await sendMessage('trigger-sync', {}, 'background').catch((err: any) => {
+        console.error('[Options] trigger-sync failed:', err)
+      })
     }
   }
   catch (err: any) {
     showAlert(`连接失败: ${err.message}`)
   }
   finally {
-    saveStatus.value = ''
+    syncConnectStatus.value = ''
   }
 }
 
@@ -572,10 +583,10 @@ onUnmounted(() => {
             <div class="flex items-center gap-4">
               <button
                 class="px-[16px] py-2 text-[14px] font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50"
-                :disabled="!syncConfig.token"
+                :disabled="!syncConfig.token || syncConnectStatus !== ''"
                 @click="connectSync"
               >
-                {{ syncConfig.gistId ? '重新连接' : '连接并开启同步' }}
+                {{ syncConfig.enabled ? '重新连接' : '连接并开启同步' }}
               </button>
               <div v-if="syncConfig.gistId" class="flex flex-col">
                 <span class="text-[12px] font-medium" :class="syncStatus.lastSyncStatus === 'error' ? 'text-red-500' : 'text-green-600'">
@@ -587,6 +598,9 @@ onUnmounted(() => {
                 </p>
               </div>
             </div>
+            <p v-if="syncConnectStatus !== ''" class="text-[13px] text-blue-600">
+              {{ syncConnectStatus }}
+            </p>
 
             <div v-if="syncConfig.gistId" class="pt-2 border-t border-gray-100 dark:border-gray-700">
               <label class="flex items-center gap-2 cursor-pointer">
