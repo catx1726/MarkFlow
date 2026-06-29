@@ -117,6 +117,14 @@ async function exportLogs() {
   a.click()
 }
 
+function withTimeout<T>(promise: Promise<T>, ms: number, reason: string): Promise<T> {
+  const timeout = new Promise<never>((_, reject) => {
+    const id = setTimeout(() => reject(new Error(reason)), ms)
+    promise.then(() => clearTimeout(id)).catch(() => clearTimeout(id))
+  })
+  return Promise.race([promise, timeout])
+}
+
 async function connectSync() {
   if (!syncConfig.value.token) {
     showAlert('请先输入 GitHub Token')
