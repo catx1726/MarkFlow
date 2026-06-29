@@ -72,6 +72,10 @@ describe('sync Logic', () => {
       expect(canPush(baseConfig, { ...baseStatus, lastSyncStatus: 'none' })).toBe(false)
     })
 
+    it('同步失败时不应推送', () => {
+      expect(canPush(baseConfig, { ...baseStatus, lastSyncStatus: 'error' })).toBe(false)
+    })
+
     it('启用、配置完整且已成功同步过时可以推送', () => {
       expect(canPush(baseConfig, baseStatus)).toBe(true)
     })

@@ -67,7 +67,7 @@ export function canPush(config: SyncConfig, status: SyncStatus): boolean {
   return config.enabled
     && !!config.token
     && !!config.gistId
-    && status.lastSyncStatus !== 'none'
+    && status.lastSyncStatus === 'success'
 }
 
 /**
