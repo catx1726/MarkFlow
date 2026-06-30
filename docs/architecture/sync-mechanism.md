@@ -98,7 +98,7 @@ Manifest V3 的 Service Worker 可能被回收，`webext-bridge` 的 `sendMessag
 每个 Mark 拥有唯一 ID。合并逻辑如下：
 1. 遍历远程数据。
 2. 若本地无此 ID -> 新增。
-3. 若两端均有此 ID -> 取 `Math.max(createdAt, deletedAt)` 较大者作为最终态。
+3. 若两端均有此 ID -> 比较两者的“最后活跃时间”（`Math.max(createdAt, deletedAt)`），取较新者作为最终态。
 4. 物理清理所有标记为已删除且已合并的记录。
 
 合并操作由 `mergeWithRemoteFile` 封装，它会处理 `JSON.parse` 异常、空内容等边界情况。
@@ -133,7 +133,7 @@ if (Date.now() - lastErrorRecoveryAt < ERROR_RECOVERY_COOLDOWN_MS) {
 ## 6. 安全考量
 
 - **最小权限**：引导用户生成仅勾选 `gist` 权限的 Token。
-- **加密存储**：Token 存储在扩展私有的 `storage.local` 中。
+- **私有存储**：Token 存储在扩展私有的 `storage.local` 中，其他网页或扩展无法访问。
 - **过期处理**：系统会自动捕获 GitHub 的 401 错误，并在 UI 提示“身份验证失败”，同时自动暂停同步以保护账户安全。
 - **Payload 大小监控**：同步前检查数据包大小，超过 8MB 记录警告，接近 GitHub 10MB 上限时提示用户清理。
 

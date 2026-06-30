@@ -22,7 +22,7 @@
 
 ### 🔄 多端同步（可选）
 
-通过 GitHub Gist 在多台设备间同步标记。首次连接先拉取合并，避免本地覆盖云端；Token 仅 gist 权限，数据以私有 Gist 存储。
+通过 GitHub Gist 在多台设备间同步标记。
 
 ![MarkFlow Preview](./assets/Highlight-Mark-Flow_4.gif)
 
