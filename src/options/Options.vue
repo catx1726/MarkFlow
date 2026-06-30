@@ -158,9 +158,16 @@ async function connectSync() {
       syncConfig.value.gistId = existingGist.id
       // 先强制拉取并合并远程数据，成功后再启用自动同步，防止本地空数据覆盖远程
       // webext-bridge 在 MV3 下有时不返回响应，加超时避免 UI 卡住
-      await triggerPull({ force: true, token: syncConfig.value.token, gistId: existingGist.id })
-      syncConfig.value.enabled = true
-      showAlert('已成功连接到现有的同步 Gist！')
+      try {
+        await triggerPull({ force: true, token: syncConfig.value.token, gistId: existingGist.id })
+        syncConfig.value.enabled = true
+        showAlert('已成功连接到现有的同步 Gist！')
+      }
+      catch (err: any) {
+        // 拉取失败时重置 gistId，避免用户下次手动启用同步时使用了错误/未验证的 Gist ID
+        syncConfig.value.gistId = ''
+        throw err
+      }
     }
     else {
       // 创建新的

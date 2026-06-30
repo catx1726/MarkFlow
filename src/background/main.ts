@@ -659,6 +659,12 @@ async function performPull(retries = 3, { force = false, token = '', gistId = ''
   if (!force && !syncConfig.value.enabled)
     return false
 
+  // performPull 使用 enqueueSync 串行化同步操作，内部通过 enqueueWrite 串行化存储写入。
+  // 二者职责分离：
+  // - enqueueSync 保证 Pull/Push 不会并发执行，isSyncing 仅用于快速拒绝新同步任务。
+  // - enqueueWrite 保证对 marksByUrl/tagsMetadata 的写入串行化，避免数据竞争。
+  // 由于 isSyncing 不会阻塞 enqueueWrite 内部任务的执行，且 enqueueWrite 中的写入完成后
+  // 才会释放 isSyncing，因此不存在死锁。后续 performPush 看到 isSyncing 时会直接返回。
   return enqueueSync(async () => {
     isSyncing = true
     try {
@@ -677,19 +683,21 @@ async function performPull(retries = 3, { force = false, token = '', gistId = ''
 
           if (!file.content) {
             console.warn('[Sync] Remote markflow_sync.json is empty, treating as no remote data')
-            await enqueueWrite(async () => {
+            return await enqueueWrite(async () => {
               syncStatus.value.lastSyncTime = Date.now()
               syncStatus.value.lastSyncStatus = 'success'
               syncStatus.value.errorMessage = '云端同步文件为空，本地数据将在下次变更时上传。'
+              return true
             })
-            return true
           }
 
           const remoteData = JSON.parse(file.content)
           const remoteMarks = remoteData.marks || {}
           const remoteTags = remoteData.tags || {}
 
-          await enqueueWrite(async () => {
+          // eslint-disable-next-line no-console
+          console.log('[Sync] Initial pull and merge successful')
+          return await enqueueWrite(async () => {
             const localMarks = toRaw(marksByUrl.value)
             const localTags = toRaw(tagsMetadata.value)
 
@@ -709,11 +717,8 @@ async function performPull(retries = 3, { force = false, token = '', gistId = ''
 
             await purgeTombstones()
             browser.runtime.sendMessage({ type: 'refresh-sidepanel-data' }).catch(() => {})
+            return true
           })
-
-          // eslint-disable-next-line no-console
-          console.log('[Sync] Initial pull and merge successful')
-          return true // 成功则退出
         }
         catch (error: any) {
           if (error.message.includes('身份验证失败')) {
