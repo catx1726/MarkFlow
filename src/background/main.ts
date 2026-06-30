@@ -19,7 +19,7 @@ import {
   tagsMetadata,
   tagsReady,
 } from '~/logic/storage'
-import { canPush, getGistById, mergeMarks, mergeTags, updateGist } from '~/logic/sync'
+import { canPush, getGistById, mergeWithRemoteFile, updateGist } from '~/logic/sync'
 
 interface TriggerSyncPayload {
   force?: boolean
@@ -449,8 +449,7 @@ browser.runtime.onMessage.addListener((message: any, _sender, sendResponse) => {
       })
     return true
   }
-  // Let other listeners handle unknown messages
-  return false
+  // 不处理的消息，让其他监听器处理
 })
 
 onMessage('report-error', async ({ data, context: _context }) => {
@@ -566,22 +565,22 @@ const performPush = debounce(async () => {
   if (isSyncing || !canPush(syncConfig.value, syncStatus.value))
     return
 
-  // 如果上次同步失败，先拉取远程数据合并后再推送，避免覆盖远程较新的数据。
-  // 增加冷却期，防止连续失败时反复进入错误恢复循环。
-  if (syncStatus.value.lastSyncStatus === 'error') {
-    if (Date.now() - lastErrorRecoveryAt < ERROR_RECOVERY_COOLDOWN_MS) {
-      console.warn('[Sync] Error recovery cooldown active, skipping push')
-      return
-    }
-    lastErrorRecoveryAt = Date.now()
-    const pullSuccess = await performPull(3, { force: false })
-    if (!pullSuccess)
-      return
-  }
-
   await enqueueSync(async () => {
     isSyncing = true
     try {
+      // 如果上次同步失败，先拉取远程数据合并后再推送，避免覆盖远程较新的数据。
+      // 增加冷却期，防止连续失败时反复进入错误恢复循环。
+      if (syncStatus.value.lastSyncStatus === 'error') {
+        if (Date.now() - lastErrorRecoveryAt < ERROR_RECOVERY_COOLDOWN_MS) {
+          console.warn('[Sync] Error recovery cooldown active, skipping push')
+          return
+        }
+        lastErrorRecoveryAt = Date.now()
+        const pullSuccess = await performPullInternal(3, { force: false })
+        if (!pullSuccess)
+          return
+      }
+
       // eslint-disable-next-line no-console
       console.log('[Sync] Starting background push...')
       const payload = {
@@ -646,107 +645,111 @@ const performPush = debounce(async () => {
   })
 }, 10000)
 
-async function performPull(retries = 3, { force = false, token = '', gistId = '' } = {}): Promise<boolean> {
+/**
+ * 执行拉取的核心逻辑（不 enqueueSync，供 performPull / performPush 错误恢复在队列内调用）。
+ */
+async function performPullInternal(retries = 3, { force = false, token = '', gistId = '' } = {}): Promise<boolean> {
   const pullToken = token || syncConfig.value.token
   const pullGistId = gistId || syncConfig.value.gistId
-  console.log('[Sync] performPull called', { retries, force, isSyncing, hasToken: !!pullToken, hasGistId: !!pullGistId, enabled: syncConfig.value.enabled })
-  if (isSyncing)
-    return false
-  await ensureReady()
+  console.log('[Sync] performPullInternal called', { retries, force, isSyncing, hasToken: !!pullToken, hasGistId: !!pullGistId, enabled: syncConfig.value.enabled })
   const hasRequired = pullToken && pullGistId
   if (!hasRequired)
     return false
   if (!force && !syncConfig.value.enabled)
     return false
 
-  // performPull 使用 enqueueSync 串行化同步操作，内部通过 enqueueWrite 串行化存储写入。
-  // 二者职责分离：
-  // - enqueueSync 保证 Pull/Push 不会并发执行，isSyncing 仅用于快速拒绝新同步任务。
-  // - enqueueWrite 保证对 marksByUrl/tagsMetadata 的写入串行化，避免数据竞争。
-  // 由于 isSyncing 不会阻塞 enqueueWrite 内部任务的执行，且 enqueueWrite 中的写入完成后
-  // 才会释放 isSyncing，因此不存在死锁。后续 performPush 看到 isSyncing 时会直接返回。
+  for (let i = 0; i < retries; i++) {
+    try {
+      // eslint-disable-next-line no-console
+      console.log(`[Sync] Starting initial pull (attempt ${i + 1})...`)
+      // 列表接口不包含文件内容，必须单独获取 Gist 详情才能读取 content
+      const gist = await getGistById(pullToken, pullGistId)
+      const file = gist.files?.['markflow_sync.json']
+
+      if (!file) {
+        console.error('[Sync] markflow_sync.json not found in Gist:', pullGistId)
+        throw new Error('同步 Gist 中未找到 markflow_sync.json 文件')
+      }
+
+      if (!file.content) {
+        console.warn('[Sync] Remote markflow_sync.json is empty, treating as no remote data')
+        return await enqueueWrite(async () => {
+          syncStatus.value.lastSyncTime = Date.now()
+          syncStatus.value.lastSyncStatus = 'success'
+          syncStatus.value.errorMessage = '云端同步文件为空，本地数据将在下次变更时上传。'
+          return true
+        })
+      }
+
+      // eslint-disable-next-line no-console
+      console.log('[Sync] Initial pull and merge successful')
+      return await enqueueWrite(async () => {
+        const result = mergeWithRemoteFile(toRaw(marksByUrl.value), toRaw(tagsMetadata.value), file.content)
+
+        // eslint-disable-next-line no-console
+        console.log('[Sync] Pull data', {
+          localMarkCount: Object.keys(result.marks).length,
+          remoteMarkCount: Object.keys(result.marks).length,
+          localTagCount: Object.keys(result.tags).length,
+          remoteTagCount: Object.keys(result.tags).length,
+        })
+
+        marksByUrl.value = result.marks
+        tagsMetadata.value = result.tags
+        syncStatus.value.lastSyncTime = Date.now()
+        syncStatus.value.lastSyncStatus = 'success'
+        syncStatus.value.errorMessage = ''
+
+        await purgeTombstones()
+        browser.runtime.sendMessage({ type: 'refresh-sidepanel-data' }).catch(() => {})
+        return true
+      })
+    }
+    catch (error: any) {
+      if (error.message.includes('身份验证失败')) {
+        await enqueueWrite(async () => {
+          syncConfig.value.enabled = false
+          syncStatus.value.lastSyncStatus = 'error'
+          syncStatus.value.errorMessage = error.message
+        })
+        return false // 认证失败无需重试
+      }
+
+      if (i === retries - 1) {
+        console.error('[Sync] Initial pull failed after retries:', error)
+        await enqueueWrite(async () => {
+          syncStatus.value.lastSyncStatus = 'error'
+          syncStatus.value.errorMessage = error.message
+        })
+        return false
+      }
+      else {
+        const delay = 2 ** i * 1000
+
+        console.warn(`[Sync] Pull failed, retrying in ${delay}ms...`, error)
+        await new Promise(resolve => setTimeout(resolve, delay))
+      }
+    }
+  }
+  return false
+}
+
+async function performPull(retries = 3, { force = false, token = '', gistId = '' } = {}): Promise<boolean> {
+  if (isSyncing)
+    return false
+  await ensureReady()
+  const pullToken = token || syncConfig.value.token
+  const pullGistId = gistId || syncConfig.value.gistId
+  const hasRequired = pullToken && pullGistId
+  if (!hasRequired)
+    return false
+  if (!force && !syncConfig.value.enabled)
+    return false
+
   return enqueueSync(async () => {
     isSyncing = true
     try {
-      for (let i = 0; i < retries; i++) {
-        try {
-          // eslint-disable-next-line no-console
-          console.log(`[Sync] Starting initial pull (attempt ${i + 1})...`)
-          // 列表接口不包含文件内容，必须单独获取 Gist 详情才能读取 content
-          const gist = await getGistById(pullToken, pullGistId)
-          const file = gist.files?.['markflow_sync.json']
-
-          if (!file) {
-            console.error('[Sync] markflow_sync.json not found in Gist:', pullGistId)
-            throw new Error('同步 Gist 中未找到 markflow_sync.json 文件')
-          }
-
-          if (!file.content) {
-            console.warn('[Sync] Remote markflow_sync.json is empty, treating as no remote data')
-            return await enqueueWrite(async () => {
-              syncStatus.value.lastSyncTime = Date.now()
-              syncStatus.value.lastSyncStatus = 'success'
-              syncStatus.value.errorMessage = '云端同步文件为空，本地数据将在下次变更时上传。'
-              return true
-            })
-          }
-
-          const remoteData = JSON.parse(file.content)
-          const remoteMarks = remoteData.marks || {}
-          const remoteTags = remoteData.tags || {}
-
-          // eslint-disable-next-line no-console
-          console.log('[Sync] Initial pull and merge successful')
-          return await enqueueWrite(async () => {
-            const localMarks = toRaw(marksByUrl.value)
-            const localTags = toRaw(tagsMetadata.value)
-
-            // eslint-disable-next-line no-console
-            console.log('[Sync] Pull data', {
-              localMarkCount: Object.keys(localMarks).length,
-              remoteMarkCount: Object.keys(remoteMarks).length,
-              localTagCount: Object.keys(localTags).length,
-              remoteTagCount: Object.keys(remoteTags).length,
-            })
-
-            marksByUrl.value = mergeMarks(localMarks, remoteMarks)
-            tagsMetadata.value = mergeTags(localTags, remoteTags)
-            syncStatus.value.lastSyncTime = Date.now()
-            syncStatus.value.lastSyncStatus = 'success'
-            syncStatus.value.errorMessage = ''
-
-            await purgeTombstones()
-            browser.runtime.sendMessage({ type: 'refresh-sidepanel-data' }).catch(() => {})
-            return true
-          })
-        }
-        catch (error: any) {
-          if (error.message.includes('身份验证失败')) {
-            await enqueueWrite(async () => {
-              syncConfig.value.enabled = false
-              syncStatus.value.lastSyncStatus = 'error'
-              syncStatus.value.errorMessage = error.message
-            })
-            return false // 认证失败无需重试
-          }
-
-          if (i === retries - 1) {
-            console.error('[Sync] Initial pull failed after retries:', error)
-            await enqueueWrite(async () => {
-              syncStatus.value.lastSyncStatus = 'error'
-              syncStatus.value.errorMessage = error.message
-            })
-            return false
-          }
-          else {
-            const delay = 2 ** i * 1000
-
-            console.warn(`[Sync] Pull failed, retrying in ${delay}ms...`, error)
-            await new Promise(resolve => setTimeout(resolve, delay))
-          }
-        }
-      }
-      return false
+      return await performPullInternal(retries, { force, token, gistId })
     }
     finally {
       isSyncing = false
