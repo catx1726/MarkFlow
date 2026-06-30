@@ -1,5 +1,9 @@
 # Unreleased
 
+### [2026-06-30] fix(sync): prevent initial sync from overwriting remote Gist data (#51)
+fix(sync): prevent initial sync from overwriting remote Gist data
+
+
 
 # Released
 
