@@ -118,9 +118,15 @@ async function exportLogs() {
 }
 
 function withTimeout<T>(promise: Promise<T>, ms: number, reason: string): Promise<T> {
+  let settled = false
   const timeout = new Promise<never>((_, reject) => {
-    const id = setTimeout(() => reject(new Error(reason)), ms)
-    promise.then(() => clearTimeout(id)).catch(() => clearTimeout(id))
+    setTimeout(() => {
+      if (!settled)
+        reject(new Error(reason))
+    }, ms)
+  })
+  promise.finally(() => {
+    settled = true
   })
   return Promise.race([promise, timeout])
 }

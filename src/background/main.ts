@@ -674,20 +674,21 @@ async function performPull(retries = 3, { force = false, token = '', gistId = ''
           }
 
           const remoteData = JSON.parse(file.content)
-          const localMarks = toRaw(marksByUrl.value)
-          const localTags = toRaw(tagsMetadata.value)
           const remoteMarks = remoteData.marks || {}
           const remoteTags = remoteData.tags || {}
 
-          // eslint-disable-next-line no-console
-          console.log('[Sync] Pull data', {
-            localMarkCount: Object.keys(localMarks).length,
-            remoteMarkCount: Object.keys(remoteMarks).length,
-            localTagCount: Object.keys(localTags).length,
-            remoteTagCount: Object.keys(remoteTags).length,
-          })
-
           await enqueueWrite(async () => {
+            const localMarks = toRaw(marksByUrl.value)
+            const localTags = toRaw(tagsMetadata.value)
+
+            // eslint-disable-next-line no-console
+            console.log('[Sync] Pull data', {
+              localMarkCount: Object.keys(localMarks).length,
+              remoteMarkCount: Object.keys(remoteMarks).length,
+              localTagCount: Object.keys(localTags).length,
+              remoteTagCount: Object.keys(remoteTags).length,
+            })
+
             marksByUrl.value = mergeMarks(localMarks, remoteMarks)
             tagsMetadata.value = mergeTags(localTags, remoteTags)
             syncStatus.value.lastSyncTime = Date.now()
