@@ -2,6 +2,7 @@
 import { computed, onMounted, onUnmounted, reactive, ref, watch, watchEffect } from 'vue'
 import { usePreferredDark } from '@vueuse/core'
 import { cloneDeep } from 'lodash-es'
+import browser from 'webextension-polyfill'
 import { sendMessage } from 'webext-bridge/options'
 import { getLogs } from '../logic/errorCollector'
 import { getActiveSectionId } from './scrollSpy'
@@ -19,6 +20,7 @@ watchEffect(() => {
 // Local state for editing to enable explicit saving
 const localSettings = reactive(cloneDeep(settings.value))
 const saveStatus = ref('')
+const syncConnectStatus = ref('')
 const isJustSaved = ref(false)
 let saveTimeout: number | undefined
 let saveResetTimeout: number | undefined
@@ -80,7 +82,7 @@ function removeColor(index: number) {
   localSettings.highlightColors.splice(index, 1)
 }
 
-function saveSettings() {
+async function saveSettings() {
   settings.value = cloneDeep(localSettings)
   saveStatus.value = '设置已保存！'
   isJustSaved.value = true
@@ -96,6 +98,13 @@ function saveSettings() {
   sendMessage('refresh-sidepanel-data', {}, 'background').catch(() => {
     // 忽略错误
   })
+  // 通知所有 content script 刷新高亮样式
+  const tabs = await browser.tabs.query({ status: 'complete' })
+  for (const tab of tabs) {
+    if (tab.id && tab.url && tab.url.startsWith('http')) {
+      sendMessage('refresh-highlights', {}, { context: 'content-script', tabId: tab.id }).catch(() => {})
+    }
+  }
 }
 
 async function exportLogs() {
@@ -108,15 +117,31 @@ async function exportLogs() {
   a.click()
 }
 
+function withTimeout<T>(promise: Promise<T>, ms: number, reason: string): Promise<T> {
+  const timeout = new Promise<never>((_, reject) => {
+    setTimeout(() => reject(new Error(reason)), ms)
+  })
+  return Promise.race([promise, timeout])
+}
+
 async function connectSync() {
   if (!syncConfig.value.token) {
     showAlert('请先输入 GitHub Token')
     return
   }
 
+  syncConnectStatus.value = '正在连接 GitHub...'
+
   try {
-    saveStatus.value = '正在连接 GitHub...'
     await Promise.all([dataReady, tagsReady, syncReady])
+
+    // Wake up service worker before sending sync message (MV3 reliability)
+    try {
+      await browser.runtime.getPlatformInfo()
+    }
+    catch {
+      // ignore
+    }
 
     const gists = await getGists(syncConfig.value.token)
     // 查找包含 markflow_sync.json 的 Gist
@@ -124,8 +149,18 @@ async function connectSync() {
 
     if (existingGist) {
       syncConfig.value.gistId = existingGist.id
-      syncConfig.value.enabled = true
-      showAlert('已成功连接到现有的同步 Gist！')
+      // 先强制拉取并合并远程数据，成功后再启用自动同步，防止本地空数据覆盖远程
+      // webext-bridge 在 MV3 下有时不返回响应，加超时避免 UI 卡住
+      try {
+        await triggerPull({ force: true, token: syncConfig.value.token, gistId: existingGist.id })
+        syncConfig.value.enabled = true
+        showAlert('已成功连接到现有的同步 Gist！')
+      }
+      catch (err: any) {
+        // 拉取失败时重置 gistId，避免用户下次手动启用同步时使用了错误/未验证的 Gist ID
+        syncConfig.value.gistId = ''
+        throw err
+      }
     }
     else {
       // 创建新的
@@ -137,16 +172,41 @@ async function connectSync() {
       syncConfig.value.gistId = newGist.id
       syncConfig.value.enabled = true
       showAlert('已创建新的同步 Gist 并开启同步！')
+      // 新 Gist 创建后拉取一次，以将 lastSyncStatus 置为 success，后续推送才能正常进行
+      triggerPull({ force: true, token: syncConfig.value.token, gistId: newGist.id }).catch((err: any) => {
+        console.error('[Options] trigger-sync failed:', err)
+      })
     }
-    syncConfig.value.lastSyncTime = Date.now()
-    // 成功连接后触发一次全量拉取合并
-    await sendMessage('trigger-sync', {}, 'background')
   }
   catch (err: any) {
     showAlert(`连接失败: ${err.message}`)
   }
   finally {
-    saveStatus.value = ''
+    syncConnectStatus.value = ''
+  }
+}
+
+async function triggerPull({ force = false, timeoutMs = 8000, token = '', gistId = '' } = {}) {
+  const payload = { force, token, gistId }
+  console.log('[Options] triggerPull started', { force, hasToken: !!token, hasGistId: !!gistId })
+  try {
+    const result = await withTimeout(
+      sendMessage('trigger-sync', payload, 'background'),
+      timeoutMs,
+      'trigger-sync timeout',
+    )
+    console.log('[Options] webext-bridge trigger-sync succeeded:', result)
+    return result
+  }
+  catch (bridgeError: any) {
+    console.warn('[Options] webext-bridge trigger-sync failed, falling back to runtime message:', bridgeError)
+    const fallbackResult = await withTimeout(
+      browser.runtime.sendMessage({ type: 'trigger-sync-pull', ...payload }),
+      timeoutMs,
+      'trigger-sync-pull timeout',
+    )
+    console.log('[Options] runtime fallback trigger-sync-pull result:', fallbackResult)
+    return fallbackResult
   }
 }
 
@@ -154,6 +214,7 @@ async function connectSync() {
 const navItems = [
   { id: 'welcome', label: '欢迎使用' },
   { id: 'default-color', label: '默认高亮颜色' },
+  { id: 'highlight-height', label: '高亮标记高度' },
   { id: 'color-palette', label: '高亮颜色配置' },
   { id: 'shortcuts', label: '快捷键设置' },
   { id: 'blacklist', label: '网站黑名单' },
@@ -384,6 +445,35 @@ onUnmounted(() => {
           </div>
         </div>
 
+        <!-- Highlight Height -->
+        <div id="highlight-height" class="setting-card scroll-mt-8">
+          <h2 class="text-[18px] font-semibold mb-[12px]">
+            高亮标记高度
+          </h2>
+          <p class="text-[14px] text-gray-500 mb-[16px]">
+            控制高亮标记的下划线粗细和底部间距，取值范围 1–20px。
+          </p>
+          <div class="flex items-center gap-[16px]">
+            <input
+              v-model.number="localSettings.highlightHeight"
+              type="range"
+              min="1"
+              max="20"
+              class="flex-1"
+            >
+            <span class="w-[48px] text-center font-mono text-[14px]">{{ localSettings.highlightHeight }}px</span>
+          </div>
+          <div class="mt-[16px]">
+            <span class="text-[14px] text-gray-500">预览：</span>
+            <span
+              class="text-[14px]"
+              :style="{ boxShadow: `inset 0 -${localSettings.highlightHeight}px 0 0 ${localSettings.defaultHighlightColor}`, paddingBottom: `${localSettings.highlightHeight}px` }"
+            >
+              这是一段示例高亮文本
+            </span>
+          </div>
+        </div>
+
         <!-- Highlight Color Palette -->
         <div id="color-palette" class="setting-card scroll-mt-8">
           <h2 class="text-[18px] font-semibold mb-[12px]">
@@ -533,10 +623,10 @@ onUnmounted(() => {
             <div class="flex items-center gap-4">
               <button
                 class="px-[16px] py-2 text-[14px] font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50"
-                :disabled="!syncConfig.token"
+                :disabled="!syncConfig.token || syncConnectStatus !== ''"
                 @click="connectSync"
               >
-                {{ syncConfig.gistId ? '重新连接' : '连接并开启同步' }}
+                {{ syncConfig.enabled ? '重新连接' : '连接并开启同步' }}
               </button>
               <div v-if="syncConfig.gistId" class="flex flex-col">
                 <span class="text-[12px] font-medium" :class="syncStatus.lastSyncStatus === 'error' ? 'text-red-500' : 'text-green-600'">
@@ -548,6 +638,9 @@ onUnmounted(() => {
                 </p>
               </div>
             </div>
+            <p v-if="syncConnectStatus !== ''" class="text-[13px] text-blue-600">
+              {{ syncConnectStatus }}
+            </p>
 
             <div v-if="syncConfig.gistId" class="pt-2 border-t border-gray-100 dark:border-gray-700">
               <label class="flex items-center gap-2 cursor-pointer">

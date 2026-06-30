@@ -70,6 +70,7 @@ export interface Mark {
   contextOrder?: number
   surroundingSnippet?: string
   deletedAt?: number // 新增：删除时间戳，用于同步删除
+  restoreFailedAt?: number
 }
 
 export interface RemoveMarkPayload {

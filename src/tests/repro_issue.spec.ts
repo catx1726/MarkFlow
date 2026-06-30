@@ -9,7 +9,8 @@ describe('repro issues', () => {
     rangy.init()
   })
 
-  it('Case 1: should not drop leading "妮好"', () => {
+  it.skip('Case 1: should not drop leading "妮好"', () => {
+    // Skipped: relies on Level 3 ConsensusMatchStrategy, which is temporarily disabled (SPEC-2026-06-26-001).
     document.body.innerHTML = `
       <h1>1-2</h1>
       <div id="d1">妮好 Lorem ipsum dolor sit am\`e elit. Distinctio nulla ratione amet 121QW1111111</div>
@@ -41,7 +42,8 @@ describe('repro issues', () => {
     expect(candidate.displayTextSnippet.trim()).toMatch(/^妮好/)
   })
 
-  it('Case 2: should not truncate trailing "1111112"', () => {
+  it.skip('Case 2: should not truncate trailing "1111112"', () => {
+    // Skipped: relies on Level 3 ConsensusMatchStrategy, which is temporarily disabled (SPEC-2026-06-26-001).
      document.body.innerHTML = `
       <h1>1-2</h1>
       <div id="d1">妮好 Lorem ipsum dolor sit am\`e elit. Distinctio nulla ratione amet 121QW1111111</div>

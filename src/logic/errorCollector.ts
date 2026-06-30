@@ -19,7 +19,8 @@ export const MAX_LOGS = 50;
  * @param type 错误发生的上下文（content script 或 background）。
  */
 export async function collectError(error: any, type: 'content' | 'background') {
-  const extensionOrigin = chrome.runtime.getURL('')
+  const extensionOrigin = typeof chrome !== 'undefined' && chrome.runtime ? chrome.runtime.getURL('') : ''
+  if (!extensionOrigin) return
 
   let message = ''
   let stack = ''

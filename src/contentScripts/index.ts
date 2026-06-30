@@ -1,29 +1,30 @@
-import { collectError } from '../logic/errorCollector'
-
-window.addEventListener('error', (event) => collectError(event.error, 'content'))
-window.addEventListener('unhandledrejection', (event) => collectError(event.reason, 'content'))
-
-/* eslint-disable no-console */
-console.log('[WebMarker] CONTENT SCRIPT LOADED AT TOP LEVEL')
 import { onMessage, sendMessage } from 'webext-bridge/content-script'
 import rangy from 'rangy/lib/rangy-core'
+import { collectError } from '../logic/errorCollector'
 import 'rangy/lib/rangy-classapplier'
 import 'rangy/lib/rangy-serializer'
-import { highlightDefaultStyle, shortcuts } from '~/logic/config'
-import { isPageBlacklisted, settings, settingsReady } from '~/logic/settings'
-import { getCanonicalUrlForMark, getMarkIdFromElement, querySelectorAllDeep, querySelectorDeep } from '~/logic/dom'
 import { HighlightStateManager } from './state'
 import { UIManager } from './ui'
 import { ContentChangeMonitor } from './monitor'
 import { HighlightRestorer } from './restorer'
+import { getCanonicalUrlForMark, getMarkIdFromElement, querySelectorAllDeep, querySelectorDeep } from '~/logic/dom'
+import { isPageBlacklisted, settings, settingsReady } from '~/logic/settings'
+import { highlightDefaultStyle, shortcuts } from '~/logic/config'
 import '../styles'
+
+window.addEventListener('error', event => collectError(event.error, 'content'))
+window.addEventListener('unhandledrejection', event => collectError(event.reason, 'content'))
+
+/* eslint-disable no-console */
+console.log('[WebMarker] CONTENT SCRIPT LOADED AT TOP LEVEL')
 
 // #region --- State Management ---
 const state = new HighlightStateManager()
 const restorer = new HighlightRestorer(state)
 const ui = new UIManager(state)
 const monitor = new ContentChangeMonitor(async () => {
-  if (state.modalState.visible) return
+  if (state.modalState.visible)
+    return
   await restorer.restoreHighlights()
 })
 let selectionTimer: number
@@ -34,7 +35,8 @@ let selectionTimer: number
  */
 function attachListenersToShadowRoots(rootNode: Document | ShadowRoot) {
   try {
-    if (!rootNode) return
+    if (!rootNode)
+      return
     rootNode.addEventListener('mousedown', handleMouseDown as EventListener, true)
     rootNode.addEventListener('mouseup', handleMouseUp as EventListener, true)
     const allElements = rootNode.querySelectorAll('*')
@@ -43,7 +45,8 @@ function attachListenersToShadowRoots(rootNode: Document | ShadowRoot) {
         attachListenersToShadowRoots(element.shadowRoot)
       }
     }
-  } catch (error) {
+  }
+  catch (error) {
     console.error('Failed to attach shadow listeners:', error)
   }
 }
@@ -60,20 +63,15 @@ async function initialize() {
     rangy.init()
     state.previewApplier = rangy.createClassApplier('webext-highlight-preview', {
       elementTagName: 'span',
-      elementAttributes: { style: `${highlightDefaultStyle(settings.value.defaultHighlightColor)} ` },
-      normalize: false
+      elementAttributes: { style: `${highlightDefaultStyle(settings.value.defaultHighlightColor, settings.value.highlightHeight)} ` },
+      normalize: false,
     })
     ui.ensureMounted()
     window.addEventListener('keydown', handleKeyDown)
     attachListenersToShadowRoots(document)
-    const ambiguous = await restorer.restoreHighlights()
-    if (ambiguous.length > 0 && !state.modalState.visible) {
-      setTimeout(() => {
-        if (state.ambiguousMarksQueue.value.length > 0 && !state.modalState.visible) {
-          state.disambiguationModalApp?.show(state.ambiguousMarksQueue.value)
-        }
-      }, 1000)
-    }
+    await restorer.restoreHighlights()
+    // Level 4 disambiguation UI is intentionally skipped (SPEC-2026-06-26-001).
+    // Future restoration: check restorer.restoreHighlights() return value and show modal here.
     {
       const hash = window.location.hash
       if (hash.startsWith('#__highlight-mark__')) {
@@ -83,7 +81,8 @@ async function initialize() {
             try {
               restorer.scrollToMark(markId)
               history.replaceState(null, '', window.location.pathname + window.location.search)
-            } catch (error) {
+            }
+            catch (error) {
               console.error('Error during scroll to mark:', error)
             }
           }, 100)
@@ -94,7 +93,8 @@ async function initialize() {
     monitor.setupBodyObserver()
     monitor.setupSPAListener()
     console.log('[ContentScript] Initialization complete.')
-  } catch (e) {
+  }
+  catch (e) {
     console.error('[ContentScript] Initialization failed:', e)
   }
 }
@@ -115,12 +115,15 @@ function handleKeyDown(event: KeyboardEvent) {
 function handleMouseDown(event: MouseEvent) {
   ui.cancelTooltipDebounce()
   // 修复：使用 composedPath 获取实际目标，处理 Shadow DOM 事件重定向
-  const actualTarget = event.composedPath().find((el) => el instanceof HTMLElement) as HTMLElement | undefined
+  const actualTarget = event.composedPath().find(el => el instanceof HTMLElement) as HTMLElement | undefined
   const target = actualTarget || (event.target as HTMLElement)
-  if (target instanceof Element && target.shadowRoot) return
-  if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return
+  if (target instanceof Element && target.shadowRoot)
+    return
+  if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)
+    return
   const path = event.composedPath() as HTMLElement[]
-  if (path.some((el) => el instanceof HTMLElement && el.classList.contains('tooltip-card'))) return
+  if (path.some(el => el instanceof HTMLElement && el.classList.contains('tooltip-card')))
+    return
 
   if (!target.closest('span[class*="webext-highlight-"]')) {
     state.tooltipApp?.hide()
@@ -130,9 +133,10 @@ function handleMouseDown(event: MouseEvent) {
 
 function handleMouseUp(event: MouseEvent) {
   const target = event.target as HTMLElement
-  if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return
+  if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)
+    return
   const path = event.composedPath()
-  if (event.button === 2 || path.some((el) => el instanceof HTMLElement && el.classList.contains('tooltip-card')))
+  if (event.button === 2 || path.some(el => el instanceof HTMLElement && el.classList.contains('tooltip-card')))
     return
   const eventSnapshot = {
     target,
@@ -140,7 +144,7 @@ function handleMouseUp(event: MouseEvent) {
     clientX: event.clientX,
     clientY: event.clientY,
     altKey: event.altKey,
-    detail: event.detail
+    detail: event.detail,
   }
   clearTimeout(selectionTimer)
   selectionTimer = window.setTimeout(() => processSelection(eventSnapshot), 50)
@@ -155,9 +159,11 @@ function findContainingBlock(node: Node): HTMLElement {
   while (current) {
     if (current.nodeType === Node.ELEMENT_NODE) {
       const display = window.getComputedStyle(current as Element).display
-      if (display === 'block' || display === 'list-item' || display.startsWith('table')) return current as HTMLElement
+      if (display === 'block' || display === 'list-item' || display.startsWith('table'))
+        return current as HTMLElement
     }
-    if (current.parentNode instanceof ShadowRoot) return current as HTMLElement
+    if (current.parentNode instanceof ShadowRoot)
+      return current as HTMLElement
     current = current.parentNode
   }
   return node as HTMLElement
@@ -173,7 +179,7 @@ function processSelection(event: {
 }) {
   const initialSelection = rangy.getSelection()
   // 修复：使用 composedPath 中的实际目标元素，正确处理 Shadow DOM 内的事件重定向
-  const actualTargetNode = (event.path.find((el) => el instanceof Node && el.nodeType === Node.ELEMENT_NODE) as HTMLElement | undefined) || (event.target as HTMLElement | null)
+  const actualTargetNode = (event.path.find(el => el instanceof Node && el.nodeType === Node.ELEMENT_NODE) as HTMLElement | undefined) || (event.target as HTMLElement | null)
   const targetNode = actualTargetNode as Node
   const targetElement = (
     targetNode.nodeType === Node.ELEMENT_NODE ? targetNode : targetNode.parentNode
@@ -187,7 +193,7 @@ function processSelection(event: {
     className: markElement?.className,
     targetTag: (targetNode as HTMLElement)?.tagName,
     targetClass: (targetNode as HTMLElement)?.className,
-    targetId: (targetNode as HTMLElement)?.id
+    targetId: (targetNode as HTMLElement)?.id,
   })
   const isNewSelectionAction = event.altKey && !initialSelection.isCollapsed
 
@@ -195,7 +201,7 @@ function processSelection(event: {
     ui.clearPreviewHighlight()
     let range: rangy.RangyRange | null = null
     if (event.detail >= 3) {
-      const shadowRoot = event.path.find((node) => node instanceof ShadowRoot) as ShadowRoot | undefined
+      const shadowRoot = event.path.find(node => node instanceof ShadowRoot) as ShadowRoot | undefined
       if (shadowRoot) {
         const clickedElement = shadowRoot.elementFromPoint(event.clientX, event.clientY)
         if (clickedElement) {
@@ -203,18 +209,21 @@ function processSelection(event: {
           if (blockElement && blockElement.textContent?.trim()) {
             const correctedRange = rangy.createRange()
             correctedRange.selectNodeContents(blockElement)
-            if (!correctedRange.collapsed) range = correctedRange
+            if (!correctedRange.collapsed)
+              range = correctedRange
           }
         }
       }
     }
     if (!range) {
       const freshSelection = rangy.getSelection()
-      if (freshSelection.rangeCount > 0 && !freshSelection.isCollapsed) range = freshSelection.getRangeAt(0)
+      if (freshSelection.rangeCount > 0 && !freshSelection.isCollapsed)
+        range = freshSelection.getRangeAt(0)
     }
     if (range && !range.collapsed) {
       const capturedText = range.toString().trim()
-      if (!capturedText) return
+      if (!capturedText)
+        return
       try {
         const root = range.commonAncestorContainer.getRootNode()
         const capturedRoot = root instanceof ShadowRoot ? root : undefined
@@ -227,7 +236,8 @@ function processSelection(event: {
 
         state.previewApplier?.applyToRange(range)
         ui.showTooltip(event.clientX, event.clientY, false, '', settings.value.defaultHighlightColor, capturedText, [])
-      } catch (e) {
+      }
+      catch (e) {
         console.error('[WebMarker] Error during selection processing:', e)
         state.tooltipApp?.hide()
       }
@@ -238,7 +248,8 @@ function processSelection(event: {
   }
 
   if (markElement && initialSelection.isCollapsed) {
-    if (markElement.classList.contains('webext-highlight-preview')) return
+    if (markElement.classList.contains('webext-highlight-preview'))
+      return
     handleExistingMarkClick(markElement, event.clientX, event.clientY)
     return
   }
@@ -250,10 +261,12 @@ function processSelection(event: {
 
 function handleExistingMarkClick(markElement: HTMLElement, x: number, y: number) {
   const markId = getMarkIdFromElement(markElement)
-  if (!markId) return
+  if (!markId)
+    return
   state.currentMarkIdForColorChange = markId
   const allSpans = querySelectorAllDeep(`.webext-highlight-${markId}`)
-  if (allSpans.length === 0) return
+  if (allSpans.length === 0)
+    return
   const range = rangy.createRange()
   range.setStartBefore(allSpans[0])
   range.setEndAfter(allSpans[allSpans.length - 1])
@@ -262,7 +275,8 @@ function handleExistingMarkClick(markElement: HTMLElement, x: number, y: number)
   tempSelection.addRange(range)
   state.currentSerializationRoot = undefined
   const root = range.commonAncestorContainer.getRootNode()
-  if (root instanceof ShadowRoot) state.currentSerializationRoot = root
+  if (root instanceof ShadowRoot)
+    state.currentSerializationRoot = root
   state.serializedSelection = rangy.serializeSelection(tempSelection, true, state.currentSerializationRoot)
   showTooltipForExistingMark(markId, x, y)
 }
@@ -290,7 +304,8 @@ onMessage('goto-mark', ({ data }) => {
   restorer.scrollToMark(data.markId)
 })
 onMessage('remove-mark', async ({ data: markToRemove }) => {
-  if (!markToRemove || !markToRemove.id) return { success: false, error: 'Invalid mark data' }
+  if (!markToRemove || !markToRemove.id)
+    return { success: false, error: 'Invalid mark data' }
   try {
     await ui.removeMarkById(markToRemove.id)
     return { success: true }

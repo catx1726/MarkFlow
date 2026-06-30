@@ -130,7 +130,7 @@ export class UIManager {
       if (mark) {
         const applier = rangy.createClassApplier(`webext-highlight-${mark.id}`, {
           elementTagName: 'span',
-          elementAttributes: { style: highlightDefaultStyle(mark.color) },
+          elementAttributes: { style: highlightDefaultStyle(mark.color, settings.value.highlightHeight) },
         })
 
         const rangeResult = applyPreciseHighlight(candidateElement, actualText, applier, matchIndex)
@@ -190,7 +190,10 @@ export class UIManager {
     if (isExisting) {
       if (this.state.currentMarkIdForColorChange) {
         querySelectorAllDeep(`.webext-highlight-${this.state.currentMarkIdForColorChange}`).forEach((el) => {
-          if (el instanceof HTMLElement) el.style.boxShadow = `inset 0 -5px 0 0 ${color}`
+          if (el instanceof HTMLElement) {
+            el.style.boxShadow = `inset 0 -${settings.value.highlightHeight}px 0 0 ${color}`
+            el.style.paddingBottom = `${settings.value.highlightHeight}px`
+          }
         })
       }
     } else {
@@ -198,7 +201,7 @@ export class UIManager {
         this.clearPreviewHighlight()
         this.state.previewApplier = rangy.createClassApplier('webext-highlight-preview', {
           elementTagName: 'span',
-          elementAttributes: { style: `${highlightDefaultStyle(color)}` },
+          elementAttributes: { style: `${highlightDefaultStyle(color, settings.value.highlightHeight)}` },
         })
         try {
           const root = this.state.currentSerializationRoot || document.documentElement
@@ -217,7 +220,10 @@ export class UIManager {
   clearPreviewWithColorRestore(): void {
     if (this.state.currentMarkIdForColorChange && this._originalColorForChange) {
       querySelectorAllDeep(`.webext-highlight-${this.state.currentMarkIdForColorChange}`).forEach((el) => {
-        if (el instanceof HTMLElement) el.style.boxShadow = `inset 0 -5px 0 0 ${this._originalColorForChange}`
+        if (el instanceof HTMLElement) {
+          el.style.boxShadow = `inset 0 -${settings.value.highlightHeight}px 0 0 ${this._originalColorForChange}`
+          el.style.paddingBottom = `${settings.value.highlightHeight}px`
+        }
       })
     }
     this.clearPreviewHighlight()
@@ -275,7 +281,10 @@ export class UIManager {
           'background',
         )
         document.querySelectorAll(`.webext-highlight-${this.state.currentMarkIdForColorChange}`).forEach((el) => {
-          if (el instanceof HTMLElement) el.style.boxShadow = `inset 0 -5px 0 0 ${color}`
+          if (el instanceof HTMLElement) {
+            el.style.boxShadow = `inset 0 -${settings.value.highlightHeight}px 0 0 ${color}`
+            el.style.paddingBottom = `${settings.value.highlightHeight}px`
+          }
         })
       } catch (e) {
         console.error('Error during mark update:', e)
@@ -339,7 +348,7 @@ export class UIManager {
     const className = `webext-highlight-${uniqueId}`
     const applier = rangy.createClassApplier(className, {
       elementTagName: 'span',
-      elementAttributes: { style: highlightDefaultStyle(color) },
+      elementAttributes: { style: highlightDefaultStyle(color, settings.value.highlightHeight) },
     })
     const root = rangyRange.commonAncestorContainer.getRootNode()
     let shadowHostSelector: string | undefined

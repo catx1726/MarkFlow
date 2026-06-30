@@ -1,21 +1,21 @@
 import { sendMessage } from 'webext-bridge/content-script'
 import rangy from 'rangy/lib/rangy-core'
+import type { HighlightStateManager } from './state'
 import type { Mark } from '~/logic/storage'
 import { highlightDefaultStyle } from '~/logic/config'
 import { settings } from '~/logic/settings'
 import {
+  DOMScanner,
   applyPreciseHighlight,
   calculateSimilarity,
-  DOMScanner,
   getCanonicalUrlForMark,
-  getHighlightContext,
   getElementSelector,
+  getHighlightContext,
   querySelectorAllDeep,
   querySelectorDeep,
   stripHighlights,
 } from '~/logic/dom'
-import { findCandidateElements, type Candidate } from '~/logic/search'
-import type { HighlightStateManager } from './state'
+import { type Candidate, findCandidateElements } from '~/logic/search'
 
 const L1_SIMILARITY_THRESHOLD = 95
 const CONTEXT_SIMILARITY_THRESHOLD = 80
@@ -31,15 +31,10 @@ function reportRestoreFailure(mark: Mark, reason: string, detail?: any) {
       markId: mark.id,
       url: window.location.href,
       text: mark.text.substring(0, 50),
-      detail
+      detail,
     }, null, 2),
-    type: 'content'
+    type: 'content',
   }, 'background').catch(() => {})
-}
-
-interface SearchRestoreResult {
-  success: boolean
-  candidates?: Candidate[]
 }
 
 export class HighlightRestorer {
@@ -48,21 +43,25 @@ export class HighlightRestorer {
   ) {}
 
   async restoreHighlights(): Promise<Candidate[]> {
-    if (this.state.isRestoring) return this.state.ambiguousMarksQueue.value
+    if (this.state.isRestoring)
+      return this.state.ambiguousMarksQueue.value
     this.state.isRestoring = true
     try {
       const canonicalUrl = getCanonicalUrlForMark()
       const marks = await sendMessage('get-marks-for-url', { url: canonicalUrl }, 'background')
-      if (!marks || marks.length === 0) return this.state.ambiguousMarksQueue.value
+      if (!marks || marks.length === 0)
+        return this.state.ambiguousMarksQueue.value
 
       const now = Date.now()
       const marksToRestore = marks.filter((mark) => {
         if (this.state.restoredMarkIds.has(mark.id)) {
-          if (querySelectorDeep(`.webext-highlight-${mark.id}`)) return false
+          if (querySelectorDeep(`.webext-highlight-${mark.id}`))
+            return false
           this.state.restoredMarkIds.delete(mark.id)
         }
         const cooldown = this.state.failedRestoreCooldowns.get(mark.id)
-        if (cooldown && now < cooldown) return false
+        if (cooldown && now < cooldown)
+          return false
         return true
       })
 
@@ -74,10 +73,12 @@ export class HighlightRestorer {
         return a.createdAt - b.createdAt
       })
 
-      if (marksToRestore.length > 0) await this.applyMarksTwoPhases(marksToRestore)
+      if (marksToRestore.length > 0)
+        await this.applyMarksTwoPhases(marksToRestore)
 
       return this.state.ambiguousMarksQueue.value
-    } finally {
+    }
+    finally {
       this.state.isRestoring = false
     }
   }
@@ -89,7 +90,7 @@ export class HighlightRestorer {
     for (const mark of marks) {
       const applier = rangy.createClassApplier(`webext-highlight-${mark.id}`, {
         elementTagName: 'span',
-        elementAttributes: { style: highlightDefaultStyle(mark.color) },
+        elementAttributes: { style: highlightDefaultStyle(mark.color, settings.value.highlightHeight) },
       })
       const root = this.getDeserializationRoot(mark)
       if (!root) {
@@ -106,7 +107,8 @@ export class HighlightRestorer {
           this.state.removeFromAmbiguousQueue(mark.id)
           continue
         }
-      } catch {
+      }
+      catch {
         // 路径失效，静默处理，留待第二阶段
       }
       failedMarks.push(mark)
@@ -121,15 +123,21 @@ export class HighlightRestorer {
     for (let i = 0; i < marksToSearch.length; i++) {
       const mark = marksToSearch[i]
       // 双重检查：循环过程中可能被其他路径恢复
-      if (this.state.restoredMarkIds.has(mark.id)) continue
+      if (this.state.restoredMarkIds.has(mark.id))
+        continue
 
-      const result = await this.restoreBySearch(mark)
-      if (!result.success && result.candidates) {
-        this.state.addToAmbiguousQueue(result.candidates)
+      const success = await this.restoreBySearch(mark)
+      if (!success) {
+        await sendMessage('update-mark-details', {
+          id: mark.id,
+          url: mark.url,
+          restoreFailedAt: Date.now(),
+        } as any, 'background')
       }
 
       // 每处理两个标记让出一次主线程，确保页面交互流畅
-      if (i % 2 === 0) await new Promise((resolve) => requestAnimationFrame(resolve))
+      if (i % 2 === 0)
+        await new Promise(resolve => requestAnimationFrame(resolve))
     }
   }
 
@@ -138,43 +146,48 @@ export class HighlightRestorer {
     const markText = mark.text.trim()
     const contentSim = calculateSimilarity(rangeText, markText)
 
-    if (contentSim < L1_SIMILARITY_THRESHOLD) return false
+    if (contentSim < L1_SIMILARITY_THRESHOLD)
+      return false
 
     if (mark.surroundingSnippet) {
       const currentContext = getHighlightContext(range)
       const contextSim = calculateSimilarity(currentContext.surroundingSnippet, mark.surroundingSnippet)
-      if (contextSim < CONTEXT_SIMILARITY_THRESHOLD) return false
+      if (contextSim < CONTEXT_SIMILARITY_THRESHOLD)
+        return false
     }
     return true
   }
 
   private getDeserializationRoot(mark: Mark): Node | undefined {
-    if (!mark.shadowHostSelector) return document.documentElement
+    if (!mark.shadowHostSelector)
+      return document.documentElement
     let host: Element | null = null
     if (mark.shadowHostSelector.includes('|>>>|')) {
       const chain = mark.shadowHostSelector.split('|>>>|')
       let currentRoot: Document | ShadowRoot = document
       for (const selector of chain) {
         host = currentRoot.querySelector(selector)
-        if (host && host.shadowRoot) currentRoot = host.shadowRoot
+        if (host && host.shadowRoot)
+          currentRoot = host.shadowRoot
         else return undefined
       }
-    } else {
+    }
+    else {
       host = querySelectorDeep(mark.shadowHostSelector)
     }
     return (host && host.shadowRoot) ? host.shadowRoot : undefined
   }
 
-  private async restoreBySearch(mark: Mark): Promise<SearchRestoreResult> {
+  private async restoreBySearch(mark: Mark): Promise<boolean> {
     const applier = rangy.createClassApplier(`webext-highlight-${mark.id}`, {
       elementTagName: 'span',
-      elementAttributes: { style: highlightDefaultStyle(mark.color) },
+      elementAttributes: { style: highlightDefaultStyle(mark.color, settings.value.highlightHeight) },
     })
     const deserializationRoot = this.getDeserializationRoot(mark)
     if (mark.shadowHostSelector && !deserializationRoot) {
       console.warn(`[HighlightRestorer] Shadow host not found for ${mark.id}, skipping search fallback.`)
       reportRestoreFailure(mark, 'Shadow host missing', { selector: mark.shadowHostSelector })
-      return { success: false }
+      return false
     }
     const root = deserializationRoot || document.documentElement
 
@@ -206,7 +219,7 @@ export class HighlightRestorer {
           this.state.restoredMarkIds.add(mark.id)
           this.state.failedRestoreCooldowns.delete(mark.id)
           this.state.removeFromAmbiguousQueue(mark.id)
-          
+
           const root = candidate.candidateElement.getRootNode()
           const newSerialized = rangy.serializeRange(range, true, root instanceof ShadowRoot ? root : undefined)
           const { contextTitle, contextSelector, contextLevel, contextOrder, surroundingSnippet } = getHighlightContext(range)
@@ -229,28 +242,42 @@ export class HighlightRestorer {
           if (similarity >= 90) {
             const newDomIndex = DOMScanner.calculatePreciseOffset(range, root instanceof ShadowRoot ? root : document.body)
             await sendMessage('update-mark-details', {
-              id: mark.id, url: mark.url, text: candidate.displayTextSnippet,
-              html: actualHtml, rangySerialized: newSerialized,
+              id: mark.id,
+              url: mark.url,
+              text: candidate.displayTextSnippet,
+              html: actualHtml,
+              rangySerialized: newSerialized,
               shadowHostSelector: shadowHostSelector || null,
-              contextTitle, contextSelector, contextLevel, contextOrder, surroundingSnippet,
+              contextTitle,
+              contextSelector,
+              contextLevel,
+              contextOrder,
+              surroundingSnippet,
               domIndex: newDomIndex,
             } as any, 'background')
           }
-          return { success: true }
+          await sendMessage('update-mark-details', {
+            id: mark.id,
+            url: mark.url,
+            restoreFailedAt: null,
+          } as any, 'background')
+          return true
         }
         // applyPreciseHighlight 失败
         reportRestoreFailure(mark, 'Apply highlight failed', { similarity })
-        return { success: false, candidates: [candidate] }
+        return false
       }
       // similarity 不足
       reportRestoreFailure(mark, 'Similarity too low', { similarity, threshold: L3_SIMILARITY_THRESHOLD })
-      return { success: false, candidates: [candidate] }
-    } else if (ambiguityLevel === 'multiple') {
-      return { success: false, candidates }
-    } else {
+      return false
+    }
+    else if (ambiguityLevel === 'multiple') {
+      return false
+    }
+    else {
       reportRestoreFailure(mark, 'No candidates found')
       this.state.failedRestoreCooldowns.set(mark.id, Date.now() + 3000)
-      return { success: false }
+      return false
     }
   }
 
@@ -266,7 +293,8 @@ export class HighlightRestorer {
     const highlights = querySelectorAllDeep('span[class*="webext-highlight-"]')
     const parentsToNormalize = new Set<Node>()
     highlights.forEach((el) => {
-      if (el.classList.contains('webext-highlight-preview')) return
+      if (el.classList.contains('webext-highlight-preview'))
+        return
       const parent = el.parentNode
       if (parent) {
         parentsToNormalize.add(parent)
@@ -274,7 +302,7 @@ export class HighlightRestorer {
         parent.removeChild(el)
       }
     })
-    parentsToNormalize.forEach((parent) => parent.normalize())
+    parentsToNormalize.forEach(parent => parent.normalize())
     this.state.restoredMarkIds.clear()
     await this.restoreHighlights()
   }
@@ -284,14 +312,18 @@ export class HighlightRestorer {
     const element = querySelectorDeep(`.${className}`)
     if (element) {
       const mark = await sendMessage('get-mark-by-id', { id: markId, url: getCanonicalUrlForMark() }, 'background')
-      if (!mark) return
+      if (!mark)
+        return
       element.scrollIntoView({ behavior: 'auto', block: 'center' })
       querySelectorAllDeep(`.${className}`).forEach((el) => {
-        if (!(el instanceof HTMLElement)) return
+        if (!(el instanceof HTMLElement))
+          return
         el.style.transition = 'box-shadow 0.5s ease-in-out'
-        el.style.boxShadow = `inset 0 -5px 0 0 ${settings.value.highlightColors[1]}`
+        el.style.boxShadow = `inset 0 -${settings.value.highlightHeight}px 0 0 ${settings.value.highlightColors[1]}`
+        el.style.paddingBottom = `${settings.value.highlightHeight}px`
         setTimeout(() => {
-          el.style.boxShadow = `inset 0 -5px 0 0 ${mark.color}`
+          el.style.boxShadow = `inset 0 -${settings.value.highlightHeight}px 0 0 ${mark.color}`
+          el.style.paddingBottom = `${settings.value.highlightHeight}px`
         }, 1000)
       })
     }

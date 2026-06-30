@@ -7,19 +7,21 @@ export const defaultSettings = {
     '#99FF99', // green
     '#FF9999', // red
     '#99CCFF', // blue
-    '#FFCC99' // orange
+    '#FFCC99', // orange
   ],
   blacklist: [] as string[],
   shortcutSave: 'Alt+S',
   shortcutDelete: 'Alt+D',
-  autoAssociation: true
+  autoAssociation: true,
+  highlightHeight: 5,
 }
 
 export function isPageBlacklisted(url: string, blacklist: string[]): boolean {
   try {
     const hostname = new URL(url).hostname
-    return blacklist.some((pattern) => hostname.endsWith(pattern))
-  } catch {
+    return blacklist.some(pattern => hostname.endsWith(pattern))
+  }
+  catch {
     return false
   }
 }

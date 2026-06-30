@@ -35,16 +35,17 @@ describe('search logic - recursive traversal', () => {
     expect(result.candidates[0].displayTextSnippet).toBe('Hello World')
   })
 
-  it('should find unique candidate even if text has minor changes (fuzzy)', () => {
+  // Level 3 consensus (fuzzy matching) is temporarily disabled.
+  it.skip('should find unique candidate even if text has minor changes (fuzzy)', () => {
     // 构造一个受控的上下文
     // 前缀(20字): "12345678901234567890"
     // 文本: "amazing world" -> "amazzing world"
     // 后缀(20字): "09876543210987654321"
     const prefix = '12345678901234567890'
     const suffix = '09876543210987654321'
-    
+
     document.body.innerHTML = `<div>${prefix}amazzing world${suffix}</div>`
-    
+
     const mark = {
       id: 'test-id',
       text: 'amazing world',

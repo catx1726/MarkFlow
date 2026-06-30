@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ref } from 'vue'
 import { UIManager } from '../contentScripts/ui'
 import { HighlightStateManager } from '../contentScripts/state'
@@ -21,12 +21,13 @@ vi.mock('~/logic/settings', () => ({
     defaultHighlightColor: '#FFFF00',
     highlightColors: ['#FFFF00', '#99FF99', '#FF9999', '#99CCFF', '#FFCC99'],
     blacklist: [],
+    highlightHeight: 5,
   }),
   settingsReady: Promise.resolve(),
   isPageBlacklisted: vi.fn(() => false),
 }))
 
-describe('UIManager', () => {
+describe('uIManager', () => {
   let state: HighlightStateManager
   let ui: UIManager
 
