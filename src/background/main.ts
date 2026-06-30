@@ -508,6 +508,12 @@ let isSyncing = false
  */
 let syncQueue: Promise<void> = Promise.resolve()
 
+/**
+ * 错误恢复冷却时间戳，防止 error 状态下连续触发 pull-then-push 循环。
+ */
+let lastErrorRecoveryAt = 0
+const ERROR_RECOVERY_COOLDOWN_MS = 60_000
+
 async function enqueueSync(task: () => Promise<void>) {
   const nextSync = syncQueue.then(task).catch((err) => {
     console.error('[Sync] Queue task failed:', err)
@@ -560,8 +566,14 @@ const performPush = debounce(async () => {
   if (isSyncing || !canPush(syncConfig.value, syncStatus.value))
     return
 
-  // 如果上次同步失败，先拉取远程数据合并后再推送，避免覆盖远程较新的数据
+  // 如果上次同步失败，先拉取远程数据合并后再推送，避免覆盖远程较新的数据。
+  // 增加冷却期，防止连续失败时反复进入错误恢复循环。
   if (syncStatus.value.lastSyncStatus === 'error') {
+    if (Date.now() - lastErrorRecoveryAt < ERROR_RECOVERY_COOLDOWN_MS) {
+      console.warn('[Sync] Error recovery cooldown active, skipping push')
+      return
+    }
+    lastErrorRecoveryAt = Date.now()
     const pullSuccess = await performPull(3, { force: false })
     if (!pullSuccess)
       return

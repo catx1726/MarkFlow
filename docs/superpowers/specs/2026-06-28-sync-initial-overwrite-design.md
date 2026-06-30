@@ -36,11 +36,12 @@ status: draft
 - `performPush()` 增加检查：若 `syncStatus.lastSyncStatus === 'none'`，则跳过推送。
 - 该门确保即使因其他路径触发了 Push，也不会在从未成功拉取的情况下把本地数据推送到远程。
 
-### 3.3 后台支持强制拉取
+### 3.4 空远程文件的处理语义
 
-- `trigger-sync` 消息或新增消息支持在 `enabled = false` 时也能执行拉取，供 `connectSync()` 在启用前调用。
-
-## 4. 最小侵入边界
+- 当 `performPull` 发现远程 Gist 中 `markflow_sync.json` 存在但 `content` 为空时，视为**首次同步**或**远程尚未写入数据**。
+- 此时将 `syncStatus.lastSyncStatus` 标记为 `success`，并提示用户“云端同步文件为空，本地数据将在下次变更时上传”。
+- 不清空本地数据，也不强制推送；后续用户产生本地数据变更时，由正常的 `storage.onChanged` → `performPush` 流程上传。
+- 该行为属于设计决策，需在 Playbook 中记录，避免未来维护者误以为空远程文件是异常。
 
 1. 不改动合并算法 `mergeMarks` / `mergeTags`。
 2. 不删除现有推送/拉取逻辑，仅增加前置条件。
