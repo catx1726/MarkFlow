@@ -6,7 +6,7 @@
     <title>MarkFlow - 一款能够精准跳转的网页文本标记工具</title>
     <meta
       name="description"
-      content="MarkFlow 是一款能够精准跳转的网页文本标记工具。按住 Alt 划词标记，点击侧边栏笔记瞬间回跳原文位置。支持标签归类、章节大纲、Markdown 导出，100% 本地存储。"
+      content="MarkFlow 是一款能够精准跳转的网页文本标记工具。按住 Alt 划词标记，点击侧边栏笔记瞬间回跳原文位置。支持标签归类、章节大纲、Markdown 导出，并可基于 GitHub Gist 实现多端同步。"
     />
     <meta
       name="keywords"
@@ -123,7 +123,7 @@
             标记自动按章节归类，打上标签后跨网页构建知识图谱。
           </p>
 
-          <p class="mt-4 text-sm text-gray-400 dark:text-gray-500">* 100% 本地存储，无需注册，隐私第一。</p>
+          <p class="mt-4 text-sm text-gray-400 dark:text-gray-500">* 100% 本地存储，无需注册；可选 GitHub Gist 多端同步，隐私可控。</p>
         </div>
         <div class="fade-up relative flex justify-center items-center">
           <div
@@ -222,12 +222,25 @@
             class="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-sm hover:shadow-md transition-all fade-up border border-transparent dark:border-gray-700"
           >
             <div
+              class="w-12 h-12 bg-teal-100 dark:bg-teal-900/50 text-teal-600 dark:text-teal-400 rounded-xl flex items-center justify-center mb-6"
+            >
+              🔄
+            </div>
+            <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-3">GitHub Gist 多端同步</h3>
+            <p class="text-gray-500 dark:text-gray-400">
+              基于私有 Gist 实现跨浏览器数据同步。首次连接先拉取合并，避免本地空数据覆盖云端；支持 Tombstone 墓碑机制，删除状态也能可靠同步。
+            </p>
+          </div>
+          <div
+            class="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-sm hover:shadow-md transition-all fade-up border border-transparent dark:border-gray-700"
+          >
+            <div
               class="w-12 h-12 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-xl flex items-center justify-center mb-6"
             >
               🛡️
             </div>
             <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-3">极致本地安全</h3>
-            <p class="text-gray-500 dark:text-gray-400">不采集、不上传，数据 100% 留存在你的设备中，无需注册登录。</p>
+            <p class="text-gray-500 dark:text-gray-400">不采集、不上传，数据 100% 留存在你的设备中，无需注册登录。Token 仅存储在扩展私有空间。</p>
           </div>
         </div>
       </div>
@@ -323,7 +336,13 @@
           <div class="p-6 rounded-xl bg-gray-50 dark:bg-gray-800">
             <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-2">Q: 我的高亮在哔哩哔哩/Reddit 等动态页面会丢失吗？</h3>
             <p class="text-gray-600 dark:text-gray-400">
-              A: 不会。MarkFlow 内置了四级恢复架构与"全局搜索回退"机制，即使评论在滚动时发生漂移或容器复用，系统也能自动找回你的标记。
+              A: 不会。MarkFlow 内置了多级恢复架构与“全局搜索回退”机制，即使评论在滚动时发生漂移或容器复用，系统也能自动找回你的标记。若遇到极端页面变更，会在侧边栏提示上下文供你手动确认。
+            </p>
+          </div>
+          <div class="p-6 rounded-xl bg-gray-50 dark:bg-gray-800">
+            <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-2">Q: 数据可以跨设备同步吗？</h3>
+            <p class="text-gray-600 dark:text-gray-400">
+              A: 可以。在设置页配置 GitHub Personal Access Token（仅需 gist 权限），即可通过私有 Gist 在多台设备间同步。首次连接会自动拉取并合并远程数据，不会覆盖云端。
             </p>
           </div>
         </div>
