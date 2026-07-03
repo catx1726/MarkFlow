@@ -1,11 +1,14 @@
-import { onMounted, onUnmounted, ref, watch } from 'vue'
+import { onMounted, onUnmounted, computed, ref, watch } from 'vue'
+import { useDebounceFn } from '@vueuse/core'
 import { sendMessage } from 'webext-bridge/options'
 import browser from 'webextension-polyfill'
 import { marksByUrl, tagsMetadata } from '~/logic/storage'
 import { type TagTree, buildTagTree } from '~/logic/tagTree'
+import { filterTagTree } from './searchFilter'
 
 export function useSidepanelData() {
   const structuredMarks = ref<TagTree>({ inbox: { tagName: '收集箱 (Inbox)', totalMarks: 0, pages: {} } })
+  const searchQuery = ref('')
   const isSidepanelActive = ref(true)
   let debounceTimer: ReturnType<typeof setTimeout> | null = null
 
@@ -14,6 +17,12 @@ export function useSidepanelData() {
     if (allMarks)
       marksByUrl.value = allMarks
   }
+
+  const debouncedSetSearchQuery = useDebounceFn((value: string) => {
+    searchQuery.value = value
+  }, 150)
+
+  const filteredTree = computed(() => filterTagTree(structuredMarks.value, searchQuery.value))
 
   const refreshListener = (message: any) => {
     if (message && message.type === 'refresh-sidepanel-data')
@@ -45,6 +54,9 @@ export function useSidepanelData() {
 
   return {
     structuredMarks,
+    searchQuery,
+    setSearchQuery: debouncedSetSearchQuery,
+    filteredTree,
     refreshAllMarks,
   }
 }
