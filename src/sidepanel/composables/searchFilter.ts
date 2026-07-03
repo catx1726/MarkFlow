@@ -16,7 +16,7 @@ export function isMarkMatch(mark: Mark, terms: string[]): boolean {
 export function filterTagTree(
   tree: TagTree,
   query: string,
-  compact = false,
+  showOnlyMatches = false,
 ): TagTree {
   const rawQuery = query.trim()
   if (!rawQuery)
@@ -42,7 +42,7 @@ export function filterTagTree(
       if (!pageTitleMatch && !hasMatchingMark && !tagNameMatch)
         continue
 
-      if (compact && !pageTitleMatch && !tagNameMatch) {
+      if (showOnlyMatches && !pageTitleMatch && !tagNameMatch) {
         // 紧凑模式：仅保留命中的 group/marks
         const matchedGroups = page.groups.map((group) => {
           const groupTitleMatch = terms.every(term => group.title.toLowerCase().includes(term))

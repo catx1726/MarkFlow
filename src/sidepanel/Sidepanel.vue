@@ -138,8 +138,8 @@ function handleSearchInput(value: string) {
   setSearchQuery(value)
 }
 
-function clearSearch() {
-  searchQuery.value = ''
+function handleClearSearch() {
+  setSearchQuery('')
 }
 
 function handleOpenOptions() {
@@ -206,7 +206,7 @@ async function handleDeleteTag(tagId: string) {
       @open-options="handleOpenOptions"
       @start-creating-tag="startCreatingTag"
       @cancel-creating-tag="cancelCreatingTag"
-      @update:search-query="handleSearchInput"
+      @clear-search="handleClearSearch"
     />
 
     <div
@@ -287,7 +287,7 @@ async function handleDeleteTag(tagId: string) {
           <p>未找到包含「{{ searchQuery }}」的标记</p>
           <button
             class="mt-2 text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
-            @click="clearSearch"
+            @click="handleClearSearch"
           >
             清除搜索
           </button>

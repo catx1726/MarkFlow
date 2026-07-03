@@ -12,12 +12,13 @@ const emit = defineEmits<{
   (e: 'open-options'): void
   (e: 'update:searchQuery', value: string): void
   (e: 'update:compactMode', value: boolean): void
+  (e: 'clear-search'): void
   (e: 'start-creating-tag'): void
   (e: 'cancel-creating-tag'): void
 }>()
 
-function clearSearch() {
-  emit('update:searchQuery', '')
+function onClearSearch() {
+  emit('clear-search')
 }
 </script>
 
@@ -51,7 +52,7 @@ function clearSearch() {
           <button
             v-if="searchQuery"
             class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
-            @click="clearSearch"
+            @click="onClearSearch"
           >
             ✕
           </button>
@@ -126,7 +127,7 @@ function clearSearch() {
         </label>
         <button
           class="text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
-          @click="clearSearch"
+          @click="onClearSearch"
         >
           清除搜索
         </button>

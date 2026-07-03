@@ -90,14 +90,15 @@ describe('filterTagTree', () => {
   })
 
   it('keeps entire page when a mark matches by default', () => {
-    const tree = buildSampleTree()
+    const tree = buildSampleTreeWithMultipleMarks()
     const result = filterTagTree(tree, 'hello')
     expect(result).toHaveProperty('tag1')
     expect(result).not.toHaveProperty('tag2')
-    expect(result.tag1.pages['https://example.com/page-a'].groups[0].marks).toHaveLength(1)
+    // 上下文模式下应保留 page 中所有 marks，而不仅是命中的 mark
+    expect(result.tag1.pages['https://example.com/page-a'].groups[0].marks).toHaveLength(2)
   })
 
-  it('keeps only matching marks in compact mode', () => {
+  it('keeps only matching marks in showOnlyMatches mode', () => {
     const tree = buildSampleTreeWithMultipleMarks()
     const result = filterTagTree(tree, 'hello', true)
     expect(result).toHaveProperty('tag1')
