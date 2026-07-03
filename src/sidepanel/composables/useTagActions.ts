@@ -1,9 +1,11 @@
-import { ref, toRaw } from 'vue'
+import { nextTick, ref, toRaw } from 'vue'
 import { sendMessage } from 'webext-bridge/options'
 import { marksByUrl, tagsMetadata } from '~/logic/storage'
 
 export function useTagActions() {
   const newTagName = ref('')
+  const isCreatingTag = ref(false)
+  const tagInputRef = ref<HTMLInputElement | null>(null)
   const tagPickerUrl = ref<string | null>(null)
   const tagPickerMarkId = ref<string | null>(null)
   const tagPickerVisible = ref(false)
@@ -17,6 +19,17 @@ export function useTagActions() {
       return
     await sendMessage('create-tag', { name: newTagName.value.trim() }, 'background')
     newTagName.value = ''
+    isCreatingTag.value = false
+  }
+
+  function startCreatingTag() {
+    isCreatingTag.value = true
+    nextTick(() => tagInputRef.value?.focus())
+  }
+
+  function cancelCreatingTag() {
+    if (!newTagName.value.trim())
+      isCreatingTag.value = false
   }
 
   function openRenameDialog(tagId: string) {
@@ -109,6 +122,8 @@ export function useTagActions() {
 
   return {
     newTagName,
+    isCreatingTag,
+    tagInputRef,
     tagPickerUrl,
     tagPickerMarkId,
     tagPickerVisible,
@@ -116,6 +131,8 @@ export function useTagActions() {
     editingTagName,
     renameDialogVisible,
     createTag,
+    startCreatingTag,
+    cancelCreatingTag,
     renameTag,
     deleteTag,
     togglePageTag,
