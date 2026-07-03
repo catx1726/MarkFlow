@@ -49,6 +49,28 @@ function buildSampleTree(): TagTree {
   }
 }
 
+function buildSampleTreeWithMultipleMarks(): TagTree {
+  const markA: TestMark = {
+    id: 'a',
+    text: 'hello world',
+    createdAt: 1,
+  }
+
+  const markC: TestMark = {
+    id: 'c',
+    text: 'context here',
+    createdAt: 3,
+  }
+
+  return {
+    tag1: { tagName: 'Tag One', totalMarks: 2, pages: {
+      'https://example.com/page-a': { pageTitle: 'Page A', groups: [{
+        title: 'Group A', level: 7, selector: 'body', marks: [markA as any, markC as any], count: 2, order: 0,
+      }], totalMarks: 2 },
+    }},
+  }
+}
+
 describe('isMarkMatch', () => {
   it('matches text content', () => {
     const mark = { text: 'hello world' } as any
@@ -67,12 +89,21 @@ describe('filterTagTree', () => {
     expect(filterTagTree(tree, '')).toEqual(tree)
   })
 
-  it('keeps entire page when a mark matches', () => {
+  it('keeps entire page when a mark matches by default', () => {
     const tree = buildSampleTree()
     const result = filterTagTree(tree, 'hello')
     expect(result).toHaveProperty('tag1')
     expect(result).not.toHaveProperty('tag2')
     expect(result.tag1.pages['https://example.com/page-a'].groups[0].marks).toHaveLength(1)
+  })
+
+  it('keeps only matching marks in compact mode', () => {
+    const tree = buildSampleTreeWithMultipleMarks()
+    const result = filterTagTree(tree, 'hello', true)
+    expect(result).toHaveProperty('tag1')
+    const page = result.tag1.pages['https://example.com/page-a']
+    expect(page.groups[0].marks).toHaveLength(1)
+    expect(page.groups[0].marks[0].text).toBe('hello world')
   })
 
   it('matches page title', () => {

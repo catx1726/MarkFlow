@@ -13,7 +13,11 @@ export function isMarkMatch(mark: Mark, terms: string[]): boolean {
   return terms.every(term => haystack.includes(term))
 }
 
-export function filterTagTree(tree: TagTree, query: string): TagTree {
+export function filterTagTree(
+  tree: TagTree,
+  query: string,
+  compact = false,
+): TagTree {
   const rawQuery = query.trim()
   if (!rawQuery)
     return tree
@@ -30,18 +34,33 @@ export function filterTagTree(tree: TagTree, query: string): TagTree {
 
     for (const [url, page] of Object.entries(folder.pages)) {
       const pageTitleMatch = terms.every(term => page.pageTitle.toLowerCase().includes(term))
-      const matchedGroups = page.groups.map((group) => {
+      const hasMatchingMark = page.groups.some((group) => {
         const groupTitleMatch = terms.every(term => group.title.toLowerCase().includes(term))
-        const matchedMarks = group.marks.filter(mark =>
-          groupTitleMatch || isMarkMatch(mark, terms),
-        )
-        return { ...group, marks: matchedMarks, count: matchedMarks.length }
-      }).filter(group => group.marks.length > 0)
+        return groupTitleMatch || group.marks.some(mark => isMarkMatch(mark, terms))
+      })
 
-      if (pageTitleMatch || matchedGroups.length > 0 || tagNameMatch) {
-        matchedPages[url] = pageTitleMatch || tagNameMatch
-          ? page
-          : { ...page, groups: matchedGroups, totalMarks: matchedGroups.reduce((sum, g) => sum + g.count, 0) }
+      if (!pageTitleMatch && !hasMatchingMark && !tagNameMatch)
+        continue
+
+      if (compact && !pageTitleMatch && !tagNameMatch) {
+        // 紧凑模式：仅保留命中的 group/marks
+        const matchedGroups = page.groups.map((group) => {
+          const groupTitleMatch = terms.every(term => group.title.toLowerCase().includes(term))
+          const matchedMarks = group.marks.filter(mark =>
+            groupTitleMatch || isMarkMatch(mark, terms),
+          )
+          return { ...group, marks: matchedMarks, count: matchedMarks.length }
+        }).filter(group => group.marks.length > 0)
+
+        matchedPages[url] = {
+          ...page,
+          groups: matchedGroups,
+          totalMarks: matchedGroups.reduce((sum, g) => sum + g.count, 0),
+        }
+      }
+      else {
+        // 上下文模式：保留命中 page 的完整结构
+        matchedPages[url] = page
       }
     }
 

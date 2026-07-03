@@ -9,6 +9,7 @@ import { filterTagTree } from './searchFilter'
 export function useSidepanelData() {
   const structuredMarks = ref<TagTree>({ inbox: { tagName: '收集箱 (Inbox)', totalMarks: 0, pages: {} } })
   const searchQuery = ref('')
+  const compactMode = ref(false)
   const isSidepanelActive = ref(true)
   let debounceTimer: ReturnType<typeof setTimeout> | null = null
 
@@ -22,7 +23,7 @@ export function useSidepanelData() {
     searchQuery.value = value
   }, 150)
 
-  const filteredTree = computed(() => filterTagTree(structuredMarks.value, searchQuery.value))
+  const filteredTree = computed(() => filterTagTree(structuredMarks.value, searchQuery.value, compactMode.value))
 
   const refreshListener = (message: any) => {
     if (message && message.type === 'refresh-sidepanel-data')
@@ -55,6 +56,7 @@ export function useSidepanelData() {
   return {
     structuredMarks,
     searchQuery,
+    compactMode,
     setSearchQuery: debouncedSetSearchQuery,
     filteredTree,
     refreshAllMarks,

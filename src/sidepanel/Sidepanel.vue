@@ -26,7 +26,7 @@ watchEffect(() => {
 })
 
 // --- Logic Composables ---
-const { structuredMarks, searchQuery, setSearchQuery, filteredTree, refreshAllMarks } = useSidepanelData()
+const { structuredMarks, searchQuery, compactMode, setSearchQuery, filteredTree, refreshAllMarks } = useSidepanelData()
 const {
   collapsedStates,
   collapsedUrls,
@@ -200,6 +200,7 @@ async function handleDeleteTag(tagId: string) {
     <SidepanelHeader
       v-model:new-tag-name="newTagName"
       v-model:search-query="searchQuery"
+      v-model:compact-mode="compactMode"
       :is-creating-tag="isCreatingTag"
       @create-tag="createTag"
       @open-options="handleOpenOptions"

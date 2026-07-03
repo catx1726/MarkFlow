@@ -3,6 +3,7 @@ defineProps<{
   newTagName: string
   isCreatingTag: boolean
   searchQuery: string
+  compactMode: boolean
 }>()
 
 const emit = defineEmits<{
@@ -10,6 +11,7 @@ const emit = defineEmits<{
   (e: 'create-tag'): void
   (e: 'open-options'): void
   (e: 'update:searchQuery', value: string): void
+  (e: 'update:compactMode', value: boolean): void
   (e: 'start-creating-tag'): void
   (e: 'cancel-creating-tag'): void
 }>()
@@ -106,6 +108,27 @@ function clearSearch() {
           @click="emit('create-tag')"
         >
           创建
+        </button>
+      </div>
+      <div
+        v-if="searchQuery.trim()"
+        class="flex items-center justify-between px-2 py-1"
+      >
+        <label class="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400 cursor-pointer select-none"
+        >
+          <input
+            type="checkbox"
+            :checked="compactMode"
+            class="h-3.5 w-3.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+            @change="e => emit('update:compactMode', (e.target as HTMLInputElement).checked)"
+          >
+          仅显示匹配项
+        </label>
+        <button
+          class="text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+          @click="clearSearch"
+        >
+          清除搜索
         </button>
       </div>
     </div>
