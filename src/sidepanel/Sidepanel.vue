@@ -26,7 +26,7 @@ watchEffect(() => {
 })
 
 // --- Logic Composables ---
-const { structuredMarks, refreshAllMarks } = useSidepanelData()
+const { structuredMarks, searchQuery, setSearchQuery, filteredTree, refreshAllMarks } = useSidepanelData()
 const {
   collapsedStates,
   collapsedUrls,
@@ -44,11 +44,15 @@ const editingMarkId = ref<string | null>(null)
 
 const {
   newTagName,
+  isCreatingTag,
+  tagInputRef,
   tagPickerVisible,
   editingTagId: _editingTagId,
   editingTagName,
   renameDialogVisible,
   createTag,
+  startCreatingTag,
+  cancelCreatingTag,
   togglePageTag,
   isPageTagChecked,
   openTagPicker,
@@ -130,6 +134,14 @@ function isGroupCollapsed(url: string, groupTitle: string, totalMarks: number): 
   return state !== undefined ? state : totalMarks > 15
 }
 
+function handleSearchInput(value: string) {
+  setSearchQuery(value)
+}
+
+function clearSearch() {
+  searchQuery.value = ''
+}
+
 function handleOpenOptions() {
   browser.runtime.openOptionsPage()
 }
@@ -187,8 +199,13 @@ async function handleDeleteTag(tagId: string) {
   >
     <SidepanelHeader
       v-model:new-tag-name="newTagName"
+      v-model:search-query="searchQuery"
+      :is-creating-tag="isCreatingTag"
       @create-tag="createTag"
       @open-options="handleOpenOptions"
+      @start-creating-tag="startCreatingTag"
+      @cancel-creating-tag="cancelCreatingTag"
+      @update:search-query="handleSearchInput"
     />
 
     <div
@@ -222,7 +239,7 @@ async function handleDeleteTag(tagId: string) {
       </div>
       <div v-else class="space-y-6">
         <TagFolder
-          v-for="[tagId, folder] in Object.entries(structuredMarks)"
+          v-for="[tagId, folder] in Object.entries(filteredTree)"
           :key="tagId"
           :tag-id="tagId"
           :folder="folder"
@@ -261,6 +278,19 @@ async function handleDeleteTag(tagId: string) {
           @toggle-mark-menu="handleToggleMarkMenu"
           @open-mark-tag-picker="(u, id) => openTagPicker(u, id)"
         />
+
+        <div
+          v-if="Object.keys(filteredTree).length === 0 && searchQuery.trim()"
+          class="text-center text-gray-500 py-8"
+        >
+          <p>未找到包含「{{ searchQuery }}」的标记</p>
+          <button
+            class="mt-2 text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+            @click="clearSearch"
+          >
+            清除搜索
+          </button>
+        </div>
       </div>
     </div>
 
