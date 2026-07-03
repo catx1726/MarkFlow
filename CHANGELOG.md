@@ -1,11 +1,34 @@
 # Unreleased
 
-### [2026-06-30] fix(sync): prevent initial sync from overwriting remote Gist data (#51)
-fix(sync): prevent initial sync from overwriting remote Gist data
-
-
-
 # Released
+
+## [v0.7.1] - 2026-07-03
+
+### 🛡️ 稳定性
+
+- **Fix**: 修复首次连接 GitHub Gist 时覆盖远程数据的问题 (#51)。现在会先拉取并合并远程数据，再启用自动同步。
+- **Fix**: 使用 `getGistById` 获取完整 Gist 内容，避免 `/gists` 列表接口缺失文件内容。
+- **Fix**: 重构同步队列，拆出 `performPullInternal`，消除错误恢复路径中的嵌套队列死锁风险。
+- **Fix**: 增加错误恢复冷却期与 `canPush` 守卫，防止失败后重复推送覆盖远程。
+- **Fix**: MV3 Service Worker 兼容：`triggerPull` 增加 `webext-bridge` 超时回退到原生消息。
+- **Fix**: Popup 直接调用 `chrome.sidePanel.open`，保留用户手势，避免侧边栏打不开。
+- **Fix**: CSP 合规：内联主题脚本抽离为外部模块。
+- **Fix**: Background 中防护 `window` 和 `chrome` 访问，提升 MV3 稳定性。
+
+### ✨ 功能
+
+- **Feat**: 新增"高亮行高"设置项，修改后实时广播刷新所有页面高亮。
+- **Feat**: Sidepanel 展示恢复失败的原文上下文提示。
+- **Feat**: Options 页面新增粘性侧边栏导航、Scroll Spy 和保存反馈。
+
+### 🏗️ 架构
+
+- **Refactor**: 简化恢复策略，跳过 Level 3/4 路径与歧义弹窗，标记失败时写入 `restoreFailedAt`。
+
+### 📝 文档
+
+- **Docs**: 更新 README、Landing Page、TECHNICAL.md，明确当前自动恢复层级为 Level 1/2/2.5，Level 3/4 已跳过。
+- **Docs**: 修正同步架构文档中"加密存储"为"私有存储"，补全 `enqueueSync` 返回值，精确描述 LWW 合并策略。
 
 ## [v0.7.0] - 2026-06-05
 
