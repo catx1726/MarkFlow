@@ -67,8 +67,8 @@
 | **search.ts 保留策略类注释** | PR #51 | 低 | 低 | ⭐⭐ | `ConsensusMatchStrategy` 等类已保留但不再使用，建议添加注释说明保留原因（如 SPEC-2026-06-26-001）。 |
 | **`mergeWithRemoteFile` 在 `performPull` 中未使用** | PR #51 | 低 | 低 | ⭐⭐ | `sync.ts` 中设计和测试了 `mergeWithRemoteFile`，但 `performPull` 仍直接用 `mergeMarks`/`mergeTags`。建议统一使用辅助函数或移除死代码。 |
 | **`withTimeout` 实现简化** | PR #51 | 低 | 低 | ⭐⭐ | 当前实现带 `clearTimeout`，CR 建议可简化为不带 `clearTimeout` 的 `Promise.race` 版本，避免微妙时序问题。 |
-| **测试辅助函数共享化** | PR #53 | 低 | 低 | ⭐⭐⭐ | `searchFilter.spec.ts` 与 `useSidepanelData.spec.ts` 中均定义了 `buildSampleTree`，提取到 `src/sidepanel/composables/__tests__/testUtils.ts` 可减少重复维护成本。 |
-| **CR 误判记录：`useSidepanelData.ts` 中 `debounceTimer` 实际已使用** | PR #53 | - | - | - | AI CR 认为 `debounceTimer` 未使用，但它在 `watch([marksByUrl, tagsMetadata])` 回调中用于防抖 `buildTagTree`。无需修改，仅作记录。 |
+| **测试辅助函数共享化** | PR #53 | 低 | 低 | [已完成] | `buildSampleTree` 已提取到 `src/sidepanel/composables/__tests__/testUtils.ts`，`searchFilter.spec.ts` 与 `useSidepanelData.spec.ts` 复用。 |
+| **CR 误判记录：`useSidepanelData.ts` 中 `debounceTimer` 实际已使用** | PR #53 | - | - | - | 多轮 CR 均认为 `debounceTimer` 未使用，但它在 `watch([marksByUrl, tagsMetadata])` 回调中用于防抖 `buildTagTree`。无需修改，仅作记录。 |
 
 ---
 

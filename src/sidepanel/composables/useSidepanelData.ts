@@ -9,6 +9,7 @@ import { filterTagTree } from './searchFilter'
 export function useSidepanelData() {
   const structuredMarks = ref<TagTree>({ inbox: { tagName: '收集箱 (Inbox)', totalMarks: 0, pages: {} } })
   const searchQuery = ref('')
+  const debouncedSearchQuery = ref('')
   const compactMode = ref(false)
   const isSidepanelActive = ref(true)
   let debounceTimer: ReturnType<typeof setTimeout> | null = null
@@ -19,11 +20,24 @@ export function useSidepanelData() {
       marksByUrl.value = allMarks
   }
 
-  const debouncedSetSearchQuery = useDebounceFn((value: string) => {
-    searchQuery.value = value
+  // 防抖：用户输入 150ms 后才更新用于过滤的稳定查询值
+  const debouncedUpdateQuery = useDebounceFn((value: string) => {
+    debouncedSearchQuery.value = value
   }, 150)
 
-  const filteredTree = computed(() => filterTagTree(structuredMarks.value, searchQuery.value, compactMode.value))
+  watch(searchQuery, (newValue) => {
+    debouncedUpdateQuery(newValue)
+  })
+
+  const filteredTree = computed(() =>
+    filterTagTree(structuredMarks.value, debouncedSearchQuery.value, compactMode.value),
+  )
+
+  function clearSearch() {
+    searchQuery.value = ''
+    debouncedSearchQuery.value = ''
+    compactMode.value = false
+  }
 
   const refreshListener = (message: any) => {
     if (message && message.type === 'refresh-sidepanel-data')
@@ -56,8 +70,9 @@ export function useSidepanelData() {
   return {
     structuredMarks,
     searchQuery,
+    debouncedSearchQuery,
     compactMode,
-    setSearchQuery: debouncedSetSearchQuery,
+    clearSearch,
     filteredTree,
     refreshAllMarks,
   }
