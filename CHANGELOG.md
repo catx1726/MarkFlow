@@ -1,5 +1,9 @@
 # Unreleased
 
+### [2026-07-04] feat(sidepanel): add search with context preservation and compact mode (#52) (#53)
+feat(sidepanel): add search with context preservation and compact mode (#52)
+
+
 # Released
 
 ## [v0.7.1] - 2026-07-03
