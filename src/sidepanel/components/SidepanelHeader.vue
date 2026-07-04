@@ -46,16 +46,9 @@ function onClearSearch() {
             :value="searchQuery"
             type="search"
             placeholder="搜索标记、页面或标签..."
-            class="w-full pl-9 pr-8 py-1.5 text-sm rounded-md border border-gray-200 dark:bg-gray-700 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            class="w-full pl-9 pr-3 py-1.5 text-sm rounded-md border border-gray-200 dark:bg-gray-700 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
             @input="e => emit('update:searchQuery', (e.target as HTMLInputElement).value)"
           >
-          <button
-            v-if="searchQuery"
-            class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
-            @click="onClearSearch"
-          >
-            ✕
-          </button>
         </div>
 
         <button
