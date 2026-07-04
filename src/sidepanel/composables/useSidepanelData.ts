@@ -1,11 +1,16 @@
-import { onMounted, onUnmounted, ref, watch } from 'vue'
+import { onMounted, onUnmounted, computed, ref, watch } from 'vue'
+import { useDebounceFn } from '@vueuse/core'
 import { sendMessage } from 'webext-bridge/options'
 import browser from 'webextension-polyfill'
 import { marksByUrl, tagsMetadata } from '~/logic/storage'
 import { type TagTree, buildTagTree } from '~/logic/tagTree'
+import { filterTagTree } from './searchFilter'
 
 export function useSidepanelData() {
   const structuredMarks = ref<TagTree>({ inbox: { tagName: '收集箱 (Inbox)', totalMarks: 0, pages: {} } })
+  const searchQuery = ref('')
+  const debouncedSearchQuery = ref('')
+  const compactMode = ref(false)
   const isSidepanelActive = ref(true)
   let debounceTimer: ReturnType<typeof setTimeout> | null = null
 
@@ -13,6 +18,25 @@ export function useSidepanelData() {
     const allMarks = await sendMessage('get-all-marks', {}, 'background')
     if (allMarks)
       marksByUrl.value = allMarks
+  }
+
+  // 防抖：用户输入 150ms 后才更新用于过滤的稳定查询值
+  const debouncedUpdateQuery = useDebounceFn((value: string) => {
+    debouncedSearchQuery.value = value
+  }, 150)
+
+  watch(searchQuery, (newValue) => {
+    debouncedUpdateQuery(newValue)
+  })
+
+  const filteredTree = computed(() =>
+    filterTagTree(structuredMarks.value, debouncedSearchQuery.value, compactMode.value),
+  )
+
+  function clearSearch() {
+    searchQuery.value = ''
+    debouncedSearchQuery.value = ''
+    compactMode.value = false
   }
 
   const refreshListener = (message: any) => {
@@ -45,6 +69,11 @@ export function useSidepanelData() {
 
   return {
     structuredMarks,
+    searchQuery,
+    debouncedSearchQuery,
+    compactMode,
+    clearSearch,
+    filteredTree,
     refreshAllMarks,
   }
 }

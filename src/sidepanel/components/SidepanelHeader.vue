@@ -1,13 +1,25 @@
 <script setup lang="ts">
 defineProps<{
   newTagName: string
+  isCreatingTag: boolean
+  searchQuery: string
+  compactMode: boolean
 }>()
 
 const emit = defineEmits<{
   (e: 'update:newTagName', value: string): void
   (e: 'create-tag'): void
   (e: 'open-options'): void
+  (e: 'update:searchQuery', value: string): void
+  (e: 'update:compactMode', value: boolean): void
+  (e: 'clear-search'): void
+  (e: 'start-creating-tag'): void
+  (e: 'cancel-creating-tag'): void
 }>()
+
+function onClearSearch() {
+  emit('clear-search')
+}
 </script>
 
 <template>
@@ -16,23 +28,47 @@ const emit = defineEmits<{
       标记管理
     </h1>
 
-    <div class="px-2">
+    <div class="px-2 space-y-2">
       <div
         class="flex gap-2 bg-white dark:bg-gray-800 p-2 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700"
       >
-        <input
-          :value="newTagName"
-          placeholder="新建标签..."
-          class="border-gray-200 dark:bg-gray-700 dark:border-gray-600 focus:ring-blue-500 flex-1 rounded-md border px-3 py-1.5 text-sm focus:outline-none focus:ring-2"
-          @input="e => emit('update:newTagName', (e.target as HTMLInputElement).value)"
-          @keydown.enter="emit('create-tag')"
-        >
+        <div class="relative flex-1">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+          <input
+            :value="searchQuery"
+            type="search"
+            placeholder="搜索标记、页面或标签..."
+            class="w-full pl-9 pr-8 py-1.5 text-sm rounded-md border border-gray-200 dark:bg-gray-700 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            @input="e => emit('update:searchQuery', (e.target as HTMLInputElement).value)"
+          >
+          <button
+            v-if="searchQuery"
+            class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+            @click="onClearSearch"
+          >
+            ✕
+          </button>
+        </div>
+
         <button
-          class="bg-blue-600 hover:bg-blue-700 rounded-md px-4 py-1.5 text-sm font-medium text-white shadow-sm transition-colors"
-          @click="emit('create-tag')"
+          class="p-1.5 rounded-md transition-colors"
+          :class="isCreatingTag ? 'bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-300' : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700'"
+          title="新建标签"
+          @click="emit(isCreatingTag ? 'cancel-creating-tag' : 'start-creating-tag')"
         >
-          创建
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+          </svg>
         </button>
+
         <button
           class="p-1.5 text-gray-500 hover:text-gray-800 dark:hover:text-gray-200 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
           title="打开设置"
@@ -53,6 +89,47 @@ const emit = defineEmits<{
             />
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
           </svg>
+        </button>
+      </div>
+
+      <div
+        v-if="isCreatingTag"
+        class="flex gap-2 bg-white dark:bg-gray-800 p-2 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700"
+      >
+        <input
+          :value="newTagName"
+          placeholder="新建标签..."
+          class="border-gray-200 dark:bg-gray-700 dark:border-gray-600 focus:ring-blue-500 flex-1 rounded-md border px-3 py-1.5 text-sm focus:outline-none focus:ring-2"
+          @input="e => emit('update:newTagName', (e.target as HTMLInputElement).value)"
+          @keydown.enter="emit('create-tag')"
+          @keydown.esc="emit('cancel-creating-tag')"
+        >
+        <button
+          class="bg-blue-600 hover:bg-blue-700 rounded-md px-4 py-1.5 text-sm font-medium text-white shadow-sm transition-colors"
+          @click="emit('create-tag')"
+        >
+          创建
+        </button>
+      </div>
+      <div
+        v-if="searchQuery.trim()"
+        class="flex items-center justify-between px-2 py-1"
+      >
+        <label class="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400 cursor-pointer select-none"
+        >
+          <input
+            type="checkbox"
+            :checked="compactMode"
+            class="h-3.5 w-3.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+            @change="e => emit('update:compactMode', (e.target as HTMLInputElement).checked)"
+          >
+          仅显示匹配项
+        </label>
+        <button
+          class="text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+          @click="onClearSearch"
+        >
+          清除搜索
         </button>
       </div>
     </div>
