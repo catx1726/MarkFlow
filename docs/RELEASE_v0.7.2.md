@@ -17,6 +17,18 @@
   - 将原有常驻的新建标签输入框折叠为 "+" 按钮，点击后展开输入框。
   - 创建成功后自动收起，为搜索框释放顶部空间。
 
+### 🐛 问题修复
+
+- **GitHub Gist 同步间歇性自动断开** (commit `420e2c4`)
+  - **症状**：开启 Gist 同步后，设置页时不时弹出"身份验证失败或权限不足，请检查 Token 配置"，同步被自动关闭，需手动重连才能恢复。
+  - **根因**：GitHub API 返回 403（主/次级速率限制、滥用检测、或网络代理/GFW 拦截）时，被错误地等同于 401 认证失败处理，触发了"自动禁用同步"的自我熔断逻辑——而 Token 本身始终有效。
+  - **修复**：
+    - 新增 `GitHubAPIError` 分类器，读取响应体与 `X-RateLimit-Remaining` / `Retry-After` 头，将错误细分为 `auth` / `rate-limit` / `not-found` / `storage-limit` / `unknown` 五类。
+    - **速率限制不再关闭同步**：改为进入退避期（遵守 `Retry-After`，缺省 60 秒），期间跳过推送但同步保持开启，到期自动恢复。
+    - 只有确认的认证类错误（真实 401，或明确的权限 403）才会自动禁用同步。
+    - 设置页报错信息现在会显示真实原因（如"GitHub 请求频率受限，请 X 秒后重试"），下次再遇到问题可一眼定位是速率限制还是 Token 失效。
+  - 新增 9 个单元测试覆盖错误分类逻辑（`sync.spec.ts` 由 16 增至 25 个用例）。
+
 ### 🏗️ 架构与代码质量
 
 - **过滤逻辑纯函数化**：将 `filterTagTree` 与 `isMarkMatch` 抽离到独立的 `searchFilter.ts`，避免测试环境加载 `webextension-polyfill`。
@@ -27,7 +39,7 @@
 
 - 新增 Spec：`docs/superpowers/specs/2026-07-03-sidepanel-search-design.md`
 - 新增 Plan：`docs/superpowers/plans/2026-07-03-sidepanel-search-plan.md`
-- 更新审计日志：`.gemini/ops_changelog.md`
+- 更新审计日志：`.project/ops_changelog.md`
 - 更新 NIT Roadmap：`docs/NIT_ROADMAP.md`
 
 ---
