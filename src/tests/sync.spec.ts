@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { canPush, mergeMarks, mergeTags, mergeWithRemoteFile } from '../logic/sync'
+import { GitHubAPIError, canPush, classifyGitHubResponse, mergeMarks, mergeTags, mergeWithRemoteFile } from '../logic/sync'
 import type { Mark, SyncConfig, SyncStatus, Tag } from '../logic/storage'
+
+function headersOf(map: Record<string, string>): { get: (name: string) => string | null } {
+  return { get: (name: string) => (name in map ? map[name] : null) }
+}
 
 describe('sync Logic', () => {
   describe('mergeMarks', () => {
@@ -122,6 +126,66 @@ describe('sync Logic', () => {
       const localMarks = { url1: [{ id: '1', text: 'local', createdAt: 100 } as Mark] }
       const result = mergeWithRemoteFile(localMarks, {}, JSON.stringify({ lastSync: 1 }))
       expect(result.marks.url1[0].id).toBe('1')
+    })
+  })
+
+  describe('classifyGitHubResponse', () => {
+    const notFound = '未找到指定的同步 Gist，请检查 Gist ID'
+
+    it('401 应分类为 auth（真实认证失败）', () => {
+      const err = classifyGitHubResponse(401, headersOf({}), '', notFound)
+      expect(err.kind).toBe('auth')
+      expect(err.status).toBe(401)
+    })
+
+    it('403 + X-RateLimit-Remaining: 0 应分类为 rate-limit（非认证）', () => {
+      const err = classifyGitHubResponse(403, headersOf({ 'X-RateLimit-Remaining': '0' }), '', notFound)
+      expect(err.kind).toBe('rate-limit')
+      expect(err.message).not.toContain('身份验证失败')
+    })
+
+    it('403 + secondary rate limit 响应体应分类为 rate-limit', () => {
+      const err = classifyGitHubResponse(
+        403,
+        headersOf({}),
+        'You have exceeded a secondary rate limit. Please wait a few minutes before you try again.',
+        notFound,
+      )
+      expect(err.kind).toBe('rate-limit')
+    })
+
+    it('403 rate-limit 应捕获 Retry-After 头', () => {
+      const err = classifyGitHubResponse(403, headersOf({ 'X-RateLimit-Remaining': '0', 'Retry-After': '42' }), '', notFound)
+      expect(err.kind).toBe('rate-limit')
+      expect(err.retryAfter).toBe(42)
+    })
+
+    it('403 其他原因应保守分类为 auth（防止误判为可恢复）', () => {
+      const err = classifyGitHubResponse(403, headersOf({}), 'Resource not accessible by personal access token', notFound)
+      expect(err.kind).toBe('auth')
+    })
+
+    it('404 应分类为 not-found 并使用上下文文案', () => {
+      const err = classifyGitHubResponse(404, headersOf({}), '', notFound)
+      expect(err.kind).toBe('not-found')
+      expect(err.message).toBe(notFound)
+    })
+
+    it('422 应分类为 storage-limit（Gist 容量上限）', () => {
+      const err = classifyGitHubResponse(422, headersOf({}), 'validation failed', notFound)
+      expect(err.kind).toBe('storage-limit')
+    })
+
+    it('500 应分类为 unknown', () => {
+      const err = classifyGitHubResponse(500, headersOf({}), 'server error', notFound)
+      expect(err.kind).toBe('unknown')
+    })
+
+    it('抛出的错误应是 GitHubAPIError 实例且带 name', () => {
+      const err = classifyGitHubResponse(401, headersOf({}), '', notFound)
+      expect(err).toBeInstanceOf(GitHubAPIError)
+      expect(err).toBeInstanceOf(Error)
+      expect(err.name).toBe('GitHubAPIError')
     })
   })
 })

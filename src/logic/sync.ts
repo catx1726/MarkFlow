@@ -95,6 +95,89 @@ export function mergeWithRemoteFile(
 }
 
 /**
+ * GitHub API 错误类型，用于驱动上层（main.ts）的差异化处理。
+ * - `auth`: 真实认证/权限失败（401，或非速率限制的 403）→ 可自动禁用同步
+ * - `rate-limit`: 速率限制/滥用检测 → 不应禁用，遵守 Retry-After 退避
+ * - `not-found`: 资源不存在（404）
+ * - `storage-limit`: Gist 容量上限（422）
+ * - `unknown`: 其他服务端错误
+ */
+export type GitHubErrorKind = 'auth' | 'rate-limit' | 'not-found' | 'storage-limit' | 'unknown'
+
+export class GitHubAPIError extends Error {
+  readonly status: number
+  readonly kind: GitHubErrorKind
+  readonly retryAfter?: number
+  constructor(status: number, kind: GitHubErrorKind, message: string, retryAfter?: number) {
+    super(message)
+    this.name = 'GitHubAPIError'
+    this.status = status
+    this.kind = kind
+    this.retryAfter = retryAfter
+  }
+}
+
+const RATE_LIMIT_PATTERN = /rate limit|secondary rate|abuse|too many requests/i
+
+/**
+ * 纯函数：根据 GitHub 响应的 status / headers / body 分类错误。
+ * 与 `classifyResponse` 分离以便单元测试，无需 mock fetch。
+ */
+export function classifyGitHubResponse(
+  status: number,
+  headers: { get: (name: string) => string | null },
+  apiMessage: string,
+  notFoundMessage: string,
+): GitHubAPIError {
+  if (status === 422)
+    return new GitHubAPIError(status, 'storage-limit', '同步失败：数据量超过 GitHub Gist 上限 (10MB)。请清理部分标记后重试。')
+
+  if (status === 404)
+    return new GitHubAPIError(status, 'not-found', notFoundMessage)
+
+  if (status === 401)
+    return new GitHubAPIError(status, 'auth', '身份验证失败，请检查 Token 是否有效（401）')
+
+  if (status === 403) {
+    const remaining = headers.get('X-RateLimit-Remaining')
+    const retryAfterRaw = headers.get('Retry-After')
+    const retryAfter = retryAfterRaw ? (Number(retryAfterRaw) || undefined) : undefined
+    // 主速率限制（剩余配额为 0）或次级滥用检测（body 含特定关键词）
+    const isRateLimit = remaining === '0' || RATE_LIMIT_PATTERN.test(apiMessage)
+    if (isRateLimit) {
+      const hint = retryAfter ? `，请 ${retryAfter} 秒后重试` : '，请稍后重试'
+      return new GitHubAPIError(
+        status,
+        'rate-limit',
+        `GitHub 请求频率受限${hint}（非 Token 失效，同步不会被关闭）`,
+        retryAfter,
+      )
+    }
+    // 其他 403：保守按认证/权限类处理（可能是 token scope 不足或资源受限）
+    return new GitHubAPIError(status, 'auth', `权限不足或 Token 无效：${apiMessage || '未知 403 原因'}`)
+  }
+
+  return new GitHubAPIError(status, 'unknown', `GitHub API 请求失败: ${status}${apiMessage ? `（${apiMessage}）` : ''}`)
+}
+
+/**
+ * 读取 Response 并抛出分类后的 GitHubAPIError。
+ * 返回类型为 `never`，调用处可当作 throw 使用。
+ */
+async function classifyResponse(res: Response, notFoundMessage: string): Promise<never> {
+  let apiMessage = ''
+  try {
+    const body = await res.json()
+    if (body && typeof body.message === 'string')
+      apiMessage = body.message
+  }
+  catch {
+    // 响应体非 JSON 或为空，忽略
+  }
+  throw classifyGitHubResponse(res.status, res.headers, apiMessage, notFoundMessage)
+}
+
+/**
  * 获取用户的 Gists 列表，支持分页直到找到目标 Gist 或没有更多数据
  *
  * 注意：列表接口返回的 Gist 文件对象不包含 content，需要读取内容时请用 getGistById。
@@ -108,11 +191,8 @@ export async function getGists(token: string, targetGistId?: string): Promise<Gi
     const res = await fetch(`https://api.github.com/gists?per_page=${perPage}&page=${page}`, {
       headers: { Authorization: `token ${token}` },
     })
-    if (!res.ok) {
-      if (res.status === 401 || res.status === 403)
-        throw new Error('身份验证失败或权限不足，请检查 Token 配置')
-      throw new Error(`GitHub API 请求失败: ${res.status}`)
-    }
+    if (!res.ok)
+      await classifyResponse(res, '未找到指定的同步 Gist，请检查 Gist ID')
 
     const gists: GistResponse[] = await res.json()
     allGists.push(...gists)
@@ -134,13 +214,8 @@ export async function getGistById(token: string, gistId: string): Promise<GistRe
   const res = await fetch(`https://api.github.com/gists/${gistId}`, {
     headers: { Authorization: `token ${token}` },
   })
-  if (!res.ok) {
-    if (res.status === 401 || res.status === 403)
-      throw new Error('身份验证失败或权限不足，请检查 Token 配置')
-    if (res.status === 404)
-      throw new Error('未找到指定的同步 Gist，请检查 Gist ID')
-    throw new Error(`GitHub API 请求失败: ${res.status}`)
-  }
+  if (!res.ok)
+    await classifyResponse(res, '未找到指定的同步 Gist，请检查 Gist ID')
   return res.json()
 }
 
@@ -157,11 +232,8 @@ export async function createGist(token: string, data: SyncData): Promise<GistRes
       files: { 'markflow_sync.json': { content: JSON.stringify(data) } },
     }),
   })
-  if (!res.ok) {
-    if (res.status === 401 || res.status === 403)
-      throw new Error('身份验证失败或权限不足，请检查 Token 配置')
-    throw new Error(`请求失败: ${res.status}`)
-  }
+  if (!res.ok)
+    await classifyResponse(res, '创建同步 Gist 失败')
   return res.json()
 }
 
@@ -176,10 +248,7 @@ export async function updateGist(token: string, gistId: string, data: SyncData):
       files: { 'markflow_sync.json': { content: JSON.stringify(data) } },
     }),
   })
-  if (!res.ok) {
-    if (res.status === 401 || res.status === 403)
-      throw new Error('身份验证失败或权限不足，请检查 Token 配置')
-    throw new Error(`请求失败: ${res.status}`)
-  }
+  if (!res.ok)
+    await classifyResponse(res, '未找到指定的同步 Gist，请检查 Gist ID')
   return res.ok
 }

@@ -413,6 +413,7 @@ onMessage('open-options-page', async () => {
 })
 
 onMessage('trigger-sync', async ({ data }) => {
+  // eslint-disable-next-line no-console
   console.log('[Sync] webext-bridge trigger-sync received', data)
   const payload = data as TriggerSyncPayload
   const force = payload?.force ?? false
@@ -420,6 +421,7 @@ onMessage('trigger-sync', async ({ data }) => {
   const gistId = payload?.gistId || syncConfig.value.gistId
   try {
     const success = await performPull(3, { force, token, gistId })
+    // eslint-disable-next-line no-console
     console.log('[Sync] webext-bridge trigger-sync completed', { success })
     return { success }
   }
@@ -431,6 +433,7 @@ onMessage('trigger-sync', async ({ data }) => {
 
 // MV3 fallback: native runtime message to wake up service worker when webext-bridge fails
 browser.runtime.onMessage.addListener((message: any, _sender, sendResponse) => {
+  // eslint-disable-next-line no-console
   console.log('[Sync] runtime.onMessage received', message)
   if (message?.type === 'trigger-sync-pull') {
     const payload = message as TriggerSyncPayload
@@ -440,6 +443,7 @@ browser.runtime.onMessage.addListener((message: any, _sender, sendResponse) => {
     // Return true to indicate async response
     performPull(3, { force, token, gistId })
       .then((success) => {
+        // eslint-disable-next-line no-console
         console.log('[Sync] runtime trigger-sync-pull completed', { success })
         sendResponse({ success })
       })
@@ -513,6 +517,14 @@ let syncQueue: Promise<void> = Promise.resolve()
 let lastErrorRecoveryAt = 0
 const ERROR_RECOVERY_COOLDOWN_MS = 60_000
 
+/**
+ * 速率限制退避期截止时间戳。在 GitHub 返回 403 速率限制后，
+ * 遵守 Retry-After（缺省 60s）暂停推送，避免反复撞限制被误判为认证失败。
+ * 注意：此期间不关闭同步（enabled 保持 true），仅跳过 push。
+ */
+let rateLimitBackoffUntil = 0
+const DEFAULT_RATE_LIMIT_BACKOFF_SEC = 60
+
 async function enqueueSync(task: () => Promise<void>) {
   const nextSync = syncQueue.then(task).catch((err) => {
     console.error('[Sync] Queue task failed:', err)
@@ -563,6 +575,10 @@ async function purgeTombstones() {
 
 const performPush = debounce(async () => {
   if (isSyncing || !canPush(syncConfig.value, syncStatus.value))
+    return
+
+  // 速率限制退避期内跳过推送，等待 Retry-After 到期后再尝试
+  if (rateLimitBackoffUntil && Date.now() < rateLimitBackoffUntil)
     return
 
   await enqueueSync(async () => {
@@ -626,15 +642,23 @@ const performPush = debounce(async () => {
         syncStatus.value.lastSyncStatus = 'error'
         let errorMsg = error.message
 
-        // 处理 GitHub 达到存储上限的特定错误 (422 Unprocessable Entity)
-        if (error.status === 422 || error.message.includes('422')) {
+        // 按 GitHubAPIError.kind 差异化处理（sync.ts 分类器产出）
+        if (error.kind === 'storage-limit' || error.status === 422 || error.message.includes('422')) {
+          // 处理 GitHub 达到存储上限的特定错误 (422 Unprocessable Entity)
           errorMsg = '同步失败：数据量超过 GitHub Gist 上限 (10MB)。请清理部分标记后重试。'
           collectError(new Error(`[Sync Critical] Storage limit exceeded (422): ${error.message}`), 'background')
         }
+        else if (error.kind === 'rate-limit') {
+          // 速率限制：不禁用同步，仅设置退避期
+          const retryAfter = typeof error.retryAfter === 'number' ? error.retryAfter : DEFAULT_RATE_LIMIT_BACKOFF_SEC
+          rateLimitBackoffUntil = Date.now() + retryAfter * 1000
+          errorMsg = error.message
+          collectError(new Error(`[Sync RateLimit] Push backed off for ${retryAfter}s: ${error.message}`), 'background')
+        }
 
         syncStatus.value.errorMessage = errorMsg
-        // 如果是身份验证问题，自动禁用同步以防止重复报错
-        if (error.message.includes('身份验证失败')) {
+        // 仅确认的认证类错误才自动禁用同步，避免速率限制/网络抖动误杀
+        if (error.kind === 'auth') {
           syncConfig.value.enabled = false
         }
       })
@@ -651,6 +675,7 @@ const performPush = debounce(async () => {
 async function performPullInternal(retries = 3, { force = false, token = '', gistId = '' } = {}): Promise<boolean> {
   const pullToken = token || syncConfig.value.token
   const pullGistId = gistId || syncConfig.value.gistId
+  // eslint-disable-next-line no-console
   console.log('[Sync] performPullInternal called', { retries, force, isSyncing, hasToken: !!pullToken, hasGistId: !!pullGistId, enabled: syncConfig.value.enabled })
   const hasRequired = pullToken && pullGistId
   if (!hasRequired)
@@ -706,7 +731,19 @@ async function performPullInternal(retries = 3, { force = false, token = '', gis
       })
     }
     catch (error: any) {
-      if (error.message.includes('身份验证失败')) {
+      // 速率限制：不重试，遵守 Retry-After 退避，不禁用同步
+      if (error.kind === 'rate-limit') {
+        const retryAfter = typeof error.retryAfter === 'number' ? error.retryAfter : DEFAULT_RATE_LIMIT_BACKOFF_SEC
+        rateLimitBackoffUntil = Date.now() + retryAfter * 1000
+        await enqueueWrite(async () => {
+          syncStatus.value.lastSyncStatus = 'error'
+          syncStatus.value.errorMessage = error.message
+        })
+        collectError(new Error(`[Sync RateLimit] Pull backed off for ${retryAfter}s: ${error.message}`), 'background')
+        return false
+      }
+      // 确认的认证类错误：禁用同步且无需重试
+      if (error.kind === 'auth') {
         await enqueueWrite(async () => {
           syncConfig.value.enabled = false
           syncStatus.value.lastSyncStatus = 'error'
