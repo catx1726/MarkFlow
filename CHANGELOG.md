@@ -1,5 +1,9 @@
 # Unreleased
 
+### [2026-07-28] chore(release): bump version to 0.7.2 (#58)
+chore(release): bump version to 0.7.2
+
+
 ### [2026-07-28] docs(release): finalize v0.7.2 release notes and changelog (#57)
 docs(release): finalize v0.7.2 release notes and changelog
 
