@@ -1,5 +1,9 @@
 # Unreleased
 
+### [2026-07-28] feat(content): 记忆上次使用的标签，新建标记默认预选 (#54) (#55)
+feat(content): 记忆上次使用的标签，新建标记默认预选 (#54)
+
+
 ### [2026-07-04] feat(sidepanel): add search with context preservation and compact mode (#52) (#53)
 feat(sidepanel): add search with context preservation and compact mode (#52)
 
