@@ -19,6 +19,7 @@
 | **数据精简与字段剥离** | 讨论 | 高 | 高 | ⭐⭐⭐⭐ | 剥离冗余的上下文信息，比压缩算法更能提升系统健康度，且保持数据可读性。 |
 | **统一消息返回格式** | PR #37 | 中 | 中 | ⭐⭐⭐⭐ | 统一 `{success, data, error}` 格式可简化前端错误处理模板。 |
 | **search.ts `structureBoundaries` 单遍历构建** | 分析 | 中 | 高 | ⭐⭐⭐⭐ | `createSearchContext` 中对每个块级元素都调用 `getAllTextNodes(el)`，导致同一子树被反复扫描，形成 O(n²) 开销。改为一次遍历同时收集文本节点和结构边界。 |
+| **`monitor.ts` MutationObserver 监听粒度过宽** | 分析 | 低 | 高 | ⭐⭐⭐⭐ | `monitor.ts:23-28` 以 `childList:true, subtree:true` 监听 `document.body`，任何 `addedNodes` 都会触发 300ms 防抖重恢复。在 Twitter/Reddit/B 站等无限滚动场景下会持续触发 `restoreHighlights`，造成性能与电池隐患。建议增加 addedNodes 数量阈值、或限定观察容器、或结合 `restoredMarkIds` 早退。与 `Monitor 生命周期管理完善`（destroy 未接入）属不同维度。 |
 | **search.ts 去重键替换 `innerHTML`** | 分析 | 低 | 中 | ⭐⭐⭐⭐ | `findCandidateElements` 使用 `candidateElement.innerHTML` 作为 Map 去重键，会触发同步 DOM 序列化。建议改用元素引用或稳定标识符。 |
 | **shadowDom.ts 与 ContentScripts 去重** | 分析 | 低 | 中 | ⭐⭐⭐ | `buildShadowHostSelector` / `resolveShadowHost` 的逻辑在 `contentScripts/ui.ts` 和 `restorer.ts` 中也有几乎相同的实现。统一收口到 `shadowDom.ts`。 |
 
@@ -46,6 +47,7 @@
 | **图标系统统一化** | UI Review | 中 | 中 | ⭐⭐⭐ | 内联 SVG 与 UnoCSS Iconify（`i-carbon-*`）混用，增加维护负担。建议统一为单一方案。 |
 | **Sidepanel 设置按钮固定定位** | UI Review | 低 | 低 | [已完成] | 当前设置按钮在 Header 内随页面滚动，长列表时难以访问。建议改为 `fixed`/`sticky`。 |
 | **Tooltip 动态高度边界检测** | UI Review | 低 | 低 | ⭐⭐ | `tooltipHeight = 340` 为硬编码，标签过多时实际高度可能溢出，建议用 `getBoundingClientRect()` 动态计算。 |
+| **导出格式扩展（Obsidian/Notion/HTML）** | 分析 | 中 | 高 | ⭐⭐⭐⭐ | 当前 `useMarkActions.ts` 仅支持纯 Markdown 导出（含 Turndown 转换）。竞品（如 Highlight Sync）已提供 Obsidian frontmatter、Notion database、CSV、JSON、HTML 等多格式。MarkFlow 已记录 `contextTitle/contextLevel/tags` 等结构化元数据，扩展为 Obsidian `> [!quote]` callout + YAML frontmatter 或 Notion database properties 的成本较低，且能强化"结构化整理"这一卖点。 |
 
 ## 4. 代码质量与规范类 (Low Hanging Fruits)
 
@@ -84,11 +86,32 @@
 
 | 项目 | 来源 | 状态 | 关联 Issue/PR |
 | :--- | :--- | :--- | :--- |
+| **Chromium 商店上架** | 分析 | 待办 | - |
 | 跳过 Level 3/4 恢复算法，侧边栏提示上下文 | `.temp/detail.md` | 已完成 | Issue #50, PR #51 |
 | 高亮标记高度自定义 (`highlightHeight`) | `.temp/detail.md` | 已完成 | Issue #50, PR #51 |
 | 侧边栏搜索功能（上下文保留 + 仅显示匹配项） | `.temp/detail.md` | 已完成 | Issue #52, PR #53 |
 
 ---
-**更新日期**: 2026-07-03
+**更新日期**: 2026-07-28
 **维护者**: OpenCode & Driver
+
+---
+
+## 附：代码审查核对记录 (2026-07-28)
+
+本轮对工具进行全量代码阅读后，提出 12 条疑似问题，经逐一核对源码后的处置如下，作为后续审查的参考依据：
+
+- **确认误判并移除（5 条）**：
+  - `getGists` 死代码 → 实际被 `Options.vue:146` 同步连接流程调用
+  - `cleanup-useless-marks` 高危 → `useStorageMonitor.ts:35` 已有 `confirm()` 二次确认
+  - 侧边栏搜索未实现 → `useSidepanelData.ts:32` `filteredTree` + `searchFilter` 已落地
+  - `shortcutSave/shortcutDelete` 未绑定 → `contentScripts/views/Tooltip.vue:127,132` 已消费
+  - 测试偏单元 → 实测 25 个 spec 文件，覆盖 sync/search/restorer/tagTree 等核心算法
+
+- **确认真实但已被现有条目跟踪（4 条）**：未重复添加
+  - `ConsensusMatchStrategy` 死代码 → 见"search.ts 保留策略类注释"
+  - `createSearchContext` 全量重建 → 见"structureBoundaries 单遍历构建"
+  - `copyMarkText` 中文硬编码 → 见"i18n 国际化基础框架"
+
+- **确认为新增并已入库（3 条）**：Chromium 上架、monitor 监听粒度、导出格式扩展
 
