@@ -1,5 +1,9 @@
 # Unreleased
 
+### [2026-07-28] fix(tooltip): 阻止创建标签按钮的 mouseup 冒泡关闭 tooltip (#56)
+fix(tooltip): 阻止创建标签按钮的 mouseup 冒泡关闭 tooltip
+
+
 ### [2026-07-28] feat(content): 记忆上次使用的标签，新建标记默认预选 (#54) (#55)
 feat(content): 记忆上次使用的标签，新建标记默认预选 (#54)
 
