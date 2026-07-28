@@ -30,19 +30,30 @@ const newTagInput = ref('')
 const allTags = ref<Tag[]>([])
 
 async function handleCreateTag() {
+  // eslint-disable-next-line no-console
+  console.log('[DIAG handleCreateTag] START, visible=', visible.value, 'activeElement=', (document.activeElement as HTMLElement)?.tagName, 'class=', (document.activeElement as HTMLElement)?.className)
   const name = newTagInput.value.trim()
-  if (!name)
+  if (!name) {
+    // eslint-disable-next-line no-console
+    console.log('[DIAG handleCreateTag] empty name, return')
     return
+  }
   const result = await sendMessage('create-tag', { name }, 'background')
+  // eslint-disable-next-line no-console
+  console.log('[DIAG handleCreateTag] after create-tag, visible=', visible.value)
   // 适配后台新的返回格式：成功返回 Tag 对象，失败返回 { success: false, error }
   const newTag = result && 'id' in result ? result : null
   if (newTag) {
     // 重新从 SSOT 获取所有标签，避免本地缓存不一致
     const tags = await sendMessage('get-all-tags', {}, 'background')
+    // eslint-disable-next-line no-console
+    console.log('[DIAG handleCreateTag] after get-all-tags, visible=', visible.value, 'count=', Object.keys(tags || {}).length)
     allTags.value = Object.values(tags || {}).sort((a, b) => b.createdAt - a.createdAt)
     selectedTags.value.push(newTag.id)
   }
   newTagInput.value = ''
+  // eslint-disable-next-line no-console
+  console.log('[DIAG handleCreateTag] END, visible=', visible.value, 'allTags.length=', allTags.value.length)
 }
 
 function toggleTag(tagId: string) {
@@ -208,6 +219,8 @@ async function show(
 }
 
 function hide() {
+  // eslint-disable-next-line no-console
+  console.log('[DIAG Tooltip.hide] called, visible=', visible.value, 'stack=', new Error('debug stack').stack)
   if (visible.value && !isHighlighted.value) {
     emit('clearPreview')
   }
