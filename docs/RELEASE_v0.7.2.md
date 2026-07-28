@@ -17,6 +17,13 @@
   - 将原有常驻的新建标签输入框折叠为 "+" 按钮，点击后展开输入框。
   - 创建成功后自动收起，为搜索框释放顶部空间。
 
+- **标签记忆：新建标记默认预选上次标签** (#55)
+  - 新建标记时，Tooltip 自动预选上一次新建标记所选的标签集合——批量整理一篇长文到同一课题时无需反复点选同一标签。
+  - "空选保存也记空"：保存一个不选任何标签的新标记会清空记忆，作为显式的重置入口（无需额外按钮）。
+  - 仅"新建"分支更新记忆；编辑已有标记仍使用该标记原标签，互不影响。
+  - 标签被删除后，悬空的标签 id 在预选时由 `filterExistingTags` 自动过滤，不会出现 ghost 选中。
+  - 记忆为本地偏好（不参与 Gist 同步），与默认高亮色同级。
+
 ### 🐛 问题修复
 
 - **GitHub Gist 同步间歇性自动断开** (commit `420e2c4`)
@@ -31,6 +38,11 @@
 
 ### 🏗️ 架构与代码质量
 
+- **无限滚动页面恢复性能优化** (commit `7ffb9ff`)
+  - `monitor.ts` 以 `subtree:true` 监听 `document.body`，导致 Twitter/Reddit/B 站等无限滚动页面下 `restoreHighlights` 每 300ms 触发一次完整扫描（跨上下文消息往返 + 每个已恢复标记一次 Shadow DOM 查询）。
+  - 在 `HighlightRestorer` 引入"恢复完成早退 + 5s 重验窗"：本页所有标记恢复完成后，monitor 触发的 restore 在窗内直接跳过消息往返；超过 5s 放行一次完整 pass 以捕获虚拟列表回收导致的标记丢失。
+  - 完成态封装在 restorer 实例内不污染共享 state；`refreshHighlights` 手动全量重扫会重置该状态。
+  - 净效果：连续滚屏期间 restore 调用频率从约每 300ms 降至约每 5s（约 16× 降频）。新增 3 个 TDD 用例（restorer.spec 5→8）。
 - **过滤逻辑纯函数化**：将 `filterTagTree` 与 `isMarkMatch` 抽离到独立的 `searchFilter.ts`，避免测试环境加载 `webextension-polyfill`。
 - **状态分离**：在 `useSidepanelData` 中分离实时输入 `searchQuery` 与防抖过滤状态 `debouncedSearchQuery`，响应式逻辑更清晰。
 - **测试共享化**：提取 `buildSampleTree` 等测试辅助函数到 `testUtils.ts`，减少测试文件间重复。
