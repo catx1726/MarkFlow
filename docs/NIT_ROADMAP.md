@@ -19,7 +19,7 @@
 | **数据精简与字段剥离** | 讨论 | 高 | 高 | ⭐⭐⭐⭐ | 剥离冗余的上下文信息，比压缩算法更能提升系统健康度，且保持数据可读性。 |
 | **统一消息返回格式** | PR #37 | 中 | 中 | ⭐⭐⭐⭐ | 统一 `{success, data, error}` 格式可简化前端错误处理模板。 |
 | **search.ts `structureBoundaries` 单遍历构建** | 分析 | 中 | 高 | ⭐⭐⭐⭐ | `createSearchContext` 中对每个块级元素都调用 `getAllTextNodes(el)`，导致同一子树被反复扫描，形成 O(n²) 开销。改为一次遍历同时收集文本节点和结构边界。 |
-| **`monitor.ts` MutationObserver 监听粒度过宽** | 分析 | 低 | 高 | ⭐⭐⭐⭐ | `monitor.ts:23-28` 以 `childList:true, subtree:true` 监听 `document.body`，任何 `addedNodes` 都会触发 300ms 防抖重恢复。在 Twitter/Reddit/B 站等无限滚动场景下会持续触发 `restoreHighlights`，造成性能与电池隐患。建议增加 addedNodes 数量阈值、或限定观察容器、或结合 `restoredMarkIds` 早退。与 `Monitor 生命周期管理完善`（destroy 未接入）属不同维度。 |
+| **`monitor.ts` MutationObserver 监听粒度过宽** | 分析 | 低 | 高 | [已完成] | 已在 `restorer.ts` 实现"恢复完成早退 + 5s 重验窗"：所有标记恢复完成后，monitor 触发的 `restoreHighlights` 在窗内直接跳过 `sendMessage` 往返与 Shadow DOM 查询；超窗后放行一次完整 pass 以捕获虚拟列表回收。无限滚动期间 restore 调用频率从 ~每 300ms 降至 ~每 5s。原建议（`monitor.ts:23-28` 以 `childList:true, subtree:true` 监听 `document.body` 任意 addedNodes 触发 300ms 防抖重恢复）不再造成性能隐患。 |
 | **search.ts 去重键替换 `innerHTML`** | 分析 | 低 | 中 | ⭐⭐⭐⭐ | `findCandidateElements` 使用 `candidateElement.innerHTML` 作为 Map 去重键，会触发同步 DOM 序列化。建议改用元素引用或稳定标识符。 |
 | **shadowDom.ts 与 ContentScripts 去重** | 分析 | 低 | 中 | ⭐⭐⭐ | `buildShadowHostSelector` / `resolveShadowHost` 的逻辑在 `contentScripts/ui.ts` 和 `restorer.ts` 中也有几乎相同的实现。统一收口到 `shadowDom.ts`。 |
 
