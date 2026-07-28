@@ -38,6 +38,20 @@ function reportRestoreFailure(mark: Mark, reason: string, detail?: any) {
 }
 
 export class HighlightRestorer {
+  /**
+   * 已完成恢复的 URL。当本页所有标记均已恢复时记录，配合 restorationCompletedAt
+   * 实现 monitor 触发的 restoreHighlights 早退，避免无限滚动场景下每 300ms 重复
+   * 消息往返与 Shadow DOM 查询。
+   */
+  private restorationCompleteUrl: string | null = null
+  private restorationCompletedAt = 0
+
+  /**
+   * 恢复完成后的重验间隔。超过此间隔放行一次完整 pass，以捕获虚拟列表回收导致的
+   * 已恢复标记丢失（与现有 3s 失败冷却同量级）。
+   */
+  private static readonly REVALIDATE_INTERVAL_MS = 5000
+
   constructor(
     private state: HighlightStateManager,
   ) {}
@@ -45,12 +59,24 @@ export class HighlightRestorer {
   async restoreHighlights(): Promise<Candidate[]> {
     if (this.state.isRestoring)
       return this.state.ambiguousMarksQueue.value
+
+    const canonicalUrl = getCanonicalUrlForMark()
+    // 早退：当前 URL 的恢复已完成且在重验窗内，跳过 sendMessage 往返与 DOM 查询。
+    // 这是 monitor 在无限滚动场景下的主要节流点。
+    if (
+      this.restorationCompleteUrl === canonicalUrl
+      && Date.now() - this.restorationCompletedAt < HighlightRestorer.REVALIDATE_INTERVAL_MS
+    ) {
+      return this.state.ambiguousMarksQueue.value
+    }
+
     this.state.isRestoring = true
     try {
-      const canonicalUrl = getCanonicalUrlForMark()
       const marks = await sendMessage('get-marks-for-url', { url: canonicalUrl }, 'background')
-      if (!marks || marks.length === 0)
+      if (!marks || marks.length === 0) {
+        this.markRestorationComplete(canonicalUrl)
         return this.state.ambiguousMarksQueue.value
+      }
 
       const now = Date.now()
       const marksToRestore = marks.filter((mark) => {
@@ -73,14 +99,27 @@ export class HighlightRestorer {
         return a.createdAt - b.createdAt
       })
 
-      if (marksToRestore.length > 0)
+      if (marksToRestore.length > 0) {
         await this.applyMarksTwoPhases(marksToRestore)
+      }
+      else {
+        // 所有标记均已恢复（marksToRestore 为空）→ 进入完成态，启用早退节流
+        this.markRestorationComplete(canonicalUrl)
+      }
 
       return this.state.ambiguousMarksQueue.value
     }
     finally {
       this.state.isRestoring = false
     }
+  }
+
+  /**
+   * 标记当前 URL 的恢复已完成，启用 monitor 触发的早退节流。
+   */
+  private markRestorationComplete(url: string): void {
+    this.restorationCompleteUrl = url
+    this.restorationCompletedAt = Date.now()
   }
 
   private async applyMarksTwoPhases(marks: Mark[]) {
@@ -290,6 +329,9 @@ export class HighlightRestorer {
   }
 
   async refreshHighlights() {
+    // 重置完成态：手动全量重扫，必须绕过早退节流
+    this.restorationCompleteUrl = null
+    this.restorationCompletedAt = 0
     const highlights = querySelectorAllDeep('span[class*="webext-highlight-"]')
     const parentsToNormalize = new Set<Node>()
     highlights.forEach((el) => {

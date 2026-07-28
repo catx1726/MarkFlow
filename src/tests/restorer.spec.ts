@@ -92,4 +92,53 @@ describe('highlightRestorer', () => {
       restoreFailedAt: expect.any(Number),
     })
   })
+
+  describe('restoration-complete early-exit (monitor throttling)', () => {
+    async function pingCount() {
+      const { sendMessage } = await import('webext-bridge/content-script')
+      return vi.mocked(sendMessage).mock.calls.filter(([type]) => type === 'get-marks-for-url').length
+    }
+
+    it('恢复完成后，重验窗内的后续调用应跳过 sendMessage 往返', async () => {
+      const { sendMessage } = await import('webext-bridge/content-script')
+      vi.mocked(sendMessage).mockResolvedValue([])
+
+      await restorer.restoreHighlights() // 首次：ping，0 marks，标记完成
+      const afterFirst = await pingCount()
+
+      await restorer.restoreHighlights() // 窗内：应早退，不再 ping
+      expect(await pingCount()).toBe(afterFirst)
+    })
+
+    it('超过重验窗后，应重新 ping 以校验虚拟列表回收等场景', async () => {
+      const { sendMessage } = await import('webext-bridge/content-script')
+      vi.mocked(sendMessage).mockResolvedValue([])
+
+      await restorer.restoreHighlights() // 标记完成
+      const afterFirst = await pingCount()
+
+      await restorer.restoreHighlights() // 窗内：早退
+      expect(await pingCount()).toBe(afterFirst)
+
+      vi.useFakeTimers()
+      vi.setSystemTime(Date.now() + 10_000) // 超过 5s 重验窗
+      await restorer.restoreHighlights() // 应重新 ping
+      vi.useRealTimers()
+      expect(await pingCount()).toBeGreaterThan(afterFirst)
+    })
+
+    it('refreshHighlights 应重置完成态，强制下次重新 ping', async () => {
+      const { sendMessage } = await import('webext-bridge/content-script')
+      vi.mocked(sendMessage).mockResolvedValue([])
+
+      await restorer.restoreHighlights() // 标记完成
+      const afterFirst = await pingCount()
+
+      await restorer.restoreHighlights() // 窗内：早退
+      expect(await pingCount()).toBe(afterFirst)
+
+      await restorer.refreshHighlights() // 重置 + 内部 restoreHighlights 应重新 ping
+      expect(await pingCount()).toBeGreaterThan(afterFirst)
+    })
+  })
 })

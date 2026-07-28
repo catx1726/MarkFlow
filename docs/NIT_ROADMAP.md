@@ -19,7 +19,7 @@
 | **数据精简与字段剥离** | 讨论 | 高 | 高 | ⭐⭐⭐⭐ | 剥离冗余的上下文信息，比压缩算法更能提升系统健康度，且保持数据可读性。 |
 | **统一消息返回格式** | PR #37 | 中 | 中 | ⭐⭐⭐⭐ | 统一 `{success, data, error}` 格式可简化前端错误处理模板。 |
 | **search.ts `structureBoundaries` 单遍历构建** | 分析 | 中 | 高 | ⭐⭐⭐⭐ | `createSearchContext` 中对每个块级元素都调用 `getAllTextNodes(el)`，导致同一子树被反复扫描，形成 O(n²) 开销。改为一次遍历同时收集文本节点和结构边界。 |
-| **`monitor.ts` MutationObserver 监听粒度过宽** | 分析 | 低 | 高 | ⭐⭐⭐⭐ | `monitor.ts:23-28` 以 `childList:true, subtree:true` 监听 `document.body`，任何 `addedNodes` 都会触发 300ms 防抖重恢复。在 Twitter/Reddit/B 站等无限滚动场景下会持续触发 `restoreHighlights`，造成性能与电池隐患。建议增加 addedNodes 数量阈值、或限定观察容器、或结合 `restoredMarkIds` 早退。与 `Monitor 生命周期管理完善`（destroy 未接入）属不同维度。 |
+| **`monitor.ts` MutationObserver 监听粒度过宽** | 分析 | 低 | 高 | [已完成] | 已在 `restorer.ts` 实现"恢复完成早退 + 5s 重验窗"：所有标记恢复完成后，monitor 触发的 `restoreHighlights` 在窗内直接跳过 `sendMessage` 往返与 Shadow DOM 查询；超窗后放行一次完整 pass 以捕获虚拟列表回收。无限滚动期间 restore 调用频率从 ~每 300ms 降至 ~每 5s。原建议（`monitor.ts:23-28` 以 `childList:true, subtree:true` 监听 `document.body` 任意 addedNodes 触发 300ms 防抖重恢复）不再造成性能隐患。 |
 | **search.ts 去重键替换 `innerHTML`** | 分析 | 低 | 中 | ⭐⭐⭐⭐ | `findCandidateElements` 使用 `candidateElement.innerHTML` 作为 Map 去重键，会触发同步 DOM 序列化。建议改用元素引用或稳定标识符。 |
 | **shadowDom.ts 与 ContentScripts 去重** | 分析 | 低 | 中 | ⭐⭐⭐ | `buildShadowHostSelector` / `resolveShadowHost` 的逻辑在 `contentScripts/ui.ts` 和 `restorer.ts` 中也有几乎相同的实现。统一收口到 `shadowDom.ts`。 |
 
@@ -48,7 +48,7 @@
 | **Sidepanel 设置按钮固定定位** | UI Review | 低 | 低 | [已完成] | 当前设置按钮在 Header 内随页面滚动，长列表时难以访问。建议改为 `fixed`/`sticky`。 |
 | **Tooltip 动态高度边界检测** | UI Review | 低 | 低 | ⭐⭐ | `tooltipHeight = 340` 为硬编码，标签过多时实际高度可能溢出，建议用 `getBoundingClientRect()` 动态计算。 |
 | **导出格式扩展（Obsidian/Notion/HTML）** | 分析 | 中 | 高 | ⭐⭐⭐⭐ | 当前 `useMarkActions.ts` 仅支持纯 Markdown 导出（含 Turndown 转换）。竞品（如 Highlight Sync）已提供 Obsidian frontmatter、Notion database、CSV、JSON、HTML 等多格式。MarkFlow 已记录 `contextTitle/contextLevel/tags` 等结构化元数据，扩展为 Obsidian `> [!quote]` callout + YAML frontmatter 或 Notion database properties 的成本较低，且能强化"结构化整理"这一卖点。 |
-| **记忆上次使用的标签，下次标记默认预选** | 用户需求 | 低 | 高 | ⭐⭐⭐⭐ | 当前 `contentScripts/views/Tooltip.vue:199` 每次新建标记时 `selectedTags` 被初始化为空（`show()` 收到的 `initialTags` 为 `[]`），用户连续标记同类内容（如批量整理一篇长文到同一课题）时必须反复点选同一标签。建议：新增 `lastUsedTags` 持久化字段（`settings` 或独立 storage key），在 `onSaveClick` 时写入当前 `selectedTags`，下次 `show()` 新建标记时预填。显著降低连续整理的认知负担，强化"结构化整理"卖点。**注意点**：① 编辑已有标记时仍用该 mark 原 `tags`，不被 lastUsedTags 覆盖；② 标签被删除后需过滤悬空的 lastUsedTags 引用；③ 是否提供"清除记忆"入口可在设置中心补充。 |
+| **记忆上次使用的标签，下次标记默认预选** | 用户需求 | 低 | 高 | [已完成] | 已实现（Issue #54）：`settings.lastUsedTags`（本地偏好，不同步）；新建标记 `ui.showTooltip` 传 lastUsedTags 作为 initialTags；`Tooltip.show()` 内 `filterExistingTags` 过滤悬空 id；`createHighlight`（仅新建分支）保存后写入。原注意点已全部覆盖：①编辑已有标记用原 tags 不受影响；②标签删除后悬空 id 经 `filterExistingTags` 过滤；③"清除记忆"靠空选保存实现（YAGNI，不设独立按钮）。 |
 
 ## 4. 代码质量与规范类 (Low Hanging Fruits)
 

@@ -235,7 +235,7 @@ function processSelection(event: {
         state.currentMarkIdForColorChange = null
 
         state.previewApplier?.applyToRange(range)
-        ui.showTooltip(event.clientX, event.clientY, false, '', settings.value.defaultHighlightColor, capturedText, [])
+        ui.showTooltip(event.clientX, event.clientY, false, '', settings.value.defaultHighlightColor, capturedText, settings.value.lastUsedTags)
       }
       catch (e) {
         console.error('[WebMarker] Error during selection processing:', e)

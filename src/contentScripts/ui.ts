@@ -4,6 +4,7 @@ import browser from 'webextension-polyfill'
 import rangy from 'rangy/lib/rangy-core'
 import Tooltip from './views/Tooltip.vue'
 import DisambiguationModal from './views/DisambiguationModal.vue'
+import type { HighlightStateManager } from './state'
 import type { Mark } from '~/logic/storage'
 import { highlightDefaultStyle } from '~/logic/config'
 import { settings } from '~/logic/settings'
@@ -11,15 +12,14 @@ import {
   DOMScanner,
   applyPreciseHighlight,
   getCanonicalUrlForMark,
-  getHighlightContext,
   getElementSelector,
+  getHighlightContext,
+  getMaxZIndex,
   querySelectorAllDeep,
   stripHighlights,
-  getMaxZIndex,
 } from '~/logic/dom'
 import { ShadowDOMManager } from '~/logic/shadowDom'
 import type { Candidate } from '~/logic/search'
-import type { HighlightStateManager } from './state'
 
 export class UIManager {
   private _originalColorForChange: string | null = null
@@ -42,7 +42,8 @@ export class UIManager {
 
     const uiRoot = document.createElement('div')
     const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches
-    if (isDark) uiRoot.classList.add('dark')
+    if (isDark)
+      uiRoot.classList.add('dark')
     shadowDOM.appendChild(uiRoot)
 
     const tooltipRoot = document.createElement('div')
@@ -59,14 +60,14 @@ export class UIManager {
     createApp({
       render: () =>
         h(DisambiguationModal, {
-          ambiguousMarksData: this.state.modalState.marks,
-          modelValue: this.state.modalState.visible,
+          'ambiguousMarksData': this.state.modalState.marks,
+          'modelValue': this.state.modalState.visible,
           'onUpdate:modelValue': (val: boolean) => {
             this.state.modalState.visible = val
           },
-          onConfirmResolution: (selections: any) => this.handleConfirmResolution(selections),
-          onDiscardMark: (markId: string) => this.handleDiscardMark(markId),
-          onCancel: () => {
+          'onConfirmResolution': (selections: any) => this.handleConfirmResolution(selections),
+          'onDiscardMark': (markId: string) => this.handleDiscardMark(markId),
+          'onCancel': () => {
             this.state.modalState.visible = false
           },
           'onHover-list-item': (item: Candidate) => this.handleCandidateHover(item),
@@ -103,7 +104,8 @@ export class UIManager {
     const previewElements = querySelectorAllDeep('.webext-highlight-preview-ambiguous')
     const parentsToNormalize = new Set<Node>()
     previewElements.forEach((el) => {
-      if (!(el instanceof HTMLElement)) return
+      if (!(el instanceof HTMLElement))
+        return
       const parent = el.parentNode
       if (parent) {
         parentsToNormalize.add(parent)
@@ -111,19 +113,21 @@ export class UIManager {
         parent.removeChild(el)
       }
     })
-    parentsToNormalize.forEach((parent) => parent.normalize())
+    parentsToNormalize.forEach(parent => parent.normalize())
   }
 
   private async handleDiscardMark(markId: string) {
+    // eslint-disable-next-line no-alert
     if (confirm('确定要彻底丢弃此标记吗？')) {
       await this.removeMarkById(markId)
-      this.state.modalState.marks = this.state.modalState.marks.filter((m) => m.originalMarkId !== markId)
-      if (this.state.modalState.marks.length === 0) this.state.modalState.visible = false
+      this.state.modalState.marks = this.state.modalState.marks.filter(m => m.originalMarkId !== markId)
+      if (this.state.modalState.marks.length === 0)
+        this.state.modalState.visible = false
     }
   }
 
   private async handleConfirmResolution(
-    selections: { originalMarkId: string; candidateElement: HTMLElement; actualText: string; matchIndex: number }[],
+    selections: { originalMarkId: string, candidateElement: HTMLElement, actualText: string, matchIndex: number }[],
   ) {
     for (const { originalMarkId, candidateElement, actualText, matchIndex } of selections) {
       const mark = await sendMessage('get-mark-by-id', { id: originalMarkId, url: getCanonicalUrlForMark() }, 'background')
@@ -182,7 +186,7 @@ export class UIManager {
       }
     }
     this.state.ambiguousMarksQueue.value = this.state.ambiguousMarksQueue.value.filter(
-      (m) => !this.state.restoredMarkIds.has(m.originalMarkId),
+      m => !this.state.restoredMarkIds.has(m.originalMarkId),
     )
   }
 
@@ -196,7 +200,8 @@ export class UIManager {
           }
         })
       }
-    } else {
+    }
+    else {
       if (this.state.serializedSelection) {
         this.clearPreviewHighlight()
         this.state.previewApplier = rangy.createClassApplier('webext-highlight-preview', {
@@ -208,9 +213,11 @@ export class UIManager {
           const win = root instanceof ShadowRoot ? root.ownerDocument.defaultView : window
           rangy.deserializeSelection(this.state.serializedSelection, root, win || window)
           this.state.previewApplier.applyToSelection()
-        } catch (_e) {
+        }
+        catch (_e) {
           console.error('应用预览高亮失败:', _e)
-        } finally {
+        }
+        finally {
           rangy.getSelection().removeAllRanges()
         }
       }
@@ -235,12 +242,14 @@ export class UIManager {
     const previewElements = querySelectorAllDeep('.webext-highlight-preview')
     const parentsToNormalize = new Set<Node>()
     previewElements.forEach((el) => {
-      if (!(el instanceof HTMLElement)) return
+      if (!(el instanceof HTMLElement))
+        return
       if (
-        el.className.split(' ').some((cls) => cls.startsWith('webext-highlight-') && cls !== 'webext-highlight-preview')
+        el.className.split(' ').some(cls => cls.startsWith('webext-highlight-') && cls !== 'webext-highlight-preview')
       ) {
         el.classList.remove('webext-highlight-preview')
-      } else {
+      }
+      else {
         const parent = el.parentNode
         if (parent) {
           parentsToNormalize.add(parent)
@@ -249,7 +258,7 @@ export class UIManager {
         }
       }
     })
-    parentsToNormalize.forEach((parent) => parent.normalize())
+    parentsToNormalize.forEach(parent => parent.normalize())
   }
 
   showTooltip(x: number, y: number, isHighlighted: boolean, note: string, color: string, text: string, tags: string[] = []): void {
@@ -286,18 +295,23 @@ export class UIManager {
             el.style.paddingBottom = `${settings.value.highlightHeight}px`
           }
         })
-      } catch (e) {
+      }
+      catch (e) {
         console.error('Error during mark update:', e)
       }
-    } else {
+    }
+    else {
       this.clearPreviewHighlight()
-      if (!this.state.serializedSelection) return
+      if (!this.state.serializedSelection)
+        return
       try {
         const root = this.state.currentSerializationRoot || document.documentElement
         const doc = root instanceof ShadowRoot ? root.ownerDocument : document
         const range = rangy.deserializeRange(this.state.serializedSelection, root, doc)
-        if (range && !range.collapsed) await this.createHighlight(range, note, color, tags)
-      } catch (e) {
+        if (range && !range.collapsed)
+          await this.createHighlight(range, note, color, tags)
+      }
+      catch (e) {
         console.error('Error during save action (create):', e)
       }
     }
@@ -309,12 +323,16 @@ export class UIManager {
   }
 
   private async handleDelete() {
-    if (!this.state.serializedSelection) return
+    if (!this.state.serializedSelection)
+      return
     try {
-      if (this.state.currentMarkIdForColorChange) await this.removeMarkById(this.state.currentMarkIdForColorChange)
-    } catch (e) {
+      if (this.state.currentMarkIdForColorChange)
+        await this.removeMarkById(this.state.currentMarkIdForColorChange)
+    }
+    catch (e) {
       console.error('Error during delete action:', e)
-    } finally {
+    }
+    finally {
       this.state.currentSerializationRoot = undefined
       this.state.serializedSelection = null
       this.state.currentMarkIdForColorChange = null
@@ -334,7 +352,7 @@ export class UIManager {
         parent.removeChild(el)
       }
     })
-    parentsToNormalize.forEach((parent) => parent.normalize())
+    parentsToNormalize.forEach(parent => parent.normalize())
     await sendMessage('remove-mark-by-id', { id: markId, url: getCanonicalUrlForMark() }, 'background')
   }
 
@@ -364,7 +382,7 @@ export class UIManager {
     const rangySerialized = rangy.serializeRange(rangyRange, true, root instanceof ShadowRoot ? root : undefined)
     const selectedText = rangyRange.toString()
     const { contextTitle, contextSelector, contextLevel, contextOrder, surroundingSnippet } = getHighlightContext(rangyRange)
-    
+
     // 计算物理位置索引
     const container = (root instanceof ShadowRoot) ? root : document.body
     const domIndex = DOMScanner.calculatePreciseOffset(rangyRange, container)
@@ -400,5 +418,7 @@ export class UIManager {
       surroundingSnippet,
     }
     await sendMessage('add-mark', markData, 'background')
+    // 记录本次新建标记选中的标签（含空集合），供下次新建时预选。仅新建分支，编辑分支不更新。
+    settings.value.lastUsedTags = [...tags]
   }
 }
