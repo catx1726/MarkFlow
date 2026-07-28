@@ -48,7 +48,7 @@
 | **Sidepanel 设置按钮固定定位** | UI Review | 低 | 低 | [已完成] | 当前设置按钮在 Header 内随页面滚动，长列表时难以访问。建议改为 `fixed`/`sticky`。 |
 | **Tooltip 动态高度边界检测** | UI Review | 低 | 低 | ⭐⭐ | `tooltipHeight = 340` 为硬编码，标签过多时实际高度可能溢出，建议用 `getBoundingClientRect()` 动态计算。 |
 | **导出格式扩展（Obsidian/Notion/HTML）** | 分析 | 中 | 高 | ⭐⭐⭐⭐ | 当前 `useMarkActions.ts` 仅支持纯 Markdown 导出（含 Turndown 转换）。竞品（如 Highlight Sync）已提供 Obsidian frontmatter、Notion database、CSV、JSON、HTML 等多格式。MarkFlow 已记录 `contextTitle/contextLevel/tags` 等结构化元数据，扩展为 Obsidian `> [!quote]` callout + YAML frontmatter 或 Notion database properties 的成本较低，且能强化"结构化整理"这一卖点。 |
-| **记忆上次使用的标签，下次标记默认预选** | 用户需求 | 低 | 高 | ⭐⭐⭐⭐ | 当前 `contentScripts/views/Tooltip.vue:199` 每次新建标记时 `selectedTags` 被初始化为空（`show()` 收到的 `initialTags` 为 `[]`），用户连续标记同类内容（如批量整理一篇长文到同一课题）时必须反复点选同一标签。建议：新增 `lastUsedTags` 持久化字段（`settings` 或独立 storage key），在 `onSaveClick` 时写入当前 `selectedTags`，下次 `show()` 新建标记时预填。显著降低连续整理的认知负担，强化"结构化整理"卖点。**注意点**：① 编辑已有标记时仍用该 mark 原 `tags`，不被 lastUsedTags 覆盖；② 标签被删除后需过滤悬空的 lastUsedTags 引用；③ 是否提供"清除记忆"入口可在设置中心补充。 |
+| **记忆上次使用的标签，下次标记默认预选** | 用户需求 | 低 | 高 | [已完成] | 已实现（Issue #54）：`settings.lastUsedTags`（本地偏好，不同步）；新建标记 `ui.showTooltip` 传 lastUsedTags 作为 initialTags；`Tooltip.show()` 内 `filterExistingTags` 过滤悬空 id；`createHighlight`（仅新建分支）保存后写入。原注意点已全部覆盖：①编辑已有标记用原 tags 不受影响；②标签删除后悬空 id 经 `filterExistingTags` 过滤；③"清除记忆"靠空选保存实现（YAGNI，不设独立按钮）。 |
 
 ## 4. 代码质量与规范类 (Low Hanging Fruits)
 
