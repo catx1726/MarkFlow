@@ -14,6 +14,7 @@ export const defaultSettings = {
   shortcutDelete: 'Alt+D',
   autoAssociation: true,
   highlightHeight: 5,
+  lastUsedTags: [] as string[], // 上次新建标记时选中的标签 id（本地偏好，不同步）
 }
 
 export function isPageBlacklisted(url: string, blacklist: string[]): boolean {

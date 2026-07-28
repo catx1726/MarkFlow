@@ -418,5 +418,7 @@ export class UIManager {
       surroundingSnippet,
     }
     await sendMessage('add-mark', markData, 'background')
+    // 记录本次新建标记选中的标签（含空集合），供下次新建时预选。仅新建分支，编辑分支不更新。
+    settings.value.lastUsedTags = [...tags]
   }
 }

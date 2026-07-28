@@ -3,6 +3,7 @@
 import { computed, nextTick, onMounted, onUnmounted, reactive, ref, toRaw, watch } from 'vue'
 import { sendMessage } from 'webext-bridge/content-script'
 import { getMaxZIndex } from '../../logic/dom'
+import { filterExistingTags } from '../../logic/tags'
 import { settings } from '~/logic/settings'
 import type { Tag } from '~/logic/storage'
 
@@ -196,7 +197,8 @@ async function show(
   position.y = y
   isHighlighted.value = highlighted
   noteValue.value = initialNote
-  selectedTags.value = [...initialTags]
+  // 过滤掉已删除标签的悬空 id（lastUsedTags 或旧 mark.tags 可能引用已删除标签）
+  selectedTags.value = filterExistingTags(initialTags, allTags.value)
   selectedColor.value = initialColor || defaultHighlightColor.value
   textToCopy.value = initialTextToCopy
   visible.value = true
