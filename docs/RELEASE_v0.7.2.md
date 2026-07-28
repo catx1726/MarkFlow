@@ -36,6 +36,12 @@
     - 设置页报错信息现在会显示真实原因（如"GitHub 请求频率受限，请 X 秒后重试"），下次再遇到问题可一眼定位是速率限制还是 Token 失效。
   - 新增 9 个单元测试覆盖错误分类逻辑（`sync.spec.ts` 由 16 增至 25 个用例）。
 
+- **Tooltip 点击"创建"按钮后标签未显示 / 无成功提示**
+  - **症状**：在 Tooltip 里输入新标签名，点击"创建"按钮，Tooltip 直接关闭，看起来标签没创建、也没有成功提示；但按 Enter 键正常，侧边栏也能看到新标签。
+  - **根因**：`tooltip-card` 根元素只阻止了 `mousedown` 冒泡（`@mousedown.stop`），没阻止 `mouseup`；鼠标点击按钮时，`mouseup` 冒泡到 `document` 的 `handleMouseUp`，启动 `selectionTimer` → `processSelection` → `hide()`，在创建标签后立即关闭 Tooltip。
+  - **修复**：为 `tooltip-card` 根元素补加 `@mouseup.stop`，与 `@mousedown.stop` 对称，阻止内部点击继续触发选区恢复流程。
+  - 影响文件：`src/contentScripts/views/Tooltip.vue`
+
 ### 🏗️ 架构与代码质量
 
 - **无限滚动页面恢复性能优化** (commit `7ffb9ff`)
@@ -51,7 +57,7 @@
 
 - 新增 Spec：`docs/superpowers/specs/2026-07-03-sidepanel-search-design.md`
 - 新增 Plan：`docs/superpowers/plans/2026-07-03-sidepanel-search-plan.md`
-- 更新审计日志：`.project/ops_changelog.md`
+- 更新审计日志：`.gemini/ops_changelog.md`
 - 更新 NIT Roadmap：`docs/NIT_ROADMAP.md`
 
 ---

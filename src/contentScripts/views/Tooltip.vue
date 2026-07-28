@@ -231,6 +231,7 @@ defineExpose({ show, hide })
     class="tooltip-card fixed z-[9999] w-[320px] rounded-lg bg-white p-[12px] font-sans shadow-xl border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200"
     :style="{ top: `${position.y}px`, left: `${position.x}px`, zIndex }"
     @mousedown.stop
+    @mouseup.stop
   >
     <div class="tooltip-content flex flex-col gap-[12px]">
       <div class="tooltip-header flex justify-between items-center mb-[-4px]">
