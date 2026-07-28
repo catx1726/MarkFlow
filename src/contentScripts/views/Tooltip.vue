@@ -28,6 +28,7 @@ const zIndex = ref(0)
 
 const newTagInput = ref('')
 const allTags = ref<Tag[]>([])
+const tagCreateSuccess = ref(false)
 
 async function handleCreateTag() {
   // eslint-disable-next-line no-console
@@ -50,6 +51,10 @@ async function handleCreateTag() {
     console.log('[DIAG handleCreateTag] after get-all-tags, visible=', visible.value, 'count=', Object.keys(tags || {}).length)
     allTags.value = Object.values(tags || {}).sort((a, b) => b.createdAt - a.createdAt)
     selectedTags.value.push(newTag.id)
+    tagCreateSuccess.value = true
+    window.setTimeout(() => {
+      tagCreateSuccess.value = false
+    }, 1500)
   }
   newTagInput.value = ''
   // eslint-disable-next-line no-console
@@ -294,11 +299,12 @@ defineExpose({ show, hide })
             @keydown.enter.prevent="handleCreateTag"
           >
           <button
-            class="px-2 py-1 text-[10px] bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+            class="px-2 py-1 text-[10px] rounded hover:opacity-90 disabled:opacity-50 transition-colors"
+            :class="tagCreateSuccess ? 'bg-green-600 text-white' : 'bg-blue-600 text-white hover:bg-blue-700'"
             :disabled="!newTagInput.trim()"
             @click="handleCreateTag"
           >
-            创建
+            {{ tagCreateSuccess ? '已创建' : '创建' }}
           </button>
         </div>
       </div>
