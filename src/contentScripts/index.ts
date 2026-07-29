@@ -113,32 +113,20 @@ function handleKeyDown(event: KeyboardEvent) {
 // #region --- Event Listeners & Handlers ---
 
 function handleMouseDown(event: MouseEvent) {
-  // eslint-disable-next-line no-console
-  console.log('[DIAG handleMouseDown] fired, target=', (event.target as HTMLElement)?.tagName, 'class=', (event.target as HTMLElement)?.className)
   ui.cancelTooltipDebounce()
   // 修复：使用 composedPath 获取实际目标，处理 Shadow DOM 事件重定向
   const actualTarget = event.composedPath().find(el => el instanceof HTMLElement) as HTMLElement | undefined
   const target = actualTarget || (event.target as HTMLElement)
-  if (target instanceof Element && target.shadowRoot) {
-    // eslint-disable-next-line no-console
-    console.log('[DIAG handleMouseDown] target has shadowRoot, return')
+  if (target instanceof Element && target.shadowRoot)
     return
-  }
-  if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
-    // eslint-disable-next-line no-console
-    console.log('[DIAG handleMouseDown] input/textarea, return')
+  if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)
     return
-  }
   const path = event.composedPath() as HTMLElement[]
   const inTooltip = path.some(el => el instanceof HTMLElement && el.classList.contains('tooltip-card'))
-  // eslint-disable-next-line no-console
-  console.log('[DIAG handleMouseDown] inTooltip=', inTooltip)
   if (inTooltip)
     return
 
   if (!target.closest('span[class*="webext-highlight-"]')) {
-    // eslint-disable-next-line no-console
-    console.log('[DIAG handleMouseDown] -> hide()')
     state.tooltipApp?.hide()
     ui.clearPreviewWithColorRestore()
   }
@@ -146,21 +134,12 @@ function handleMouseDown(event: MouseEvent) {
 
 function handleMouseUp(event: MouseEvent) {
   const target = event.target as HTMLElement
-  // eslint-disable-next-line no-console
-  console.log('[DIAG handleMouseUp] fired, target=', target?.tagName, 'class=', target?.className, 'button=', event.button)
-  if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
-    // eslint-disable-next-line no-console
-    console.log('[DIAG handleMouseUp] input/textarea, return')
+  if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)
     return
-  }
   const path = event.composedPath()
   const inTooltip = path.some(el => el instanceof HTMLElement && el.classList.contains('tooltip-card'))
-  // eslint-disable-next-line no-console
-  console.log('[DIAG handleMouseUp] inTooltip=', inTooltip, 'pathTags=', path.filter(el => el instanceof HTMLElement).map((el: HTMLElement) => `${el.tagName}.${el.className}`).slice(0, 6))
   if (event.button === 2 || inTooltip)
     return
-  // eslint-disable-next-line no-console
-  console.log('[DIAG handleMouseUp] -> processSelection scheduled')
   const eventSnapshot = {
     target,
     path: typeof event.composedPath === 'function' ? event.composedPath() : [target],
@@ -200,8 +179,6 @@ function processSelection(event: {
   altKey: boolean
   detail: number
 }) {
-  // eslint-disable-next-line no-console
-  console.log('[DIAG processSelection] called')
   const initialSelection = rangy.getSelection()
   // 修复：使用 composedPath 中的实际目标元素，正确处理 Shadow DOM 内的事件重定向
   const actualTargetNode = (event.path.find(el => el instanceof Node && el.nodeType === Node.ELEMENT_NODE) as HTMLElement | undefined) || (event.target as HTMLElement | null)
@@ -210,16 +187,6 @@ function processSelection(event: {
     targetNode.nodeType === Node.ELEMENT_NODE ? targetNode : targetNode.parentNode
   ) as HTMLElement | null
   const markElement = targetElement?.closest('span[class*="webext-highlight-"]') as HTMLElement | null
-  console.log('[TooltipDebug] processSelection:', {
-    markElement: !!markElement,
-    isCollapsed: initialSelection?.isCollapsed,
-    rangeCount: initialSelection?.rangeCount,
-    altKey: event.altKey,
-    className: markElement?.className,
-    targetTag: (targetNode as HTMLElement)?.tagName,
-    targetClass: (targetNode as HTMLElement)?.className,
-    targetId: (targetNode as HTMLElement)?.id,
-  })
   const isNewSelectionAction = event.altKey && !initialSelection.isCollapsed
 
   if (isNewSelectionAction) {
@@ -263,16 +230,11 @@ function processSelection(event: {
         ui.showTooltip(event.clientX, event.clientY, false, '', settings.value.defaultHighlightColor, capturedText, settings.value.lastUsedTags)
       }
       catch (e) {
-        // eslint-disable-next-line no-console
         console.error('[WebMarker] Error during selection processing:', e)
-        // eslint-disable-next-line no-console
-        console.log('[DIAG processSelection] catch -> hide()')
         state.tooltipApp?.hide()
       }
       return
     }
-    // eslint-disable-next-line no-console
-    console.log('[DIAG processSelection] collapsed/no mark -> hide()')
     state.tooltipApp?.hide()
     return
   }
@@ -283,8 +245,6 @@ function processSelection(event: {
     handleExistingMarkClick(markElement, event.clientX, event.clientY)
     return
   }
-  // eslint-disable-next-line no-console
-  console.log('[DIAG processSelection] final fallback -> hide()')
   state.tooltipApp?.hide()
   state.currentMarkIdForColorChange = null
   state.serializedSelection = null
@@ -319,8 +279,6 @@ async function showTooltipForExistingMark(markId: string, x: number, y: number) 
   const note = mark ? mark.note : ''
   const color = mark ? mark.color : settings.value.defaultHighlightColor
   const tags = mark ? mark.tags : undefined
-  // eslint-disable-next-line no-console
-  console.log('[DIAG showTooltipForExistingMark] markId=', markId, 'tags=', JSON.stringify(tags))
   ui.setOriginalColorForChange(color)
   state.tooltipApp?.show(x, y, true, note, color, mark?.text ?? '', tags)
 }

@@ -30,28 +30,14 @@ const newTagInput = ref('')
 const allTags = ref<Tag[]>([])
 const tagCreateSuccess = ref(false)
 
-watch(() => settings.value.lastUsedTags, (val, oldVal) => {
-  // eslint-disable-next-line no-console
-  console.log('[DIAG lastUsedTags changed] old=', JSON.stringify(oldVal), 'new=', JSON.stringify(val))
-}, { deep: true })
-
 async function handleCreateTag() {
-  // eslint-disable-next-line no-console
-  console.log('[DIAG handleCreateTag] START, visible=', visible.value, 'isHighlighted=', isHighlighted.value, 'tagCreateSuccess=', tagCreateSuccess.value, 'newTagInput=', JSON.stringify(newTagInput.value), 'allTags.length=', allTags.value.length, 'selectedTags=', JSON.stringify(selectedTags.value))
   const name = newTagInput.value.trim()
-  if (!name) {
-    // eslint-disable-next-line no-console
-    console.log('[DIAG handleCreateTag] empty name, return')
+  if (!name)
     return
-  }
   const result = await sendMessage('create-tag', { name }, 'background')
-  // eslint-disable-next-line no-console
-  console.log('[DIAG handleCreateTag] after create-tag, visible=', visible.value, 'result=', result)
   // 适配后台新的返回格式：成功返回 Tag 对象，失败返回 { success: false, error }
   const newTag = result && 'id' in result ? result : null
   if (newTag) {
-    // eslint-disable-next-line no-console
-    console.log('[DIAG handleCreateTag] using returned tag directly, skipping get-all-tags roundtrip')
     // 直接插入 create-tag 返回的权威 Tag 对象，避免 get-all-tags 消息卡死导致无反馈
     allTags.value = [newTag, ...allTags.value].sort((a, b) => b.createdAt - a.createdAt)
     selectedTags.value.push(newTag.id)
@@ -61,8 +47,6 @@ async function handleCreateTag() {
     }, 1500)
   }
   newTagInput.value = ''
-  // eslint-disable-next-line no-console
-  console.log('[DIAG handleCreateTag] END, visible=', visible.value, 'allTags.length=', allTags.value.length, 'selectedTags=', JSON.stringify(selectedTags.value))
 }
 
 function toggleTag(tagId: string) {
@@ -191,8 +175,6 @@ async function show(
   initialTextToCopy = '',
   initialTags: string[] = [],
 ) {
-  // eslint-disable-next-line no-console
-  console.log('[DIAG Tooltip.show] called, highlighted=', highlighted, 'initialTags=', JSON.stringify(initialTags), 'newTagInput before=', JSON.stringify(newTagInput.value), 'selectedTags before=', JSON.stringify(selectedTags.value))
   // 异步获取最新标签，遵循 SSOT，不使用本地缓存
   try {
     const tags = await sendMessage('get-all-tags', {}, 'background')
@@ -224,16 +206,12 @@ async function show(
   selectedColor.value = initialColor || defaultHighlightColor.value
   textToCopy.value = initialTextToCopy
   visible.value = true
-  // eslint-disable-next-line no-console
-  console.log('[DIAG Tooltip.show] selectedTags after=', JSON.stringify(selectedTags.value))
   nextTick(() => {
     textareaRef.value?.focus()
   })
 }
 
 function hide() {
-  // eslint-disable-next-line no-console
-  console.log('[DIAG Tooltip.hide] called, visible=', visible.value, 'stack=', new Error('debug stack').stack)
   if (visible.value && !isHighlighted.value) {
     emit('clearPreview')
   }
