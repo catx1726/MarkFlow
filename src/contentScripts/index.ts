@@ -122,7 +122,8 @@ function handleMouseDown(event: MouseEvent) {
   if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)
     return
   const path = event.composedPath() as HTMLElement[]
-  if (path.some(el => el instanceof HTMLElement && el.classList.contains('tooltip-card')))
+  const inTooltip = path.some(el => el instanceof HTMLElement && el.classList.contains('tooltip-card'))
+  if (inTooltip)
     return
 
   if (!target.closest('span[class*="webext-highlight-"]')) {
@@ -136,7 +137,8 @@ function handleMouseUp(event: MouseEvent) {
   if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)
     return
   const path = event.composedPath()
-  if (event.button === 2 || path.some(el => el instanceof HTMLElement && el.classList.contains('tooltip-card')))
+  const inTooltip = path.some(el => el instanceof HTMLElement && el.classList.contains('tooltip-card'))
+  if (event.button === 2 || inTooltip)
     return
   const eventSnapshot = {
     target,
@@ -185,16 +187,6 @@ function processSelection(event: {
     targetNode.nodeType === Node.ELEMENT_NODE ? targetNode : targetNode.parentNode
   ) as HTMLElement | null
   const markElement = targetElement?.closest('span[class*="webext-highlight-"]') as HTMLElement | null
-  console.log('[TooltipDebug] processSelection:', {
-    markElement: !!markElement,
-    isCollapsed: initialSelection?.isCollapsed,
-    rangeCount: initialSelection?.rangeCount,
-    altKey: event.altKey,
-    className: markElement?.className,
-    targetTag: (targetNode as HTMLElement)?.tagName,
-    targetClass: (targetNode as HTMLElement)?.className,
-    targetId: (targetNode as HTMLElement)?.id,
-  })
   const isNewSelectionAction = event.altKey && !initialSelection.isCollapsed
 
   if (isNewSelectionAction) {
