@@ -32,7 +32,7 @@ const tagCreateSuccess = ref(false)
 
 async function handleCreateTag() {
   // eslint-disable-next-line no-console
-  console.log('[DIAG handleCreateTag] START, visible=', visible.value, 'activeElement=', (document.activeElement as HTMLElement)?.tagName, 'class=', (document.activeElement as HTMLElement)?.className)
+  console.log('[DIAG handleCreateTag] START, visible=', visible.value, 'isHighlighted=', isHighlighted.value, 'tagCreateSuccess=', tagCreateSuccess.value, 'newTagInput=', JSON.stringify(newTagInput.value), 'allTags.length=', allTags.value.length, 'selectedTags=', JSON.stringify(selectedTags.value))
   const name = newTagInput.value.trim()
   if (!name) {
     // eslint-disable-next-line no-console
@@ -41,7 +41,7 @@ async function handleCreateTag() {
   }
   const result = await sendMessage('create-tag', { name }, 'background')
   // eslint-disable-next-line no-console
-  console.log('[DIAG handleCreateTag] after create-tag, visible=', visible.value)
+  console.log('[DIAG handleCreateTag] after create-tag, visible=', visible.value, 'result=', result)
   // 适配后台新的返回格式：成功返回 Tag 对象，失败返回 { success: false, error }
   const newTag = result && 'id' in result ? result : null
   if (newTag) {
@@ -58,7 +58,7 @@ async function handleCreateTag() {
   }
   newTagInput.value = ''
   // eslint-disable-next-line no-console
-  console.log('[DIAG handleCreateTag] END, visible=', visible.value, 'allTags.length=', allTags.value.length)
+  console.log('[DIAG handleCreateTag] END, visible=', visible.value, 'allTags.length=', allTags.value.length, 'selectedTags=', JSON.stringify(selectedTags.value))
 }
 
 function toggleTag(tagId: string) {
@@ -187,6 +187,8 @@ async function show(
   initialTextToCopy = '',
   initialTags: string[] = [],
 ) {
+  // eslint-disable-next-line no-console
+  console.log('[DIAG Tooltip.show] called, highlighted=', highlighted, 'initialTags=', JSON.stringify(initialTags), 'newTagInput before=', JSON.stringify(newTagInput.value), 'selectedTags before=', JSON.stringify(selectedTags.value))
   // 异步获取最新标签，遵循 SSOT，不使用本地缓存
   try {
     const tags = await sendMessage('get-all-tags', {}, 'background')
