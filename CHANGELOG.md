@@ -1,5 +1,9 @@
 # Unreleased
 
+### [2026-07-29] docs(audit): add PR #59 ops changelog entry (#60)
+docs(audit): add PR #59 ops changelog entry
+
+
 ### [2026-07-29] fix(tooltip): 修复 tooltip 创建标签第二次点击无响应 (#59)
 fix(tooltip): 修复 tooltip 创建标签第二次点击无响应
 
