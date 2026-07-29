@@ -1,5 +1,9 @@
 # Unreleased
 
+### [2026-07-29] fix(tooltip): 修复 tooltip 创建标签第二次点击无响应 (#59)
+fix(tooltip): 修复 tooltip 创建标签第二次点击无响应
+
+
 ### [2026-07-28] chore(release): bump version to 0.7.2 (#58)
 chore(release): bump version to 0.7.2
 
