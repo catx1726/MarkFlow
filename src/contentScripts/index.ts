@@ -319,6 +319,8 @@ async function showTooltipForExistingMark(markId: string, x: number, y: number) 
   const note = mark ? mark.note : ''
   const color = mark ? mark.color : settings.value.defaultHighlightColor
   const tags = mark ? mark.tags : undefined
+  // eslint-disable-next-line no-console
+  console.log('[DIAG showTooltipForExistingMark] markId=', markId, 'tags=', JSON.stringify(tags))
   ui.setOriginalColorForChange(color)
   state.tooltipApp?.show(x, y, true, note, color, mark?.text ?? '', tags)
 }

@@ -30,6 +30,11 @@ const newTagInput = ref('')
 const allTags = ref<Tag[]>([])
 const tagCreateSuccess = ref(false)
 
+watch(() => settings.value.lastUsedTags, (val, oldVal) => {
+  // eslint-disable-next-line no-console
+  console.log('[DIAG lastUsedTags changed] old=', JSON.stringify(oldVal), 'new=', JSON.stringify(val))
+}, { deep: true })
+
 async function handleCreateTag() {
   // eslint-disable-next-line no-console
   console.log('[DIAG handleCreateTag] START, visible=', visible.value, 'isHighlighted=', isHighlighted.value, 'tagCreateSuccess=', tagCreateSuccess.value, 'newTagInput=', JSON.stringify(newTagInput.value), 'allTags.length=', allTags.value.length, 'selectedTags=', JSON.stringify(selectedTags.value))
@@ -219,6 +224,8 @@ async function show(
   selectedColor.value = initialColor || defaultHighlightColor.value
   textToCopy.value = initialTextToCopy
   visible.value = true
+  // eslint-disable-next-line no-console
+  console.log('[DIAG Tooltip.show] selectedTags after=', JSON.stringify(selectedTags.value))
   nextTick(() => {
     textareaRef.value?.focus()
   })
