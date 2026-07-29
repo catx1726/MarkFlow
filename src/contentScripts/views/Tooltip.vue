@@ -45,11 +45,10 @@ async function handleCreateTag() {
   // 适配后台新的返回格式：成功返回 Tag 对象，失败返回 { success: false, error }
   const newTag = result && 'id' in result ? result : null
   if (newTag) {
-    // 重新从 SSOT 获取所有标签，避免本地缓存不一致
-    const tags = await sendMessage('get-all-tags', {}, 'background')
     // eslint-disable-next-line no-console
-    console.log('[DIAG handleCreateTag] after get-all-tags, visible=', visible.value, 'count=', Object.keys(tags || {}).length)
-    allTags.value = Object.values(tags || {}).sort((a, b) => b.createdAt - a.createdAt)
+    console.log('[DIAG handleCreateTag] using returned tag directly, skipping get-all-tags roundtrip')
+    // 直接插入 create-tag 返回的权威 Tag 对象，避免 get-all-tags 消息卡死导致无反馈
+    allTags.value = [newTag, ...allTags.value].sort((a, b) => b.createdAt - a.createdAt)
     selectedTags.value.push(newTag.id)
     tagCreateSuccess.value = true
     window.setTimeout(() => {
