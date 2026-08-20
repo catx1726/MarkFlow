@@ -1,5 +1,9 @@
 # Unreleased
 
+### [2026-08-20] fix(content): 已有标记 Tooltip 改用点击点锚点 (#67)
+fix(content): 已有标记 Tooltip 改用点击点锚点
+
+
 ### [2026-08-20] style(ui): 视觉精修 Sprint — 可读性 / 层级减负 / 微交互 (#66)
 style(ui): 视觉精修 Sprint — 可读性 / 层级减负 / 微交互
 
