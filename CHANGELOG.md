@@ -1,5 +1,9 @@
 # Unreleased
 
+### [2026-08-20] docs(landing): OG/Twitter Card 分享卡片支持 (#64)
+docs(landing): OG/Twitter Card 分享卡片支持
+
+
 ### [2026-08-20] 宣传前 UI 优化：品牌色统一 amber + Tooltip 定位与拖拽 (#63)
 宣传前 UI 优化：品牌色统一 amber + Tooltip 定位与拖拽
 
