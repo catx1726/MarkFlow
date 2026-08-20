@@ -1,5 +1,9 @@
 # Unreleased
 
+### [2026-08-20] fix: 底部菜单翻向 + 补登 vitest setupFiles（修 main 测试崩溃） (#72)
+fix: 底部菜单翻向 + 补登 vitest setupFiles（修 main 测试崩溃）
+
+
 ### [2026-08-20] feat(theme): 主题手动切换（跟随系统/浅色/深色） (#71)
 feat(theme): 主题手动切换（跟随系统/浅色/深色）
 
