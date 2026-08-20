@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { ref } from 'vue'
+import { MENU_HEIGHTS, menuPlacementClass, shouldMenuOpenUp } from '../composables/menuPosition'
 import MarkItem from './MarkItem.vue'
 import type { Mark } from '~/logic/storage'
 import { t } from '~/logic/i18n'
@@ -23,12 +25,12 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: 'toggle-url-collapse', url: string): void
-  (e: 'toggle-url-menu', url: string): void
+  (e: 'toggleUrlMenu', url: string): void
   (e: 'export-markdown', urlData: any): void
   (e: 'open-tag-picker', url: string): void
   (e: 'remove-all-marks', url: string): void
   (e: 'toggle-group', url: string, groupTitle: string, totalMarks: number): void
-  (e: 'toggle-group-menu', url: string, groupTitle: string): void
+  (e: 'toggleGroupMenu', url: string, groupTitle: string): void
   (e: 'export-group', url: string, group: any): void
   (e: 'open-group-tag-picker', url: string, groupTitle: string): void
   (e: 'remove-group-marks', url: string, group: any): void
@@ -69,6 +71,20 @@ function getLevelBorderStyle(level: number) {
   return styles[level] || { borderLeft: '1px solid #FDE68A' }
 }
 
+// --- 菜单翻向：底部空间不足时向上弹出（同 MarkItem） ---
+const urlMenuUp = ref(false)
+const groupMenuUp = ref(false)
+
+function onUrlMenuClick(e: MouseEvent) {
+  urlMenuUp.value = shouldMenuOpenUp(e, MENU_HEIGHTS.url)
+  emit('toggleUrlMenu', props.url)
+}
+
+function onGroupMenuClick(e: MouseEvent, groupTitle: string) {
+  groupMenuUp.value = shouldMenuOpenUp(e, MENU_HEIGHTS.group)
+  emit('toggleGroupMenu', props.url, groupTitle)
+}
+
 function isGroupCollapsed(groupTitle: string): boolean {
   const state = props.collapsedStates[groupTitle]
   if (state !== undefined)
@@ -106,7 +122,7 @@ function isGroupCollapsed(groupTitle: string): boolean {
       <div class="relative flex-shrink-0" @click.stop>
         <button
           class="text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 rounded-full p-1"
-          @click="emit('toggle-url-menu', url)"
+          @click="onUrlMenuClick"
         >
           <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
             <path
@@ -117,7 +133,8 @@ function isGroupCollapsed(groupTitle: string): boolean {
         <transition name="fade-scale">
           <div
             v-if="activeUrlMenu === url"
-            class="bg-white border-gray-200 dark:bg-gray-700 dark:border-gray-600 absolute right-0 z-20 mt-2 w-32 rounded-md border shadow-lg"
+            class="bg-white border-gray-200 dark:bg-gray-700 dark:border-gray-600 absolute right-0 z-20 w-32 rounded-md border shadow-lg"
+            :class="menuPlacementClass(urlMenuUp)"
           >
             <ul class="py-1">
               <li>
@@ -191,7 +208,7 @@ function isGroupCollapsed(groupTitle: string): boolean {
                 <button
                   class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-full p-1 opacity-0 transition-opacity group-hover:opacity-100"
                   :title="t('sidepanel.groupActions')"
-                  @click="emit('toggle-group-menu', url, group.title)"
+                  @click="e => onGroupMenuClick(e, group.title)"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                     <path
@@ -202,7 +219,8 @@ function isGroupCollapsed(groupTitle: string): boolean {
                 <transition name="fade-scale">
                   <div
                     v-if="activeGroupMenu === `${url}|${group.title}`"
-                    class="bg-white border-gray-200 dark:bg-gray-700 dark:border-gray-600 absolute right-0 z-20 mt-1 w-36 rounded-md border shadow-lg"
+                    class="bg-white border-gray-200 dark:bg-gray-700 dark:border-gray-600 absolute right-0 z-20 w-36 rounded-md border shadow-lg"
+                    :class="menuPlacementClass(groupMenuUp, 'mt-1')"
                   >
                     <ul class="py-1">
                       <li>

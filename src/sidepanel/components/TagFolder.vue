@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
+import { MENU_HEIGHTS, menuPlacementClass, shouldMenuOpenUp } from '../composables/menuPosition'
 import PageSection from './PageSection.vue'
 import type { Mark } from '~/logic/storage'
 import { t } from '~/logic/i18n'
@@ -21,7 +22,7 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  (e: 'toggle-folder-menu', tagId: string): void
+  (e: 'toggleFolderMenu', tagId: string): void
   (e: 'export-tag-folder', folder: any): void
   (e: 'open-rename-dialog', tagId: string): void
   (e: 'remove-tag-from-all', tagId: string): void
@@ -50,6 +51,14 @@ const emit = defineEmits<{
 
 function isUrlCollapsed(url: string): boolean {
   return !!props.collapsedUrls[url]
+}
+
+// --- 菜单翻向：底部空间不足时向上弹出 ---
+const folderMenuUp = ref(false)
+
+function onFolderMenuClick(e: MouseEvent) {
+  folderMenuUp.value = shouldMenuOpenUp(e, MENU_HEIGHTS.folder)
+  emit('toggleFolderMenu', props.tagId)
 }
 
 // --- 文件夹展开/收起高度动画（Grid 0fr↔1fr） ---
@@ -125,7 +134,7 @@ function onSummaryClick(e: MouseEvent) {
       <div class="relative flex-shrink-0" @click.stop>
         <button
           class="p-1 text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 rounded-full"
-          @click="emit('toggle-folder-menu', tagId)"
+          @click.stop="onFolderMenuClick"
         >
           <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
             <path
@@ -136,7 +145,8 @@ function onSummaryClick(e: MouseEvent) {
         <transition name="fade-scale">
           <div
             v-if="activeFolderMenu === tagId"
-            class="absolute right-0 mt-2 w-40 bg-white dark:bg-gray-700 rounded-md shadow-lg z-20 border border-gray-200 dark:border-gray-600"
+            class="absolute right-0 w-40 bg-white dark:bg-gray-700 rounded-md shadow-lg z-20 border border-gray-200 dark:border-gray-600"
+            :class="menuPlacementClass(folderMenuUp)"
           >
             <ul class="py-1">
               <li>
@@ -209,7 +219,7 @@ function onSummaryClick(e: MouseEvent) {
     <div class="folder-grid" :class="{ 'fold-anim': foldAnim, 'fold-open': foldOpen }">
       <div class="fold-inner">
         <div
-          class="folder-content space-y-4 py-2 pr-1 ml-3 pl-3 border-l-2 border-gray-200 dark:border-gray-600"
+          class="folder-content space-y-4 py-2 ml-3 pl-3 border-l-2 border-gray-200 dark:border-gray-600"
         >
           <div
             v-if="Object.keys(folder.pages).length === 0"

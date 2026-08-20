@@ -54,14 +54,24 @@ function buildSampleTree(): TagTree {
   return {
     tag1: { tagName: 'Tag One', totalMarks: 1, pages: {
       'https://example.com/page-a': { pageTitle: 'Page A', groups: [{
-        title: 'Group A', level: 7, selector: 'body', marks: [markA as any], count: 1, order: 0,
+        title: 'Group A',
+        level: 7,
+        selector: 'body',
+        marks: [markA as any],
+        count: 1,
+        order: 0,
       }], totalMarks: 1 },
-    }},
+    } },
     tag2: { tagName: 'Tag Two', totalMarks: 1, pages: {
       'https://example.com/page-b': { pageTitle: 'Page B', groups: [{
-        title: 'Group B', level: 7, selector: 'body', marks: [markB as any], count: 1, order: 0,
+        title: 'Group B',
+        level: 7,
+        selector: 'body',
+        marks: [markB as any],
+        count: 1,
+        order: 0,
       }], totalMarks: 1 },
-    }},
+    } },
   }
 }
 
