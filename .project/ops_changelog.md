@@ -48,3 +48,4 @@
 | 2026-08-20T17:40:00+08:00 | FIX | Tooltip.vue + Sidepanel.vue + TagFolder.vue + PageSection.vue | 第 6 轮 CR：Tooltip 进入动画改绑 isPositioned（避免测量期空跑）；菜单裁剪 bug——overflow/contain 改为仅动画激活期生效；as any 移除；sticky 层级与 grid 兼容性注释 | pending | git checkout HEAD -- src/ |
 | 2026-08-20T18:20:00+08:00 | FIX | Sidepanel.vue + TagFolder.vue + ui.ts + ui-polish Spec | 第 7 轮 CR：headerEl 改 instanceof 守卫（B2）；B1 多文件夹吸顶堆叠判定误报（互斥手风琴+sticky 包含块机制）；动画时长同步注释；注释 emoji 改文字；Spec 状态转正 | pending | git checkout HEAD -- src/ docs/superpowers/specs/ |
 | 2026-08-20T19:10:00+08:00 | REFACTOR | tooltipPosition.ts + Tooltip.vue + spec | 第 8 轮 CR：computeTooltipPosition 改 options 对象（margin/gap/pointer），消除连续 undefined 实参；Blocking 项确认为预期行为不改 | pending | git checkout HEAD -- src/ |
+| 2026-08-20T19:40:00+08:00 | DOCS | NIT_ROADMAP + specs/2026-08-20-i18n-english-design.md | Roadmap 状态收尾（视觉精修/tooltip 锚点已完成）；新建 i18n Spec（TS 字典+_locales 混合架构，两 PR 分期），待 Driver 审查 | pending | git checkout HEAD -- docs/ |

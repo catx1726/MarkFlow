@@ -15,7 +15,7 @@
 | **`ensureReady` 守卫解耦** | PR #45 | 中 | 高 | ⭐⭐⭐⭐ | 将守卫逻辑提取到独立模块，方便只读操作复用及单元测试直接引用，减少代码重复。 |
 | **ContentScripts 高亮元数据提取统一化** | 分析 | 中 | 高 | ⭐⭐⭐⭐ | `restorer.ts` 与 `ui.ts` 中存在 3 段几乎相同的 ShadowHost 构建/Rangy 序列化/上下文提取逻辑。提取为 `extractMarkPayload` 纯函数，可减少 60-80 行重复代码。 |
 | **ContentScripts DOM 清理逻辑统一化** | 分析 | 低 | 中 | ⭐⭐⭐⭐ | `unwrapHighlightElements(selector)` 逻辑在 `ui.ts` 和 `restorer.ts` 中重复 4 次。提取为共享工具函数，降低后续维护遗漏风险。 |
-| **i18n 国际化基础框架** | PR #41 / 宣传分析 | 中 | 高 | ⭐⭐⭐⭐⭐ | 错误消息与全部 UI 文案均为硬编码中文。建立标准 i18n 体系是走向社区的基础；**英文界面是 Reddit 等海外社区宣传的前置门槛**（无英文 UI，海外宣传截图直接劝退）。 |
+| **i18n 国际化基础框架** | PR #41 / 宣传分析 | 中 | 高 | [Spec 待审] | 错误消息与全部 UI 文案均为硬编码中文。建立标准 i18n 体系是走向社区的基础；**英文界面是 Reddit 等海外社区宣传的前置门槛**。Spec：`docs/superpowers/specs/2026-08-20-i18n-english-design.md` |
 | **数据精简与字段剥离** | 讨论 | 高 | 高 | ⭐⭐⭐⭐ | 剥离冗余的上下文信息，比压缩算法更能提升系统健康度，且保持数据可读性。 |
 | **统一消息返回格式** | PR #37 | 中 | 中 | ⭐⭐⭐⭐ | 统一 `{success, data, error}` 格式可简化前端错误处理模板。 |
 | **search.ts `structureBoundaries` 单遍历构建** | 分析 | 中 | 高 | ⭐⭐⭐⭐ | `createSearchContext` 中对每个块级元素都调用 `getAllTextNodes(el)`，导致同一子树被反复扫描，形成 O(n²) 开销。改为一次遍历同时收集文本节点和结构边界。 |
@@ -43,7 +43,7 @@
 | **清理未使用的 Prompt.vue 组件** | UI Review | 低 | 中 | [已完成] | `src/contentScripts/views/Prompt.vue` 无任何引用，且使用纯手写 CSS 与项目风格脱节，建议直接删除以减少维护负担。 |
 | **DisambiguationModal.vue 暗黑模式适配** | UI Review | 低 | 高 | [已完成] | 搜索框、列表、底部背景均未适配暗黑模式，与 Tooltip 的精致感形成反差。 |
 | **Popup 视觉层次与品牌感优化** | UI Review | 低 | 中 | [已完成] | 当前仅文字统计 + 三个等权灰色按钮，缺乏 Logo 和视觉重点。建议主操作（打开侧边栏）使用主色按钮。 |
-| **点击已有标记的 Tooltip 锚点改为点击位置** | 用户反馈 2026-08-20 | 低 | 中 | ⭐⭐⭐ | 当前用整个标记矩形锚定，长标记时 tooltip 出现在标记最前方而非鼠标附近，视觉断联。方案：已有标记改用点击点锚点（context-menu 式），新建标记保持选区矩形锚定。改动仅 `index.ts`，待本轮 PR 合并后处理。 |
+| **点击已有标记的 Tooltip 锚点改为点击位置 + 鼠标感知定位** | 用户反馈 2026-08-20 | 低 | 高 | [已完成] | PR #67：点击点锚点 + pointer 感知（水平跟随鼠标、垂直沿指针侧脱离选区），options 对象签名。 |
 | **界面视觉精修 Sprint（可读性 / 层级减负 / 微交互）** | 设计走查 2026-08-20 | 中 | 高 | [PR 待验收] | 结构不需重设计（与 Readwise/Glasp 同构）。精修范围：①Tooltip 小字 10→12px（保 px，Shadow DOM 反 rem 污染）②侧边栏嵌套卡片改缩进+引导线 ③Tooltip/文件夹展开动画。**宣传素材质量的前置杠杆，应在英文 i18n 前完成**。 |
 | **统一模态框替代原生 confirm/alert** | UI Review | 中 | 中 | ⭐⭐⭐⭐ | Sidepanel 删除操作多处使用原生 `confirm()`/`alert()`，样式不统一且阻塞执行。建议复用自定义 Dialog。 |
 | **图标系统统一化** | UI Review | 中 | 中 | ⭐⭐⭐ | 内联 SVG 与 UnoCSS Iconify（`i-carbon-*`）混用，增加维护负担。建议统一为单一方案。 |
@@ -102,7 +102,7 @@
 | **宣传素材准备（浅色模式截图 / 三连动图 / B 站演示 GIF）** | 宣传分析 2026-08-20 | 待办 | 依赖：品牌色统一 + 主题切换 |
 | **品牌色统一（blue → amber 琥珀橙）** | 宣传分析 2026-08-20 | PR 待合并 | Issue #62, `docs/superpowers/specs/2026-08-20-brand-color-unification-design.md` |
 | **Tooltip 定位与拖拽优化** | 用户需求 2026-08-20 | PR 待合并 | Issue #62, `docs/superpowers/specs/2026-08-20-tooltip-positioning-drag-design.md` |
-| **界面视觉精修 Sprint** | 设计走查 2026-08-20 | PR 待验收合并 | Issue #65, `docs/superpowers/specs/2026-08-20-ui-polish-sprint-design.md` |
+| **界面视觉精修 Sprint** | 设计走查 2026-08-20 | 已完成 | Issue #65, PR #66 |
 | 跳过 Level 3/4 恢复算法，侧边栏提示上下文 | `.temp/detail.md` | 已完成 | Issue #50, PR #51 |
 | 高亮标记高度自定义 (`highlightHeight`) | `.temp/detail.md` | 已完成 | Issue #50, PR #51 |
 | 侧边栏搜索功能（上下文保留 + 仅显示匹配项） | `.temp/detail.md` | 已完成 | Issue #52, PR #53 |
