@@ -23,7 +23,7 @@ function onClearSearch() {
 </script>
 
 <template>
-  <header class="sticky top-0 z-40">
+  <header class="sticky top-0 z-40 bg-gray-100 dark:bg-gray-900 pb-2">
     <h1 class="text-xl font-bold text-center text-gray-800 dark:text-gray-200 mt-4 mb-2">
       标记管理
     </h1>

@@ -168,96 +168,140 @@ function isGroupCollapsed(groupTitle: string): boolean {
         </transition>
       </div>
     </header>
-    <div v-if="!isCollapsed">
-      <div v-for="group in urlData.groups" :key="group.title" class="group-container mt-1">
-        <header
-          class="group group-header hover:bg-gray-100 dark:hover:bg-gray-800 -mx-2 flex cursor-pointer items-center justify-between px-2 py-2 transition-colors"
-          :style="getLevelBorderStyle(group.level)"
-          @click="emit('toggle-group', url, group.title, urlData.totalMarks)"
-        >
-          <h3 class="min-w-0 flex-1 truncate" :class="getLevelClass(group.level)">
-            {{ group.title }}
-            <span class="text-gray-400 text-xs font-normal">({{ group.count }})</span>
-          </h3>
-          <div class="relative ml-2 flex-shrink-0" @click.stop>
-            <button
-              class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-full p-1 opacity-0 transition-opacity group-hover:opacity-100"
-              title="分组操作"
-              @click="emit('toggle-group-menu', url, group.title)"
+    <Transition
+      enter-active-class="fold-enter-active"
+      enter-from-class="fold-collapsed"
+      leave-active-class="fold-leave-active"
+      leave-to-class="fold-collapsed"
+    >
+      <div v-if="!isCollapsed" class="fold-grid">
+        <div class="fold-inner">
+          <div v-for="group in urlData.groups" :key="group.title" class="group-container mt-1">
+            <header
+              class="group group-header hover:bg-gray-100 dark:hover:bg-gray-800 -mx-2 flex cursor-pointer items-center justify-between px-2 py-2 transition-colors"
+              :style="getLevelBorderStyle(group.level)"
+              @click="emit('toggle-group', url, group.title, urlData.totalMarks)"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                <path
-                  d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z"
-                />
-              </svg>
-            </button>
-            <transition name="fade-scale">
-              <div
-                v-if="activeGroupMenu === `${url}|${group.title}`"
-                class="bg-white border-gray-200 dark:bg-gray-700 dark:border-gray-600 absolute right-0 z-20 mt-1 w-36 rounded-md border shadow-lg"
-              >
-                <ul class="py-1">
-                  <li>
-                    <button
-                      class="text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm"
-                      @click="emit('export-group', url, group)"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                      </svg>
-                      <span>导出</span>
-                    </button>
-                  </li>
-                  <li>
-                    <button
-                      class="text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm"
-                      @click="emit('open-group-tag-picker', url, group.title)"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                        <path fill-rule="evenodd" d="M17.707 9.293a1 1 0 010 1.414l-7 7a1 1 0 01-1.414 0l-7-7A.997.997 0 012 10V5a3 3 0 013-3h5c.266 0 .52.105.707.293l7 7zM5 6a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd" />
-                      </svg>
-                      <span>管理标签</span>
-                    </button>
-                  </li>
-                  <li>
-                    <button
-                      class="hover:bg-red-50 dark:hover:bg-red-900/50 flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm text-red-600 dark:text-red-400"
-                      @click="emit('remove-group-marks', url, group)"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                        <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" />
-                      </svg>
-                      <span>删除标记</span>
-                    </button>
-                  </li>
+              <h3 class="min-w-0 flex-1 truncate" :class="getLevelClass(group.level)">
+                {{ group.title }}
+                <span class="text-gray-400 text-xs font-normal">({{ group.count }})</span>
+              </h3>
+              <div class="relative ml-2 flex-shrink-0" @click.stop>
+                <button
+                  class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-full p-1 opacity-0 transition-opacity group-hover:opacity-100"
+                  title="分组操作"
+                  @click="emit('toggle-group-menu', url, group.title)"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path
+                      d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z"
+                    />
+                  </svg>
+                </button>
+                <transition name="fade-scale">
+                  <div
+                    v-if="activeGroupMenu === `${url}|${group.title}`"
+                    class="bg-white border-gray-200 dark:bg-gray-700 dark:border-gray-600 absolute right-0 z-20 mt-1 w-36 rounded-md border shadow-lg"
+                  >
+                    <ul class="py-1">
+                      <li>
+                        <button
+                          class="text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm"
+                          @click="emit('export-group', url, group)"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                          </svg>
+                          <span>导出</span>
+                        </button>
+                      </li>
+                      <li>
+                        <button
+                          class="text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm"
+                          @click="emit('open-group-tag-picker', url, group.title)"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M17.707 9.293a1 1 0 010 1.414l-7 7a1 1 0 01-1.414 0l-7-7A.997.997 0 012 10V5a3 3 0 013-3h5c.266 0 .52.105.707.293l7 7zM5 6a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd" />
+                          </svg>
+                          <span>管理标签</span>
+                        </button>
+                      </li>
+                      <li>
+                        <button
+                          class="hover:bg-red-50 dark:hover:bg-red-900/50 flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm text-red-600 dark:text-red-400"
+                          @click="emit('remove-group-marks', url, group)"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" />
+                          </svg>
+                          <span>删除标记</span>
+                        </button>
+                      </li>
+                    </ul>
+                  </div>
+                </transition>
+              </div>
+            </header>
+
+            <Transition
+              enter-active-class="fold-enter-active"
+              enter-from-class="fold-collapsed"
+              leave-active-class="fold-leave-active"
+              leave-to-class="fold-collapsed"
+            >
+              <div v-if="!isGroupCollapsed(group.title)" class="fold-grid">
+                <ul class="fold-inner space-y-3 pl-3 pt-2">
+                  <MarkItem
+                    v-for="mark in group.marks"
+                    :key="mark.id"
+                    :mark="mark"
+                    :is-expanded="expandedTexts.has(mark.id)"
+                    :is-note-expanded="expandedNotes.has(mark.id)"
+                    :is-editing="editingMarkId === mark.id"
+                    :active-menu="activeMarkMenu"
+                    @goto="m => emit('goto-mark', m)"
+                    @edit="m => emit('edit-mark', m)"
+                    @save="(m, note) => emit('save-note', m, note)"
+                    @cancel="() => emit('cancel-edit')"
+                    @remove="m => emit('remove-mark', m)"
+                    @copy="m => emit('copy-mark', m)"
+                    @toggle-expand="id => emit('toggle-text-expansion', id)"
+                    @toggle-note-expand="id => emit('toggle-note-expansion', id)"
+                    @toggle-menu="id => emit('toggle-mark-menu', id)"
+                    @open-tag-picker="m => emit('open-mark-tag-picker', url, m.id)"
+                  />
                 </ul>
               </div>
-            </transition>
+            </Transition>
           </div>
-        </header>
-
-        <ul v-if="!isGroupCollapsed(group.title)" class="space-y-3 pl-3 pt-2">
-          <MarkItem
-            v-for="mark in group.marks"
-            :key="mark.id"
-            :mark="mark"
-            :is-expanded="expandedTexts.has(mark.id)"
-            :is-note-expanded="expandedNotes.has(mark.id)"
-            :is-editing="editingMarkId === mark.id"
-            :active-menu="activeMarkMenu"
-            @goto="m => emit('goto-mark', m)"
-            @edit="m => emit('edit-mark', m)"
-            @save="(m, note) => emit('save-note', m, note)"
-            @cancel="() => emit('cancel-edit')"
-            @remove="m => emit('remove-mark', m)"
-            @copy="m => emit('copy-mark', m)"
-            @toggle-expand="id => emit('toggle-text-expansion', id)"
-            @toggle-note-expand="id => emit('toggle-note-expansion', id)"
-            @toggle-menu="id => emit('toggle-mark-menu', id)"
-            @open-tag-picker="m => emit('open-mark-tag-picker', url, m.id)"
-          />
-        </ul>
+        </div>
       </div>
-    </div>
+    </Transition>
   </section>
 </template>
+
+<style scoped>
+/* 手风琴高度过渡：CSS Grid 0fr↔1fr 技巧（与 StorageManager 同一约定），
+   fr 轨道尺寸可插值，子元素 overflow-hidden 被挤压；
+   Transition 负责收起动画播完后再卸载（v-if）的时机 */
+.fold-grid {
+  display: grid;
+  grid-template-rows: 1fr;
+}
+.fold-inner {
+  overflow: hidden;
+  min-height: 0;
+  /* 隔离重排范围：高度动画每帧只在此子树内布局，避免整面板 reflow（大列表卡顿的主要来源） */
+  contain: layout paint;
+}
+.fold-collapsed {
+  grid-template-rows: 0fr;
+  opacity: 0;
+}
+.fold-enter-active {
+  transition: grid-template-rows 150ms ease-out, opacity 130ms ease-out;
+}
+.fold-leave-active {
+  transition: grid-template-rows 120ms ease-in, opacity 100ms ease-in;
+}
+</style>

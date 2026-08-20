@@ -4,7 +4,7 @@ import { computed, nextTick, onMounted, onUnmounted, reactive, ref, toRaw, watch
 import { sendMessage } from 'webext-bridge/content-script'
 import { getMaxZIndex } from '../../logic/dom'
 import { filterExistingTags } from '../../logic/tags'
-import { computeTooltipPosition } from '~/logic/tooltipPosition'
+import { clampToViewport, computeTooltipPosition } from '~/logic/tooltipPosition'
 import type { AnchorRect } from '~/logic/tooltipPosition'
 import { settings } from '~/logic/settings'
 import type { Tag } from '~/logic/storage'

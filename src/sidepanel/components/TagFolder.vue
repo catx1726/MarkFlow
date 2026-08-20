@@ -58,7 +58,7 @@ function isUrlCollapsed(url: string): boolean {
     class="mb-6 group/folder"
   >
     <summary
-      class="flex items-center gap-2 p-2 bg-gray-200 dark:bg-gray-700 rounded-t-lg cursor-pointer hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors border border-gray-200 dark:border-gray-700 list-none rounded-b-lg group-open/folder:rounded-b-none"
+      class="flex items-center gap-2 p-2 bg-white dark:bg-gray-700 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors border border-gray-200 dark:border-gray-700 list-none sticky z-30 top-[var(--sidepanel-header-h,104px)]"
       :class="{ 'opacity-50 grayscale': folder.totalMarks === 0 }"
     >
       <svg
@@ -75,7 +75,7 @@ function isUrlCollapsed(url: string): boolean {
       </svg>
       <span class="font-bold text-gray-700 dark:text-gray-200 flex-1">{{ folder.tagName }}</span>
       <span
-        class="px-2 py-0.5 text-xs font-semibold bg-gray-300 dark:bg-gray-600 text-gray-600 dark:text-gray-300 rounded-full mr-2"
+        class="px-2 py-0.5 text-xs font-semibold bg-gray-100 dark:bg-gray-600 text-gray-500 dark:text-gray-300 rounded-full mr-2"
       >
         {{ folder.totalMarks }}
       </span>
@@ -162,7 +162,7 @@ function isUrlCollapsed(url: string): boolean {
     </summary>
 
     <div
-      class="folder-content space-y-4 py-2 pr-1 ml-3 pl-3 border-l-2 border-gray-200 dark:border-gray-700"
+      class="folder-content space-y-4 py-2 pr-1 ml-3 pl-3 border-l-2 border-gray-200 dark:border-gray-600"
     >
       <div
         v-if="Object.keys(folder.pages).length === 0"

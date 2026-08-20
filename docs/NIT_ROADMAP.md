@@ -43,6 +43,7 @@
 | **清理未使用的 Prompt.vue 组件** | UI Review | 低 | 中 | [已完成] | `src/contentScripts/views/Prompt.vue` 无任何引用，且使用纯手写 CSS 与项目风格脱节，建议直接删除以减少维护负担。 |
 | **DisambiguationModal.vue 暗黑模式适配** | UI Review | 低 | 高 | [已完成] | 搜索框、列表、底部背景均未适配暗黑模式，与 Tooltip 的精致感形成反差。 |
 | **Popup 视觉层次与品牌感优化** | UI Review | 低 | 中 | [已完成] | 当前仅文字统计 + 三个等权灰色按钮，缺乏 Logo 和视觉重点。建议主操作（打开侧边栏）使用主色按钮。 |
+| **点击已有标记的 Tooltip 锚点改为点击位置** | 用户反馈 2026-08-20 | 低 | 中 | ⭐⭐⭐ | 当前用整个标记矩形锚定，长标记时 tooltip 出现在标记最前方而非鼠标附近，视觉断联。方案：已有标记改用点击点锚点（context-menu 式），新建标记保持选区矩形锚定。改动仅 `index.ts`，待本轮 PR 合并后处理。 |
 | **界面视觉精修 Sprint（可读性 / 层级减负 / 微交互）** | 设计走查 2026-08-20 | 中 | 高 | [PR 待验收] | 结构不需重设计（与 Readwise/Glasp 同构）。精修范围：①Tooltip 小字 10→12px（保 px，Shadow DOM 反 rem 污染）②侧边栏嵌套卡片改缩进+引导线 ③Tooltip/文件夹展开动画。**宣传素材质量的前置杠杆，应在英文 i18n 前完成**。 |
 | **统一模态框替代原生 confirm/alert** | UI Review | 中 | 中 | ⭐⭐⭐⭐ | Sidepanel 删除操作多处使用原生 `confirm()`/`alert()`，样式不统一且阻塞执行。建议复用自定义 Dialog。 |
 | **图标系统统一化** | UI Review | 中 | 中 | ⭐⭐⭐ | 内联 SVG 与 UnoCSS Iconify（`i-carbon-*`）混用，增加维护负担。建议统一为单一方案。 |
@@ -60,6 +61,7 @@
 
 | 建议项目 | 来源 | 成本 | 收益 | 推荐等级 | 评估理由 |
 | :--- | :--- | :--- | :--- | :--- | :--- |
+| **typecheck 改用 vue-tsc 覆盖 .vue 文件** | 事故复盘 2026-08-20 | 低 | 高 | ⭐⭐⭐⭐ | 当前 `tsc --noEmit` 不解析 .vue SFC，导致 Tooltip.vue 中 `clampToViewport` 未导入的引用错误穿过 typecheck/lint/build 三层直到运行时才暴露。换 `vue-tsc --noEmit` 后 SFC 内 TS 错误可被 CI 拦截。 |
 | **导入顺序规范化 (Lint)** | PR #45 | 低 | 中 | ⭐⭐⭐ | 统一脚本的导入分组（外部库、内部模块、别名），提升代码扫描效率和可读性。 |
 | **统一 `catch` 块格式** | PR #45 | 低 | 低 | ⭐⭐ | 全局清理 `catch {}` 为 `catch (error) {}`，保持代码风格一致性，符合现代 TS 实践。 |
 | **ContentScripts 类型安全增强** | 分析 | 低 | 中 | ⭐⭐⭐ | `state.ts` 中 `previewApplier: any` 可收窄为 `rangy.ClassApplier \| null`；`restorer.ts` 中的 `as any` payload 可替换为强类型接口。 |
