@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue'
+import { menuPlacementClass, shouldMenuOpenUp } from '../composables/menuPosition'
 import type { Mark } from '~/logic/storage'
 import { t } from '~/logic/i18n'
 
@@ -20,13 +21,20 @@ const emit = defineEmits<{
   (e: 'copy', mark: Mark): void
   (e: 'toggle-expand', markId: string): void
   (e: 'toggle-note-expand', markId: string): void
-  (e: 'toggle-menu', markId: string): void
+  (e: 'toggleMenu', markId: string): void
   (e: 'open-tag-picker', mark: Mark): void
 }>()
 
 const editingNote = ref(props.mark.note)
 const textareaRef = ref<HTMLTextAreaElement | null>(null)
 const showContext = ref(false)
+const menuOpensUp = ref(false)
+
+function onMenuClick(e: MouseEvent) {
+  // 下方空间不足时向上弹出（页面底部标记的菜单不被视口底边/存储栏截断）
+  menuOpensUp.value = shouldMenuOpenUp(e, 260)
+  emit('toggleMenu', props.mark.id)
+}
 const hasContext = computed(() => !!props.mark.contextTitle || !!props.mark.surroundingSnippet)
 const contextHint = computed(() => props.mark.restoreFailedAt ? t('sidepanel.positionChanged') : '')
 
@@ -147,7 +155,7 @@ function handleSave() {
       <button
         class="text-gray-400 hover:text-gray-600 rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
         :title="t('sidepanel.moreActions')"
-        @click.stop="emit('toggle-menu', mark.id)"
+        @click.stop="onMenuClick"
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -164,7 +172,8 @@ function handleSave() {
       <transition name="fade-scale">
         <div
           v-if="activeMenu === mark.id"
-          class="bg-white border-gray-200 dark:bg-gray-700 dark:border-gray-600 absolute right-0 z-30 mt-2 w-48 rounded-md border shadow-lg"
+          class="bg-white border-gray-200 dark:bg-gray-700 dark:border-gray-600 absolute right-0 z-30 w-48 rounded-md border shadow-lg"
+          :class="menuPlacementClass(menuOpensUp)"
           @click.stop
         >
           <div class="py-1">
