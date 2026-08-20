@@ -219,7 +219,7 @@ function onSummaryClick(e: MouseEvent) {
     <div class="folder-grid" :class="{ 'fold-anim': foldAnim, 'fold-open': foldOpen }">
       <div class="fold-inner">
         <div
-          class="folder-content space-y-4 py-2 pr-1 ml-3 pl-3 border-l-2 border-gray-200 dark:border-gray-600"
+          class="folder-content space-y-4 py-2 ml-3 pl-3 border-l-2 border-gray-200 dark:border-gray-600"
         >
           <div
             v-if="Object.keys(folder.pages).length === 0"

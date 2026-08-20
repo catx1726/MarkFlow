@@ -30,7 +30,7 @@ function onClearSearch() {
       {{ t('sidepanel.title') }}
     </h1>
 
-    <div class="px-2 space-y-2">
+    <div class="space-y-2">
       <div
         class="flex gap-2 bg-white dark:bg-gray-800 p-2 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700"
       >
