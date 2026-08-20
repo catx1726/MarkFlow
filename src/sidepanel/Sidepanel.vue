@@ -112,14 +112,30 @@ async function broadcastRefreshToTabs() {
   }
 }
 
+const headerCompRef = ref<InstanceType<typeof SidepanelHeader> | null>(null)
+let headerResizeObserver: ResizeObserver | null = null
+
 onMounted(() => {
   refreshUsage()
   refreshAllMarks()
   document.addEventListener('click', closeMenus)
+
+  // 测量主 header 实际高度并写入 CSS 变量，供文件夹行 sticky 吸顶定位
+  // （header 高度可变：新建标签行展开时会变高，用 ResizeObserver 跟踪）
+  const headerEl = headerCompRef.value?.$el
+  if (headerEl instanceof HTMLElement) {
+    const updateHeaderHeight = () => {
+      document.documentElement.style.setProperty('--sidepanel-header-h', `${headerEl.offsetHeight}px`)
+    }
+    updateHeaderHeight()
+    headerResizeObserver = new ResizeObserver(updateHeaderHeight)
+    headerResizeObserver.observe(headerEl)
+  }
 })
 
 onUnmounted(() => {
   document.removeEventListener('click', closeMenus)
+  headerResizeObserver?.disconnect()
 })
 
 function toggleGroup(url: string, groupTitle: string, totalMarks: number) {
@@ -189,6 +205,7 @@ async function handleDeleteTag(tagId: string) {
     :class="isStorageExpanded ? 'pb-48' : 'pb-16'"
   >
     <SidepanelHeader
+      ref="headerCompRef"
       v-model:new-tag-name="newTagName"
       v-model:search-query="searchQuery"
       v-model:compact-mode="compactMode"
