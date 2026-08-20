@@ -222,8 +222,8 @@ const navItems = [
   { id: 'color-palette', label: 'options.colorPalette' },
   { id: 'shortcuts', label: 'options.shortcuts' },
   { id: 'blacklist', label: 'options.blacklist' },
-  { id: 'error-logs', label: 'options.errorLogs' },
   { id: 'github-sync', label: 'options.githubSync' },
+  { id: 'error-logs', label: 'options.errorLogs' },
 ]
 
 const activeSection = ref('welcome')
@@ -595,22 +595,6 @@ onUnmounted(() => {
           />
         </div>
 
-        <!-- Error Logs -->
-        <div id="error-logs" class="setting-card scroll-mt-8">
-          <h2 class="text-[18px] font-semibold mb-[12px]">
-            {{ t('options.errorLogs') }}
-          </h2>
-          <p class="text-[14px] text-gray-500 mb-[16px]">
-            {{ t('options.errorLogsDesc') }}
-          </p>
-          <button
-            class="px-[16px] py-2 text-[14px] font-medium text-gray-900 bg-amber-500 rounded-md hover:bg-amber-600"
-            @click="exportLogs"
-          >
-            {{ t('options.exportLogs') }}
-          </button>
-        </div>
-
         <!-- GitHub Sync -->
         <div id="github-sync" class="setting-card scroll-mt-8">
           <div class="flex justify-between items-center mb-[12px]">
@@ -681,6 +665,22 @@ onUnmounted(() => {
               </label>
             </div>
           </div>
+        </div>
+
+        <!-- Error Logs -->
+        <div id="error-logs" class="setting-card scroll-mt-8">
+          <h2 class="text-[18px] font-semibold mb-[12px]">
+            {{ t('options.errorLogs') }}
+          </h2>
+          <p class="text-[14px] text-gray-500 mb-[16px]">
+            {{ t('options.errorLogsDesc') }}
+          </p>
+          <button
+            class="px-[16px] py-2 text-[14px] font-medium text-gray-900 bg-amber-500 rounded-md hover:bg-amber-600"
+            @click="exportLogs"
+          >
+            {{ t('options.exportLogs') }}
+          </button>
         </div>
 
         <!-- Save Button and Status -->
