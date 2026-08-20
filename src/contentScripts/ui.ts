@@ -1,11 +1,12 @@
 import { sendMessage } from 'webext-bridge/content-script'
-import { createApp, h } from 'vue'
+import { createApp, h, watchEffect } from 'vue'
 import browser from 'webextension-polyfill'
 import rangy from 'rangy/lib/rangy-core'
 import Tooltip from './views/Tooltip.vue'
 import DisambiguationModal from './views/DisambiguationModal.vue'
 import type { HighlightStateManager } from './state'
 import type { Mark } from '~/logic/storage'
+import { isDark } from '~/logic/theme'
 import { highlightDefaultStyle } from '~/logic/config'
 import { settings } from '~/logic/settings'
 import {
@@ -45,9 +46,8 @@ export class UIManager {
     ShadowDOMManager.attachStylesheet(shadowDOM as ShadowRoot, browser.runtime.getURL('dist/contentScripts/style.css'))
 
     const uiRoot = document.createElement('div')
-    const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches
-    if (isDark)
-      uiRoot.classList.add('dark')
+    // 响应式跟随主题设置（手动切换/系统变化时 Shadow DOM 内主题同步）
+    watchEffect(() => uiRoot.classList.toggle('dark', isDark.value))
     shadowDOM.appendChild(uiRoot)
 
     const tooltipRoot = document.createElement('div')

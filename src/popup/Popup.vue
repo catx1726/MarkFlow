@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watchEffect } from 'vue'
 import { sendMessage } from 'webext-bridge/popup'
-import { usePreferredDark } from '@vueuse/core'
 import { marksByUrl } from '~/logic/storage'
 
 import { isPageBlacklisted, settings } from '~/logic/settings'
 import { t } from '~/logic/i18n'
+import { isDark } from '~/logic/theme'
 
 const currentTab = ref<any>(null)
 
@@ -50,7 +50,6 @@ function reloadPage() {
 }
 
 // Automatically apply dark mode class to the root element
-const isDark = usePreferredDark()
 watchEffect(() => {
   if (isDark.value)
     document.documentElement.classList.add('dark')

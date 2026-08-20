@@ -57,3 +57,4 @@
 | 2026-08-20T22:00:00+08:00 | DOCS | locales/zh-CN.ts + en.ts | 第 10 轮 CR：Blocking 判定误报（en 标签自带尾随空格，输出格式正确），补"尾随分隔符属翻译一部分"注释防误修剪 | pending | git checkout HEAD -- src/logic/i18n/locales/ |
 | 2026-08-20T22:30:00+08:00 | DOCS | docs/RELEASE_v0.8.0.md + package.json | v0.8.0 发布说明（品牌焕新/i18n/智能定位2.0/视觉精修），版本号 0.7.2→0.8.0 | pending | git checkout HEAD -- docs/RELEASE_v0.8.0.md package.json |
 | 2026-08-20T22:50:00+08:00 | DOCS | docs/lang/en/index.html + docs/index.html | PR-2 宣传页英文版：整页翻译（hero/7 特性卡/4 步/FAQ 本地化 YouTube-Reddit/CTA/footer），双向语言链接，og:locale en_US + og:url /lang/en/；Playwright CDP 截图三段验收无溢出 | pending | git checkout HEAD -- docs/index.html && rm -rf docs/lang/ |
+| 2026-08-20T23:00:00+08:00 | FEAT | theme.ts + theme-init.ts + settings.ts + 3 页面 + ui.ts + Options.vue + 字典 | 主题手动切换：settings.theme(auto/light/dark) + 共享 isDark computed 统一三页面与 Shadow DOM；localStorage 镜像防 FOUC；设置页通用区加主题下拉；+2 resolveTheme 单测 | pending | git checkout HEAD -- src/ |
