@@ -22,6 +22,8 @@ const tooltipRef = ref<HTMLElement | null>(null)
 const isDragging = ref(false)
 const dragOffset = { x: 0, y: 0 }
 const DRAG_MARGIN = 8
+let dragRafId: number | null = null
+let pendingDragEvent: PointerEvent | null = null
 const isHighlighted = ref(false)
 const noteValue = ref('')
 const selectedTags = ref<string[]>([])
@@ -235,15 +237,31 @@ function onHeaderPointerDown(e: PointerEvent) {
 function onDragMove(e: PointerEvent) {
   if (!isDragging.value)
     return
-  const rect = tooltipRef.value?.getBoundingClientRect()
-  const width = rect?.width ?? 320
-  const height = rect?.height ?? 340
-  position.x = clamp(e.clientX - dragOffset.x, DRAG_MARGIN, window.innerWidth - DRAG_MARGIN - width)
-  position.y = clamp(e.clientY - dragOffset.y, DRAG_MARGIN, window.innerHeight - DRAG_MARGIN - height)
+  // rAF 节流：高频 pointermove 下避免每帧多次 getBoundingClientRect + 响应式更新
+  pendingDragEvent = e
+  if (dragRafId !== null)
+    return
+  dragRafId = requestAnimationFrame(() => {
+    dragRafId = null
+    const ev = pendingDragEvent
+    pendingDragEvent = null
+    if (!ev || !isDragging.value)
+      return
+    const rect = tooltipRef.value?.getBoundingClientRect()
+    const width = rect?.width ?? 320
+    const height = rect?.height ?? 340
+    position.x = clamp(ev.clientX - dragOffset.x, DRAG_MARGIN, window.innerWidth - DRAG_MARGIN - width)
+    position.y = clamp(ev.clientY - dragOffset.y, DRAG_MARGIN, window.innerHeight - DRAG_MARGIN - height)
+  })
 }
 
 function onDragEnd() {
   isDragging.value = false
+  if (dragRafId !== null) {
+    cancelAnimationFrame(dragRafId)
+    dragRafId = null
+  }
+  pendingDragEvent = null
   window.removeEventListener('pointermove', onDragMove, true)
   window.removeEventListener('pointerup', onDragEnd, true)
 }

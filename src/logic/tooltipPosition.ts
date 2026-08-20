@@ -37,7 +37,8 @@ export function getRangyRangeRect(range: unknown): DOMRect {
   const nativeRange = (range as { nativeRange?: Range }).nativeRange
   if (nativeRange)
     return nativeRange.getBoundingClientRect()
-  // 竟底：无原生 Range 的罕见环境，退回视口上部中央
+  // 竟底：无原生 Range 的罕见环境，退回视口上部中央（打日志便于追踪异常路径）
+  console.warn('[MarkFlow] getRangyRangeRect: 未找到 nativeRange，使用 fallback 定位', range)
   return new DOMRect(window.innerWidth / 2, window.innerHeight / 3, 0, 0)
 }
 
