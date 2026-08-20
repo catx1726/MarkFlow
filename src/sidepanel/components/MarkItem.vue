@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue'
 import type { Mark } from '~/logic/storage'
+import { t } from '~/logic/i18n'
 
 const props = defineProps<{
   mark: Mark
@@ -27,7 +28,7 @@ const editingNote = ref(props.mark.note)
 const textareaRef = ref<HTMLTextAreaElement | null>(null)
 const showContext = ref(false)
 const hasContext = computed(() => !!props.mark.contextTitle || !!props.mark.surroundingSnippet)
-const contextHint = computed(() => props.mark.restoreFailedAt ? '原位置已变化' : '')
+const contextHint = computed(() => props.mark.restoreFailedAt ? t('sidepanel.positionChanged') : '')
 
 watch(() => props.isEditing, async (newVal) => {
   if (newVal) {
@@ -99,7 +100,7 @@ function handleSave() {
             v-if="mark.contextTitle"
             class="text-xs font-medium"
           >
-            章节：{{ mark.contextTitle }}
+            {{ t('sidepanel.sectionLabel') }}{{ mark.contextTitle }}
           </p>
           <p
             v-if="mark.surroundingSnippet"
@@ -122,13 +123,13 @@ function handleSave() {
             class="action-button bg-gray-200 text-gray-800 hover:bg-gray-300 dark:bg-gray-600 dark:text-gray-200 dark:hover:bg-gray-500 rounded-md px-3 py-1 text-sm font-medium"
             @click.stop="emit('cancel')"
           >
-            取消
+            {{ t('common.cancel') }}
           </button>
           <button
             class="action-button bg-amber-500 hover:bg-amber-600 rounded-md px-3 py-1 text-sm font-medium text-gray-900"
             @click.stop="handleSave"
           >
-            保存
+            {{ t('common.save') }}
           </button>
         </div>
       </div>
@@ -139,13 +140,13 @@ function handleSave() {
         :class="isNoteExpanded ? 'max-h-96' : 'max-h-5'"
         @click.stop="emit('edit', mark)"
       >
-        {{ mark.note || '点击添加备注...' }}
+        {{ mark.note || t('sidepanel.addNote') }}
       </p>
     </div>
     <div class="relative flex-shrink-0">
       <button
         class="text-gray-400 hover:text-gray-600 rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-        title="更多操作"
+        :title="t('sidepanel.moreActions')"
         @click.stop="emit('toggle-menu', mark.id)"
       >
         <svg
@@ -171,34 +172,34 @@ function handleSave() {
               class="text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 flex w-full items-center gap-2 px-4 py-2 text-left text-sm"
               @click="emit('toggle-expand', mark.id)"
             >
-              <span>{{ isExpanded ? '收起标记' : '展开标记' }}</span>
+              <span>{{ isExpanded ? t('sidepanel.collapseMark') : t('sidepanel.expandMark') }}</span>
             </button>
             <button
               v-if="mark.note"
               class="text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 flex w-full items-center gap-2 px-4 py-2 text-left text-sm"
               @click="emit('toggle-note-expand', mark.id)"
             >
-              <span>{{ isNoteExpanded ? '收起备注' : '展开备注' }}</span>
+              <span>{{ isNoteExpanded ? t('sidepanel.collapseNote') : t('sidepanel.expandNote') }}</span>
             </button>
             <div class="border-gray-100 dark:border-gray-600 my-1 border-t" />
             <button
               class="text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 w-full px-4 py-2 text-left text-sm"
               @click="emit('open-tag-picker', mark)"
             >
-              管理标签
+              {{ t('common.manageTags') }}
             </button>
 
             <button
               class="text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 flex w-full items-center gap-2 px-4 py-2 text-left text-sm"
               @click="emit('copy', mark)"
             >
-              <span>复制标记</span>
+              <span>{{ t('sidepanel.copyMark') }}</span>
             </button>
             <button
               class="hover:bg-red-50 dark:hover:bg-red-900/50 w-full px-4 py-2 text-left text-sm text-red-600 dark:text-red-400"
               @click="emit('remove', mark)"
             >
-              删除标记
+              {{ t('sidepanel.deleteMark') }}
             </button>
           </div>
         </div>

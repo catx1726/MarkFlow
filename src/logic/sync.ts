@@ -1,4 +1,5 @@
 import type { Mark, SyncConfig, SyncStatus, Tag } from './storage'
+import { t } from '~/logic/i18n'
 
 export interface SyncData {
   marks: Record<string, Mark[]>
@@ -130,13 +131,13 @@ export function classifyGitHubResponse(
   notFoundMessage: string,
 ): GitHubAPIError {
   if (status === 422)
-    return new GitHubAPIError(status, 'storage-limit', '同步失败：数据量超过 GitHub Gist 上限 (10MB)。请清理部分标记后重试。')
+    return new GitHubAPIError(status, 'storage-limit', t('sync.errorStorageLimit'))
 
   if (status === 404)
     return new GitHubAPIError(status, 'not-found', notFoundMessage)
 
   if (status === 401)
-    return new GitHubAPIError(status, 'auth', '身份验证失败，请检查 Token 是否有效（401）')
+    return new GitHubAPIError(status, 'auth', t('sync.errorAuth'))
 
   if (status === 403) {
     const remaining = headers.get('X-RateLimit-Remaining')
@@ -145,19 +146,19 @@ export function classifyGitHubResponse(
     // 主速率限制（剩余配额为 0）或次级滥用检测（body 含特定关键词）
     const isRateLimit = remaining === '0' || RATE_LIMIT_PATTERN.test(apiMessage)
     if (isRateLimit) {
-      const hint = retryAfter ? `，请 ${retryAfter} 秒后重试` : '，请稍后重试'
+      const hint = retryAfter ? t('sync.rateLimitRetryIn', { seconds: retryAfter }) : t('sync.rateLimitRetryLater')
       return new GitHubAPIError(
         status,
         'rate-limit',
-        `GitHub 请求频率受限${hint}（非 Token 失效，同步不会被关闭）`,
+        t('sync.rateLimited', { hint }),
         retryAfter,
       )
     }
     // 其他 403：保守按认证/权限类处理（可能是 token scope 不足或资源受限）
-    return new GitHubAPIError(status, 'auth', `权限不足或 Token 无效：${apiMessage || '未知 403 原因'}`)
+    return new GitHubAPIError(status, 'auth', t('sync.errorForbidden', { message: apiMessage || t('sync.unknownForbiddenReason') }))
   }
 
-  return new GitHubAPIError(status, 'unknown', `GitHub API 请求失败: ${status}${apiMessage ? `（${apiMessage}）` : ''}`)
+  return new GitHubAPIError(status, 'unknown', t('sync.errorApiFailed', { status }) + (apiMessage ? t('sync.errorApiDetail', { message: apiMessage }) : ''))
 }
 
 /**
@@ -192,7 +193,7 @@ export async function getGists(token: string, targetGistId?: string): Promise<Gi
       headers: { Authorization: `token ${token}` },
     })
     if (!res.ok)
-      await classifyResponse(res, '未找到指定的同步 Gist，请检查 Gist ID')
+      await classifyResponse(res, t('sync.gistNotFound'))
 
     const gists: GistResponse[] = await res.json()
     allGists.push(...gists)
@@ -215,7 +216,7 @@ export async function getGistById(token: string, gistId: string): Promise<GistRe
     headers: { Authorization: `token ${token}` },
   })
   if (!res.ok)
-    await classifyResponse(res, '未找到指定的同步 Gist，请检查 Gist ID')
+    await classifyResponse(res, t('sync.gistNotFound'))
   return res.json()
 }
 
@@ -233,7 +234,7 @@ export async function createGist(token: string, data: SyncData): Promise<GistRes
     }),
   })
   if (!res.ok)
-    await classifyResponse(res, '创建同步 Gist 失败')
+    await classifyResponse(res, t('sync.createGistFailed'))
   return res.json()
 }
 
@@ -249,6 +250,6 @@ export async function updateGist(token: string, gistId: string, data: SyncData):
     }),
   })
   if (!res.ok)
-    await classifyResponse(res, '未找到指定的同步 Gist，请检查 Gist ID')
+    await classifyResponse(res, t('sync.gistNotFound'))
   return res.ok
 }

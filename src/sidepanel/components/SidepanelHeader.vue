@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { t } from '~/logic/i18n'
+
 defineProps<{
   newTagName: string
   isCreatingTag: boolean
@@ -25,7 +27,7 @@ function onClearSearch() {
 <template>
   <header class="sticky top-0 z-40 bg-gray-100 dark:bg-gray-900 pb-2">
     <h1 class="text-xl font-bold text-center text-gray-800 dark:text-gray-200 mt-4 mb-2">
-      标记管理
+      {{ t('sidepanel.title') }}
     </h1>
 
     <div class="px-2 space-y-2">
@@ -45,7 +47,7 @@ function onClearSearch() {
           <input
             :value="searchQuery"
             type="search"
-            placeholder="搜索标记、页面或标签..."
+            :placeholder="t('sidepanel.searchPlaceholder')"
             class="w-full pl-9 pr-3 py-1.5 text-sm rounded-md border border-gray-200 dark:bg-gray-700 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-amber-500"
             @input="e => emit('update:searchQuery', (e.target as HTMLInputElement).value)"
           >
@@ -54,7 +56,7 @@ function onClearSearch() {
         <button
           class="p-1.5 rounded-md transition-colors"
           :class="isCreatingTag ? 'bg-amber-100 text-amber-600 dark:bg-amber-900 dark:text-amber-300' : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700'"
-          title="新建标签"
+          :title="t('sidepanel.newTag')"
           @click="emit(isCreatingTag ? 'cancelCreatingTag' : 'startCreatingTag')"
         >
           <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -64,7 +66,7 @@ function onClearSearch() {
 
         <button
           class="p-1.5 text-gray-500 hover:text-gray-800 dark:hover:text-gray-200 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-          title="打开设置"
+          :title="t('sidepanel.openSettings')"
           @click="emit('open-options')"
         >
           <svg
@@ -91,7 +93,7 @@ function onClearSearch() {
       >
         <input
           :value="newTagName"
-          placeholder="新建标签..."
+          :placeholder="t('sidepanel.newTagPlaceholder')"
           class="border-gray-200 dark:bg-gray-700 dark:border-gray-600 focus:ring-amber-500 flex-1 rounded-md border px-3 py-1.5 text-sm focus:outline-none focus:ring-2"
           @input="e => emit('update:newTagName', (e.target as HTMLInputElement).value)"
           @keydown.enter="emit('create-tag')"
@@ -101,7 +103,7 @@ function onClearSearch() {
           class="bg-amber-500 hover:bg-amber-600 rounded-md px-4 py-1.5 text-sm font-medium text-gray-900 shadow-sm transition-colors"
           @click="emit('create-tag')"
         >
-          创建
+          {{ t('common.create') }}
         </button>
       </div>
       <div
@@ -115,13 +117,13 @@ function onClearSearch() {
             class="h-3.5 w-3.5 rounded border-gray-300 text-amber-600 focus:ring-amber-500"
             @change="e => emit('update:compactMode', (e.target as HTMLInputElement).checked)"
           >
-          仅显示匹配项
+          {{ t('sidepanel.showMatchesOnly') }}
         </label>
         <button
           class="text-xs text-amber-600 hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-300"
           @click="onClearSearch"
         >
-          清除搜索
+          {{ t('sidepanel.clearSearch') }}
         </button>
       </div>
     </div>

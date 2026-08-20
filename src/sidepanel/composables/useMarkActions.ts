@@ -4,6 +4,7 @@ import browser from 'webextension-polyfill'
 import TurndownService from 'turndown'
 import type { Mark } from '~/logic/storage'
 import type { MarkGroup } from '~/logic/tagTree'
+import { t } from '~/logic/i18n'
 
 export function useMarkActions() {
   const turndownService = new TurndownService()
@@ -47,7 +48,7 @@ export function useMarkActions() {
 
   async function removeMark(mark: Mark) {
     // eslint-disable-next-line no-alert
-    if (!confirm('确定要删除此标记吗？'))
+    if (!confirm(t('sidepanel.confirmDeleteMark')))
       return
     try {
       const result = await sendMessage('remove-mark', toRaw(mark), 'background')
@@ -85,7 +86,7 @@ export function useMarkActions() {
 
   async function copyMarkText(mark: Mark) {
     try {
-      await navigator.clipboard.writeText(`标记：${mark.text}\n` + `备注：${mark.note}`)
+      await navigator.clipboard.writeText(`${t('sidepanel.markLabel')}${mark.text}\n` + `${t('sidepanel.noteLabel')}${mark.note}`)
       return true
     }
     catch {
@@ -97,7 +98,7 @@ export function useMarkActions() {
     const { pageTitle, groups } = urlData
     const firstMark = groups.length > 0 && groups[0].marks.length > 0 ? groups[0].marks[0] : null
     const pageURL = firstMark?.url || ''
-    let markdown = `> 来源：[${pageTitle}](${pageURL})\n\n---\n\n`
+    let markdown = `> ${t('sidepanel.sourceLabel')}[${pageTitle}](${pageURL})\n\n---\n\n`
     for (const group of groups) {
       markdown += `**${group.title}**\n\n`
       for (const mark of group.marks) {
@@ -114,7 +115,7 @@ export function useMarkActions() {
           markdown += `> ${mark.text.replace(/>/g, '\\>')}\n\n`
         }
         if (mark.note)
-          markdown += `**备注**：${mark.note}\n\n`
+          markdown += `**${t('sidepanel.noteLabel')}**${mark.note}\n\n`
         markdown += `---\n\n`
       }
     }
@@ -122,7 +123,7 @@ export function useMarkActions() {
   }
 
   function exportTagFolder(folder: { tagName: string, pages: Record<string, any> }) {
-    let markdown = `**标签：${folder.tagName}**\n\n---\n\n`
+    let markdown = `**${t('sidepanel.tagLabel')}${folder.tagName}**\n\n---\n\n`
     for (const [url, urlData] of Object.entries(folder.pages)) {
       const { pageTitle, groups } = urlData as any
       markdown += `**[${pageTitle}](${url})**\n\n`
@@ -141,7 +142,7 @@ export function useMarkActions() {
             markdown += `> ${mark.text.replace(/>/g, '\\>')}\n\n`
           }
           if (mark.note)
-            markdown += `**备注**：${mark.note}\n\n`
+            markdown += `**${t('sidepanel.noteLabel')}**${mark.note}\n\n`
           markdown += `---\n\n`
         }
       }
@@ -150,7 +151,7 @@ export function useMarkActions() {
   }
 
   function exportGroup(url: string, group: any) {
-    let md = `**分组：${group.title}**\n\n---\n\n`
+    let md = `**${t('sidepanel.groupLabel')}${group.title}**\n\n---\n\n`
     for (const mark of group.marks) {
       if (mark.html) {
         try {
@@ -164,7 +165,7 @@ export function useMarkActions() {
         md += `> ${mark.text.replace(/>/g, '\\>')}\n\n`
       }
       if (mark.note)
-        md += `**备注**：${mark.note}\n\n`
+        md += `**${t('sidepanel.noteLabel')}**${mark.note}\n\n`
       md += `---\n\n`
     }
     downloadMarkdown(md, group.title)

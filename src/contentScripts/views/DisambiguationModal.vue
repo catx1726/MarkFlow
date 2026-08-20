@@ -2,6 +2,7 @@
 import { computed, ref, watch } from 'vue'
 import ListItemComponent from './ListItemComponent.vue'
 import type { Candidate } from '~/logic/search'
+import { t } from '~/logic/i18n'
 
 const props = defineProps<{
   ambiguousMarksData: Candidate[]
@@ -110,7 +111,7 @@ watch(
       <!-- Header -->
       <div class="p-4 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center">
         <h2 class="text-lg font-bold text-gray-800 dark:text-gray-200">
-          确认标记位置
+          {{ t('modal.title') }}
         </h2>
         <button class="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 transition-colors" @click="handleCancel">
           <div i-carbon-close class="text-2xl" />
@@ -126,7 +127,7 @@ watch(
           <input
             v-model="searchTerm"
             type="text"
-            placeholder="在歧义项中搜索..."
+            :placeholder="t('modal.searchPlaceholder')"
             class="w-full pl-10 pr-4 py-2 border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all"
           >
         </div>
@@ -138,17 +139,17 @@ watch(
           <div class="flex items-center justify-between mb-4 pb-2 border-b border-amber-100 dark:border-amber-900/30">
             <div class="flex items-center gap-2">
               <div class="px-2 py-0.5 bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 text-xs font-bold rounded flex-shrink-0">
-                寻找位置
+                {{ t('modal.locating') }}
               </div>
               <span class="text-sm font-bold text-gray-700 dark:text-gray-200">“{{ group.text }}”</span>
             </div>
             <button
               class="flex flex-shrink-0 items-center gap-1 text-xs text-red-400 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300 transition-colors"
-              title="由于内容已删除，彻底移除此标记"
+              :title="t('modal.discardTitle')"
               @click="emit('discardMark', markId as string)"
             >
               <div i-carbon-trash-can />
-              彻底丢弃
+              {{ t('modal.discard') }}
             </button>
           </div>
           <ListItemComponent
@@ -163,21 +164,21 @@ watch(
           />
         </div>
         <div v-if="Object.keys(groupedMarks).length === 0" class="text-center py-10 text-gray-400 dark:text-gray-500">
-          未找到匹配项
+          {{ t('modal.noMatches') }}
         </div>
       </div>
 
       <!-- Footer -->
       <div class="p-4 bg-gray-50 dark:bg-gray-800 border-t border-gray-100 dark:border-gray-700 flex justify-end gap-3">
         <button class="px-4 py-2 text-gray-600 hover:bg-gray-200 dark:text-gray-300 dark:hover:bg-gray-700 rounded transition-colors" @click="handleCancel">
-          取消
+          {{ t('common.cancel') }}
         </button>
         <button
           :disabled="selectedCandidateIds.size === 0"
           class="px-6 py-2 bg-amber-500 text-gray-900 rounded font-medium hover:bg-amber-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
           @click="handleConfirm"
         >
-          确认恢复 ({{ selectedCandidateIds.size }})
+          {{ t('modal.confirmRestore', { count: selectedCandidateIds.size }) }}
         </button>
       </div>
     </div>

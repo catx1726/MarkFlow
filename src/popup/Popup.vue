@@ -5,6 +5,7 @@ import { usePreferredDark } from '@vueuse/core'
 import { marksByUrl } from '~/logic/storage'
 
 import { isPageBlacklisted, settings } from '~/logic/settings'
+import { t } from '~/logic/i18n'
 
 const currentTab = ref<any>(null)
 
@@ -103,23 +104,23 @@ async function openSidePanel() {
     </div>
 
     <p class="mb-[24px] text-center text-[14px]">
-      你已经创建了
+      {{ t('popup.markCountPrefix') }}
       <strong class="text-amber-600 text-base">{{ totalMarks }}</strong>
-      条标记。
+      {{ t('popup.markCountSuffix') }}
     </p>
 
     <div class="flex flex-col gap-[12px]">
       <button class="btn-secondary" @click="openOptionsPage">
-        设置
+        {{ t('popup.openSettings') }}
       </button>
       <button
         class="px-4 py-2 rounded-md bg-amber-500 text-gray-900 font-medium shadow-sm transition-colors hover:bg-amber-600"
         @click="openSidePanel"
       >
-        打开侧边栏
+        {{ t('popup.openSidePanel') }}
       </button>
       <button class="btn-secondary" @click="toggleBlacklist">
-        {{ isBlocked ? '在此网站启用' : '在此网站禁用' }}
+        {{ isBlocked ? t('popup.enableOnSite') : t('popup.disableOnSite') }}
       </button>
 
       <div
@@ -127,13 +128,13 @@ async function openSidePanel() {
         class="text-xs text-orange-600 dark:text-orange-300 bg-orange-50 dark:bg-orange-900/30 p-2 rounded border border-orange-200 dark:border-orange-800 animate-fade-in"
       >
         <p class="mb-1 font-medium">
-          状态已更新，需刷新页面生效。
+          {{ t('popup.reloadRequired') }}
         </p>
         <button
           class="underline hover:text-orange-800 dark:hover:text-orange-100 transition-colors"
           @click="reloadPage"
         >
-          立即刷新
+          {{ t('popup.reloadNow') }}
         </button>
       </div>
     </div>

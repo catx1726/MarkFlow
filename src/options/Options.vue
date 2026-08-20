@@ -10,6 +10,7 @@ import { settings } from '~/logic/settings'
 import { dataReady, marksByUrl, syncConfig, syncReady, syncStatus, tagsMetadata, tagsReady } from '~/logic/storage'
 import { createGist, getGists } from '~/logic/sync'
 import { t } from '~/logic/i18n'
+import type { Messages } from '~/logic/i18n'
 
 const isDark = usePreferredDark()
 watchEffect(() => {
@@ -46,12 +47,12 @@ const blacklistText = computed({
 
 const alertInfo = reactive({
   visible: false,
-  title: '提示',
+  title: t('options.alertTitle'),
   message: '',
   isHtml: false,
 })
 
-function showAlert(message: string, title = '提示', isHtml = false) {
+function showAlert(message: string, title = t('options.alertTitle'), isHtml = false) {
   alertInfo.title = title
   alertInfo.message = message
   alertInfo.isHtml = isHtml
@@ -72,7 +73,7 @@ function addColor() {
 
 function removeColor(index: number) {
   if (localSettings.highlightColors.length <= 1) {
-    showAlert('至少需要保留一种高亮颜色。')
+    showAlert(t('options.minOneColor'))
     return
   }
   // If removing the default color, set a new default
@@ -84,7 +85,7 @@ function removeColor(index: number) {
 
 async function saveSettings() {
   settings.value = cloneDeep(localSettings)
-  saveStatus.value = '设置已保存！'
+  saveStatus.value = t('options.settingsSaved')
   isJustSaved.value = true
   clearTimeout(saveTimeout)
   clearTimeout(saveResetTimeout)
@@ -126,11 +127,11 @@ function withTimeout<T>(promise: Promise<T>, ms: number, reason: string): Promis
 
 async function connectSync() {
   if (!syncConfig.value.token) {
-    showAlert('请先输入 GitHub Token')
+    showAlert(t('options.enterToken'))
     return
   }
 
-  syncConnectStatus.value = '正在连接 GitHub...'
+  syncConnectStatus.value = t('options.connecting')
 
   try {
     await Promise.all([dataReady, tagsReady, syncReady])
@@ -154,7 +155,7 @@ async function connectSync() {
       try {
         await triggerPull({ force: true, token: syncConfig.value.token, gistId: existingGist.id })
         syncConfig.value.enabled = true
-        showAlert('已成功连接到现有的同步 Gist！')
+        showAlert(t('options.connectedExisting'))
       }
       catch (err: any) {
         // 拉取失败时重置 gistId，避免用户下次手动启用同步时使用了错误/未验证的 Gist ID
@@ -171,7 +172,7 @@ async function connectSync() {
       })
       syncConfig.value.gistId = newGist.id
       syncConfig.value.enabled = true
-      showAlert('已创建新的同步 Gist 并开启同步！')
+      showAlert(t('options.createdNewGist'))
       // 新 Gist 创建后拉取一次，以将 lastSyncStatus 置为 success，后续推送才能正常进行
       triggerPull({ force: true, token: syncConfig.value.token, gistId: newGist.id }).catch((err: any) => {
         console.error('[Options] trigger-sync failed:', err)
@@ -179,7 +180,7 @@ async function connectSync() {
     }
   }
   catch (err: any) {
-    showAlert(`连接失败: ${err.message}`)
+    showAlert(t('options.connectFailed', { message: err.message }))
   }
   finally {
     syncConnectStatus.value = ''
@@ -214,15 +215,18 @@ async function triggerPull({ force = false, timeoutMs = 8000, token = '', gistId
 }
 
 // ========== 左侧导航与 Scroll Spy ==========
-const navItems = [
-  { id: 'welcome', label: '欢迎使用' },
-  { id: 'default-color', label: '默认高亮颜色' },
-  { id: 'highlight-height', label: '高亮标记高度' },
-  { id: 'color-palette', label: '高亮颜色配置' },
-  { id: 'shortcuts', label: '快捷键设置' },
-  { id: 'blacklist', label: '网站黑名单' },
-  { id: 'error-logs', label: '错误日志' },
-  { id: 'github-sync', label: 'GitHub 同步' },
+type OptionsKey = `options.${keyof Messages['options']}`
+
+const navItems: { id: string, label: OptionsKey }[] = [
+  { id: 'welcome', label: 'options.navWelcome' },
+  { id: 'general', label: 'options.navGeneral' },
+  { id: 'default-color', label: 'options.defaultColor' },
+  { id: 'highlight-height', label: 'options.highlightHeight' },
+  { id: 'color-palette', label: 'options.colorPalette' },
+  { id: 'shortcuts', label: 'options.shortcuts' },
+  { id: 'blacklist', label: 'options.blacklist' },
+  { id: 'github-sync', label: 'options.githubSync' },
+  { id: 'error-logs', label: 'options.errorLogs' },
 ]
 
 const activeSection = ref('welcome')
@@ -305,7 +309,7 @@ onUnmounted(() => {
         <div class="sticky top-[40px] self-start">
           <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-[16px]">
             <h1 class="text-[20px] font-bold mb-[16px] text-gray-900 dark:text-gray-100">
-              设置
+              {{ t('options.settingsTitle') }}
             </h1>
             <nav class="space-y-1">
               <button
@@ -321,7 +325,7 @@ onUnmounted(() => {
                   v-if="activeSection === item.id"
                   class="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-[16px] bg-amber-500 rounded-r-full"
                 />
-                {{ item.label }}
+                {{ t(item.label) }}
               </button>
             </nav>
             <div class="mt-[16px] pt-[16px] border-t border-gray-100 dark:border-gray-700">
@@ -333,7 +337,7 @@ onUnmounted(() => {
                 :disabled="isJustSaved"
                 @click="saveSettings"
               >
-                {{ isJustSaved ? '已保存 ✓' : '保存设置' }}
+                {{ isJustSaved ? t('options.savedShort') : t('options.saveSettings') }}
               </button>
             </div>
           </div>
@@ -345,18 +349,18 @@ onUnmounted(() => {
         <!-- Welcome Guide -->
         <div id="welcome" class="setting-card border-l-4 border-amber-500 scroll-mt-8">
           <h2 class="text-[18px] font-semibold mb-[16px] flex items-center gap-2">
-            👋 欢迎使用 MarkFlow
+            {{ t('options.welcomeTitle') }}
           </h2>
           <div class="space-y-4 text-[14px]">
             <!-- Quick Start -->
             <div class="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-md">
               <h3 class="font-bold text-gray-900 dark:text-gray-100 mb-1">
-                🚀 快速开始
+                {{ t('options.quickStartTitle') }}
               </h3>
               <p class="text-gray-600 dark:text-gray-300">
-                在任意网页，按住
+                {{ t('options.quickStartPrefix') }}
                 <kbd class="px-1.5 py-0.5 rounded bg-gray-200 dark:bg-gray-600 font-mono text-xs border border-gray-300 dark:border-gray-500">Alt</kbd>
-                键并拖动鼠标选中文字，即可唤起高亮工具栏。
+                {{ t('options.quickStartSuffix') }}
               </p>
             </div>
 
@@ -364,16 +368,16 @@ onUnmounted(() => {
             <div class="grid grid-cols-2 gap-4">
               <div>
                 <h3 class="font-bold text-gray-900 dark:text-gray-100 mb-1">
-                  ✨ 核心功能
+                  {{ t('options.coreFeaturesTitle') }}
                 </h3>
                 <ul class="list-disc list-inside text-gray-600 dark:text-gray-400 space-y-1">
                   <li>
-                    <strong>标记 (Mark)</strong>
-                    ：多彩高亮，捕捉灵感
+                    <strong>{{ t('options.featureMarkName') }}</strong>
+                    {{ t('options.featureMarkDesc') }}
                   </li>
                   <li>
-                    <strong>回顾 (Review)</strong>
-                    ：一览所有标记片段
+                    <strong>{{ t('options.featureReviewName') }}</strong>
+                    {{ t('options.featureReviewDesc') }}
                   </li>
                 </ul>
               </div>
@@ -383,12 +387,12 @@ onUnmounted(() => {
                 </h3>
                 <ul class="list-disc list-inside text-gray-600 dark:text-gray-400 space-y-1">
                   <li>
-                    <strong>跳转 (Jump)</strong>
-                    ：点击快速定位上下文
+                    <strong>{{ t('options.featureJumpName') }}</strong>
+                    {{ t('options.featureJumpDesc') }}
                   </li>
                   <li>
-                    <strong>整理 (Organize)</strong>
-                    ：高效管理知识碎片
+                    <strong>{{ t('options.featureOrganizeName') }}</strong>
+                    {{ t('options.featureOrganizeDesc') }}
                   </li>
                 </ul>
               </div>
@@ -397,10 +401,10 @@ onUnmounted(() => {
             <!-- Acknowledgments -->
             <div class="pt-2 border-t border-gray-100 dark:border-gray-700">
               <h3 class="font-bold text-gray-900 dark:text-gray-100 mb-1">
-                ❤️ 致谢与支持
+                {{ t('options.thanksTitle') }}
               </h3>
               <p class="text-gray-600 dark:text-gray-400 mb-2">
-                感谢您的使用！如果您觉得这个工具对您有帮助，欢迎在商店评分或分享给朋友。
+                {{ t('options.thanksDesc') }}
               </p>
               <div class="flex gap-4">
                 <a
@@ -423,12 +427,40 @@ onUnmounted(() => {
         </div>
 
         <!-- Default Highlight Color -->
+        <!-- General -->
+        <div id="general" class="setting-card scroll-mt-8">
+          <h2 class="text-[18px] font-semibold mb-[12px]">
+            {{ t('options.navGeneral') }}
+          </h2>
+          <p class="text-[14px] text-gray-500 mb-[4px]">
+            {{ t('options.languageLabel') }}
+          </p>
+          <p class="text-[13px] text-gray-400 mb-[12px]">
+            {{ t('options.languageDesc') }}
+          </p>
+          <select
+            v-model="localSettings.language"
+            class="px-[12px] py-[8px] text-[14px] rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-amber-500"
+          >
+            <option value="auto">
+              {{ t('options.languageAuto') }}
+            </option>
+            <option value="zh-CN">
+              {{ t('options.languageZh') }}
+            </option>
+            <option value="en">
+              {{ t('options.languageEn') }}
+            </option>
+          </select>
+        </div>
+
+        <!-- Default Color -->
         <div id="default-color" class="setting-card scroll-mt-8">
           <h2 class="text-[18px] font-semibold mb-[12px]">
-            默认高亮颜色
+            {{ t('options.defaultColor') }}
           </h2>
           <p class="text-[14px] text-gray-500 mb-[16px]">
-            选择在创建新高亮时默认使用的颜色。
+            {{ t('options.defaultColorDesc') }}
           </p>
           <div class="flex flex-wrap gap-[12px]">
             <label
@@ -451,10 +483,10 @@ onUnmounted(() => {
         <!-- Highlight Height -->
         <div id="highlight-height" class="setting-card scroll-mt-8">
           <h2 class="text-[18px] font-semibold mb-[12px]">
-            高亮标记高度
+            {{ t('options.highlightHeight') }}
           </h2>
           <p class="text-[14px] text-gray-500 mb-[16px]">
-            控制高亮标记的下划线粗细和底部间距，取值范围 1–20px。
+            {{ t('options.highlightHeightDesc') }}
           </p>
           <div class="flex items-center gap-[16px]">
             <input
@@ -467,12 +499,12 @@ onUnmounted(() => {
             <span class="w-[48px] text-center font-mono text-[14px]">{{ localSettings.highlightHeight }}px</span>
           </div>
           <div class="mt-[16px]">
-            <span class="text-[14px] text-gray-500">预览：</span>
+            <span class="text-[14px] text-gray-500">{{ t('options.previewLabel') }}</span>
             <span
               class="text-[14px]"
               :style="{ boxShadow: `inset 0 -${localSettings.highlightHeight}px 0 0 ${localSettings.defaultHighlightColor}`, paddingBottom: `${localSettings.highlightHeight}px` }"
             >
-              这是一段示例高亮文本
+              {{ t('options.previewText') }}
             </span>
           </div>
         </div>
@@ -480,10 +512,10 @@ onUnmounted(() => {
         <!-- Highlight Color Palette -->
         <div id="color-palette" class="setting-card scroll-mt-8">
           <h2 class="text-[18px] font-semibold mb-[12px]">
-            高亮颜色配置
+            {{ t('options.colorPalette') }}
           </h2>
           <p class="text-[14px] text-gray-500 mb-[16px]">
-            自定义在工具提示中可用的颜色选项。
+            {{ t('options.colorPaletteDesc') }}
           </p>
           <div class="space-y-3">
             <div
@@ -501,7 +533,7 @@ onUnmounted(() => {
                 type="text"
                 class="flex-1 px-[8px] py-[4px] border rounded-md bg-gray-50 dark:bg-gray-800"
               >
-              <button class="p-[8px] text-gray-500 hover:text-red-500" title="移除颜色" @click="removeColor(index)">
+              <button class="p-[8px] text-gray-500 hover:text-red-500" :title="t('options.removeColor')" @click="removeColor(index)">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-[20px] w-[20px]" viewBox="0 0 20 20" fill="currentColor">
                   <path
                     fill-rule="evenodd"
@@ -516,21 +548,21 @@ onUnmounted(() => {
             class="mt-[16px] px-[16px] py-2 text-[14px] font-medium text-gray-900 bg-amber-500 rounded-md hover:bg-amber-600"
             @click="addColor"
           >
-            添加颜色
+            {{ t('options.addColor') }}
           </button>
         </div>
 
         <!-- Shortcut Settings -->
         <div id="shortcuts" class="setting-card scroll-mt-8">
           <h2 class="text-[18px] font-semibold mb-[12px]">
-            快捷键设置
+            {{ t('options.shortcuts') }}
           </h2>
           <p class="text-[14px] text-gray-500 mb-[16px]">
-            自定义保存和删除操作的快捷键 (例如: Alt+S, Ctrl+Shift+D)。
+            {{ t('options.shortcutsDesc') }}
           </p>
           <div class="space-y-4">
             <div class="flex items-center gap-[16px]">
-              <label for="shortcut-save" class="w-[96px] shrink-0">保存标记:</label>
+              <label for="shortcut-save" class="w-[96px] shrink-0">{{ t('options.shortcutSaveLabel') }}</label>
               <input
                 id="shortcut-save"
                 v-model="localSettings.shortcutSave"
@@ -539,7 +571,7 @@ onUnmounted(() => {
               >
             </div>
             <div class="flex items-center gap-[16px]">
-              <label for="shortcut-delete" class="w-[96px] shrink-0">删除标记:</label>
+              <label for="shortcut-delete" class="w-[96px] shrink-0">{{ t('options.shortcutDeleteLabel') }}</label>
               <input
                 id="shortcut-delete"
                 v-model="localSettings.shortcutDelete"
@@ -553,10 +585,10 @@ onUnmounted(() => {
         <!-- Blacklist -->
         <div id="blacklist" class="setting-card scroll-mt-8">
           <h2 class="text-[18px] font-semibold mb-[12px]">
-            网站黑名单
+            {{ t('options.blacklist') }}
           </h2>
           <p class="text-[14px] text-gray-500 mb-[16px]">
-            在以下网站禁用此插件，每行输入一个域名（例如 example.com）。
+            {{ t('options.blacklistDesc') }}
           </p>
           <textarea
             v-model="blacklistText"
@@ -566,38 +598,22 @@ onUnmounted(() => {
           />
         </div>
 
-        <!-- Error Logs -->
-        <div id="error-logs" class="setting-card scroll-mt-8">
-          <h2 class="text-[18px] font-semibold mb-[12px]">
-            错误日志
-          </h2>
-          <p class="text-[14px] text-gray-500 mb-[16px]">
-            如果扩展运行异常，请导出错误日志发送给我们。
-          </p>
-          <button
-            class="px-[16px] py-2 text-[14px] font-medium text-gray-900 bg-amber-500 rounded-md hover:bg-amber-600"
-            @click="exportLogs"
-          >
-            导出错误日志
-          </button>
-        </div>
-
         <!-- GitHub Sync -->
         <div id="github-sync" class="setting-card scroll-mt-8">
           <div class="flex justify-between items-center mb-[12px]">
             <h2 class="text-[18px] font-semibold">
-              GitHub 同步
+              {{ t('options.githubSync') }}
             </h2>
             <button
               class="text-amber-500 hover:text-amber-700 flex items-center gap-1 text-[13px]"
               @click="showSyncHelp"
             >
               <div class="i-carbon-help text-[16px]" />
-              使用指南
+              {{ t('options.syncGuide') }}
             </button>
           </div>
           <p class="text-[14px] text-gray-500 mb-[16px]">
-            使用 GitHub Gist 实现多端标记同步。数据以私有 Gist 形式存储。
+            {{ t('options.syncDesc') }}
           </p>
           <div class="space-y-4">
             <div class="flex flex-col gap-2">
@@ -609,17 +625,17 @@ onUnmounted(() => {
                 placeholder="ghp_xxxxxxxxxxxxxxxxxxxxxxxx"
               >
               <p class="text-[12px] text-gray-400">
-                请确保 Token 已勾选 <strong>'gist'</strong> 权限（无需 repo 权限）。
+                {{ t('options.tokenScopePrefix') }}<strong>'gist'</strong>{{ t('options.tokenScopeSuffix') }}
                 <a
                   href="https://github.com/settings/tokens/new?scopes=gist&description=MarkFlow-Sync"
                   target="_blank"
                   class="text-amber-500 hover:underline"
                 >
-                  点此快速生成 Token
+                  {{ t('options.generateToken') }}
                 </a>
               </p>
               <p class="text-[11px] text-amber-700 dark:text-amber-400 mt-1">
-                ⚠️ 注意：Token 将以加密/私有形式存储在浏览器本地，建议使用最小权限。
+                {{ t('options.tokenWarning') }}
               </p>
             </div>
 
@@ -629,13 +645,13 @@ onUnmounted(() => {
                 :disabled="!syncConfig.token || syncConnectStatus !== ''"
                 @click="connectSync"
               >
-                {{ syncConfig.enabled ? '重新连接' : '连接并开启同步' }}
+                {{ syncConfig.enabled ? t('options.reconnect') : t('options.connectAndSync') }}
               </button>
               <div v-if="syncConfig.gistId" class="flex flex-col">
                 <span class="text-[12px] font-medium" :class="syncStatus.lastSyncStatus === 'error' ? 'text-red-500' : 'text-green-600'">
-                  ● {{ syncStatus.lastSyncStatus === 'error' ? '同步失败' : '已连接到云端同步' }}
+                  ● {{ syncStatus.lastSyncStatus === 'error' ? t('options.syncFailed') : t('options.syncConnected') }}
                 </span>
-                <span class="text-[11px] text-gray-400">上次同步: {{ syncStatus.lastSyncTime ? new Date(syncStatus.lastSyncTime).toLocaleString() : 'never' }}</span>
+                <span class="text-[11px] text-gray-400">{{ t('options.lastSync') }}{{ syncStatus.lastSyncTime ? new Date(syncStatus.lastSyncTime).toLocaleString() : 'never' }}</span>
                 <p v-if="syncStatus.errorMessage" class="text-[11px] text-red-400 mt-1">
                   {{ syncStatus.errorMessage }}
                 </p>
@@ -648,10 +664,26 @@ onUnmounted(() => {
             <div v-if="syncConfig.gistId" class="pt-2 border-t border-gray-100 dark:border-gray-700">
               <label class="flex items-center gap-2 cursor-pointer">
                 <input v-model="syncConfig.enabled" type="checkbox" class="h-4 w-4">
-                <span class="text-[14px]">启用自动同步</span>
+                <span class="text-[14px]">{{ t('options.enableAutoSync') }}</span>
               </label>
             </div>
           </div>
+        </div>
+
+        <!-- Error Logs -->
+        <div id="error-logs" class="setting-card scroll-mt-8">
+          <h2 class="text-[18px] font-semibold mb-[12px]">
+            {{ t('options.errorLogs') }}
+          </h2>
+          <p class="text-[14px] text-gray-500 mb-[16px]">
+            {{ t('options.errorLogsDesc') }}
+          </p>
+          <button
+            class="px-[16px] py-2 text-[14px] font-medium text-gray-900 bg-amber-500 rounded-md hover:bg-amber-600"
+            @click="exportLogs"
+          >
+            {{ t('options.exportLogs') }}
+          </button>
         </div>
 
         <!-- Save Button and Status -->
@@ -663,7 +695,7 @@ onUnmounted(() => {
             class="px-[16px] py-[8px] text-[14px] font-medium text-gray-900 bg-amber-500 rounded-md hover:bg-amber-600"
             @click="saveSettings"
           >
-            保存设置
+            {{ t('options.saveSettings') }}
           </button>
         </div>
       </div>
@@ -690,7 +722,7 @@ onUnmounted(() => {
             class="px-[16px] py-2 text-[14px] font-medium text-gray-900 bg-amber-500 rounded-md hover:bg-amber-600"
             @click="hideAlert"
           >
-            确认
+            {{ t('common.confirm') }}
           </button>
         </div>
       </div>

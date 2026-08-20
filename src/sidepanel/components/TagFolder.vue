@@ -1,6 +1,8 @@
 <script setup lang="ts">
+import { onMounted, ref } from 'vue'
 import PageSection from './PageSection.vue'
 import type { Mark } from '~/logic/storage'
+import { t } from '~/logic/i18n'
 import type { TagTree } from '~/logic/tagTree'
 
 const props = defineProps<{
@@ -49,10 +51,49 @@ const emit = defineEmits<{
 function isUrlCollapsed(url: string): boolean {
   return !!props.collapsedUrls[url]
 }
+
+// --- 文件夹展开/收起高度动画（Grid 0fr↔1fr） ---
+// 拦截 summary 原生瞬切：收起时先播动画再真正关闭 details
+const detailsRef = ref<HTMLDetailsElement | null>(null)
+const foldOpen = ref(false)
+const foldAnim = ref(false)
+let closeTimer: number | undefined
+
+onMounted(() => {
+  // 初始状态同步（如 inbox 默认展开），不播动画
+  foldOpen.value = props.isOpen
+})
+
+function onSummaryClick(e: MouseEvent) {
+  e.preventDefault()
+  const details = detailsRef.value
+  if (!details)
+    return
+  clearTimeout(closeTimer)
+  foldAnim.value = true
+  if (details.open) {
+    // 收起：先播动画，结束后再真正关闭
+    foldOpen.value = false
+    closeTimer = window.setTimeout(() => {
+      details.open = false
+    }, 150)
+  }
+  else {
+    // 展开：先打开（内容被 0fr 裁剪不可见），下一帧再播展开动画
+    details.open = true
+    foldOpen.value = false
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        foldOpen.value = true
+      })
+    })
+  }
+}
 </script>
 
 <template>
   <details
+    ref="detailsRef"
     name="tag-folder"
     :open="isOpen"
     class="mb-6 group/folder"
@@ -61,6 +102,7 @@ function isUrlCollapsed(url: string): boolean {
     <summary
       class="flex items-center gap-2 p-2 bg-white dark:bg-gray-700 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors border border-gray-200 dark:border-gray-700 list-none sticky z-30 top-[var(--sidepanel-header-h,104px)]"
       :class="{ 'opacity-50 grayscale': folder.totalMarks === 0 }"
+      @click="onSummaryClick"
     >
       <svg
         xmlns="http://www.w3.org/2000/svg"
@@ -116,7 +158,7 @@ function isUrlCollapsed(url: string): boolean {
                       d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
                     />
                   </svg>
-                  <span>导出</span>
+                  <span>{{ t('common.export') }}</span>
                 </button>
               </li>
               <li>
@@ -138,7 +180,7 @@ function isUrlCollapsed(url: string): boolean {
                       d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
                     />
                   </svg>
-                  <span>重命名</span>
+                  <span>{{ t('common.rename') }}</span>
                 </button>
               </li>
               <li v-if="tagId !== 'inbox'">
@@ -153,7 +195,7 @@ function isUrlCollapsed(url: string): boolean {
                       clip-rule="evenodd"
                     />
                   </svg>
-                  <span>删除标签</span>
+                  <span>{{ t('sidepanel.deleteTag') }}</span>
                 </button>
               </li>
             </ul>
@@ -162,68 +204,75 @@ function isUrlCollapsed(url: string): boolean {
       </div>
     </summary>
 
-    <div
-      class="folder-content space-y-4 py-2 pr-1 ml-3 pl-3 border-l-2 border-gray-200 dark:border-gray-600"
-    >
-      <div
-        v-if="Object.keys(folder.pages).length === 0"
-        class="text-center py-8 text-gray-400 dark:text-gray-500 text-sm"
-      >
-        暂无标记
+    <!-- 高度动画结构：folder-grid(0fr↔1fr) > fold-inner(裁剪) > folder-content，
+         与 PageSection 的 fold-* 同一 Grid 技巧；时长保持 150ms 同步 -->
+    <div class="folder-grid" :class="{ 'fold-anim': foldAnim, 'fold-open': foldOpen }">
+      <div class="fold-inner">
+        <div
+          class="folder-content space-y-4 py-2 pr-1 ml-3 pl-3 border-l-2 border-gray-200 dark:border-gray-600"
+        >
+          <div
+            v-if="Object.keys(folder.pages).length === 0"
+            class="text-center py-8 text-gray-400 dark:text-gray-500 text-sm"
+          >
+            {{ t('sidepanel.emptyFolder') }}
+          </div>
+          <PageSection
+            v-for="[url, urlData] in Object.entries(folder.pages)"
+            :key="url"
+            :url="url"
+            :url-data="urlData as any"
+            :is-collapsed="isUrlCollapsed(url)"
+            :collapsed-states="collapsedStates[url] || {}"
+            :expanded-texts="expandedTexts"
+            :expanded-notes="expandedNotes"
+            :editing-mark-id="editingMarkId"
+            :active-mark-menu="activeMarkMenu"
+            :active-group-menu="activeGroupMenu"
+            :active-url-menu="activeUrlMenu"
+            @toggle-url-collapse="u => emit('toggle-url-collapse', u)"
+            @toggle-url-menu="u => emit('toggle-url-menu', u)"
+            @export-markdown="data => emit('export-markdown', data)"
+            @open-tag-picker="u => emit('open-tag-picker', u)"
+            @remove-all-marks="u => emit('remove-all-marks', u)"
+            @toggle-group="(u, title, total) => emit('toggle-group', u, title, total)"
+            @toggle-group-menu="(u, title) => emit('toggle-group-menu', u, title)"
+            @export-group="(u, group) => emit('export-group', u, group)"
+            @open-group-tag-picker="(u, title) => emit('open-group-tag-picker', u, title)"
+            @remove-group-marks="(u, group) => emit('remove-group-marks', u, group)"
+            @goto-mark="mark => emit('goto-mark', mark)"
+            @edit-mark="mark => emit('edit-mark', mark)"
+            @save-note="(mark, note) => emit('save-note', mark, note)"
+            @cancel-edit="() => emit('cancel-edit')"
+            @remove-mark="mark => emit('remove-mark', mark)"
+            @copy-mark="mark => emit('copy-mark', mark)"
+            @toggle-text-expansion="id => emit('toggle-text-expansion', id)"
+            @toggle-note-expansion="id => emit('toggle-note-expansion', id)"
+            @toggle-mark-menu="id => emit('toggle-mark-menu', id)"
+            @open-mark-tag-picker="(u, id) => emit('open-mark-tag-picker', u, id)"
+          />
+        </div>
       </div>
-      <PageSection
-        v-for="[url, urlData] in Object.entries(folder.pages)"
-        :key="url"
-        :url="url"
-        :url-data="urlData as any"
-        :is-collapsed="isUrlCollapsed(url)"
-        :collapsed-states="collapsedStates[url] || {}"
-        :expanded-texts="expandedTexts"
-        :expanded-notes="expandedNotes"
-        :editing-mark-id="editingMarkId"
-        :active-mark-menu="activeMarkMenu"
-        :active-group-menu="activeGroupMenu"
-        :active-url-menu="activeUrlMenu"
-        @toggle-url-collapse="u => emit('toggle-url-collapse', u)"
-        @toggle-url-menu="u => emit('toggle-url-menu', u)"
-        @export-markdown="data => emit('export-markdown', data)"
-        @open-tag-picker="u => emit('open-tag-picker', u)"
-        @remove-all-marks="u => emit('remove-all-marks', u)"
-        @toggle-group="(u, title, total) => emit('toggle-group', u, title, total)"
-        @toggle-group-menu="(u, title) => emit('toggle-group-menu', u, title)"
-        @export-group="(u, group) => emit('export-group', u, group)"
-        @open-group-tag-picker="(u, title) => emit('open-group-tag-picker', u, title)"
-        @remove-group-marks="(u, group) => emit('remove-group-marks', u, group)"
-        @goto-mark="mark => emit('goto-mark', mark)"
-        @edit-mark="mark => emit('edit-mark', mark)"
-        @save-note="(mark, note) => emit('save-note', mark, note)"
-        @cancel-edit="() => emit('cancel-edit')"
-        @remove-mark="mark => emit('remove-mark', mark)"
-        @copy-mark="mark => emit('copy-mark', mark)"
-        @toggle-text-expansion="id => emit('toggle-text-expansion', id)"
-        @toggle-note-expansion="id => emit('toggle-note-expansion', id)"
-        @toggle-mark-menu="id => emit('toggle-mark-menu', id)"
-        @open-mark-tag-picker="(u, id) => emit('open-mark-tag-picker', u, id)"
-      />
     </div>
   </details>
 </template>
 
 <style scoped>
-/* 文件夹展开动画：fade + 轻微下滑（原生 details 无收起动画，已知限制，接受）。
-   注意：与 PageSection.vue 的 fold-* 折叠动画是两套机制（details 无法参与 Transition），
-   修改时长时需与 fold-enter-active（150ms）保持同步，避免同面板内动画节奏不一致。 */
-details[open] > .folder-content {
-  animation: fold-in 150ms ease-out;
+/* 文件夹展开/收起动画：Grid 0fr↔1fr（与 PageSection fold-* 同一技巧，150ms 保持同步）。
+   原生 details 的 name 互斥手风琴保留；其他文件夹被浏览器自动关闭时无动画（已知限制，接受）。
+   fold-anim 仅在用户点击后启用，避免初始挂载时闪动。 */
+.folder-grid {
+  display: grid;
+  grid-template-rows: 0fr;
 }
-@keyframes fold-in {
-  from {
-    opacity: 0;
-    transform: translateY(-4px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+.fold-inner {
+  overflow: hidden;
+  min-height: 0;
+}
+.folder-grid.fold-anim {
+  transition: grid-template-rows 150ms ease-out;
+}
+.folder-grid.fold-open {
+  grid-template-rows: 1fr;
 }
 </style>

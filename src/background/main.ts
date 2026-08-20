@@ -20,6 +20,7 @@ import {
   tagsReady,
 } from '~/logic/storage'
 import { canPush, getGistById, mergeWithRemoteFile, updateGist } from '~/logic/sync'
+import { t } from '~/logic/i18n'
 
 interface TriggerSyncPayload {
   force?: boolean
@@ -612,7 +613,7 @@ const performPush = debounce(async () => {
 
       if (payloadSize > LIMIT_8MB) {
         const sizeMB = (payloadSize / (1024 * 1024)).toFixed(2)
-        const warningMsg = `[Sync Warning] 同步数据量接近限制 (${sizeMB}MB / 10MB)。建议清理不再需要的标记以确保同步稳定。`
+        const warningMsg = t('sync.sizeWarning', { size: sizeMB })
         // 写入持久化日志，方便开发者诊断
         collectError(new Error(warningMsg), 'background')
         // 更新 UI 提示
@@ -645,7 +646,7 @@ const performPush = debounce(async () => {
         // 按 GitHubAPIError.kind 差异化处理（sync.ts 分类器产出）
         if (error.kind === 'storage-limit' || error.status === 422 || error.message.includes('422')) {
           // 处理 GitHub 达到存储上限的特定错误 (422 Unprocessable Entity)
-          errorMsg = '同步失败：数据量超过 GitHub Gist 上限 (10MB)。请清理部分标记后重试。'
+          errorMsg = t('sync.errorStorageLimit')
           collectError(new Error(`[Sync Critical] Storage limit exceeded (422): ${error.message}`), 'background')
         }
         else if (error.kind === 'rate-limit') {
@@ -693,7 +694,7 @@ async function performPullInternal(retries = 3, { force = false, token = '', gis
 
       if (!file) {
         console.error('[Sync] markflow_sync.json not found in Gist:', pullGistId)
-        throw new Error('同步 Gist 中未找到 markflow_sync.json 文件')
+        throw new Error(t('sync.syncFileMissing'))
       }
 
       if (!file.content) {
@@ -701,7 +702,7 @@ async function performPullInternal(retries = 3, { force = false, token = '', gis
         return await enqueueWrite(async () => {
           syncStatus.value.lastSyncTime = Date.now()
           syncStatus.value.lastSyncStatus = 'success'
-          syncStatus.value.errorMessage = '云端同步文件为空，本地数据将在下次变更时上传。'
+          syncStatus.value.errorMessage = t('sync.cloudFileEmpty')
           return true
         })
       }

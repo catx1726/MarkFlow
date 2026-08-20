@@ -7,6 +7,7 @@ import { filterExistingTags } from '../../logic/tags'
 import { clampToViewport, computeTooltipPosition } from '~/logic/tooltipPosition'
 import type { AnchorRect } from '~/logic/tooltipPosition'
 import { settings } from '~/logic/settings'
+import { t } from '~/logic/i18n'
 import type { Tag } from '~/logic/storage'
 
 const emit = defineEmits<{
@@ -335,7 +336,7 @@ defineExpose({ show, hide })
           class="tag-section bg-gray-50 dark:bg-gray-900/50 p-2 rounded-md border border-gray-100 dark:border-gray-700"
         >
           <p class="text-[12px] text-gray-400 uppercase font-bold mb-1.5 flex justify-between">
-            <span>关联标签</span>
+            <span>{{ t('tooltip.tagsLabel') }}</span>
           </p>
           <div class="flex flex-wrap gap-1 max-h-[72px] overflow-y-auto custom-scrollbar">
             <button
@@ -351,12 +352,12 @@ defineExpose({ show, hide })
             >
               {{ tag.name }}
             </button>
-            <span v-if="allTags.length === 0" class="text-[12px] text-gray-400 italic">暂无标签</span>
+            <span v-if="allTags.length === 0" class="text-[12px] text-gray-400 italic">{{ t('tooltip.noTags') }}</span>
           </div>
           <div class="flex gap-1 mt-1.5">
             <input
               v-model="newTagInput"
-              placeholder="+ 新建标签"
+              :placeholder="t('tooltip.newTagPlaceholder')"
               class="flex-1 px-2 py-1 text-[12px] border border-gray-200 dark:border-gray-600 rounded dark:bg-gray-700 focus:outline-none focus:ring-1 focus:ring-amber-500"
               @keydown.enter.prevent="handleCreateTag"
             >
@@ -366,7 +367,7 @@ defineExpose({ show, hide })
               :disabled="!newTagInput.trim()"
               @click="handleCreateTag"
             >
-              {{ tagCreateSuccess ? '已创建' : '创建' }}
+              {{ tagCreateSuccess ? t('tooltip.tagCreated') : t('common.create') }}
             </button>
           </div>
         </div>
@@ -375,7 +376,7 @@ defineExpose({ show, hide })
           ref="textareaRef"
           v-model="noteValue"
           class="tooltip-textarea min-h-[80px] w-full resize-y rounded-md border border-gray-300 p-[8px] text-[14px] leading-relaxed focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:placeholder-gray-400 dark:focus:border-amber-400 dark:focus:ring-amber-400"
-          placeholder="在这里记录你的笔记或思考..."
+          :placeholder="t('tooltip.notePlaceholder')"
           @keydown.enter.ctrl.prevent="onSaveClick"
           @keydown.esc="hide"
         />
@@ -384,7 +385,7 @@ defineExpose({ show, hide })
           <div class="flex gap-2">
             <button
               class="action-button p-[6px] text-gray-400 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/30 rounded-md transition-colors"
-              title="复制文本"
+              :title="t('tooltip.copyText')"
               @click="onCopyClick"
             >
               <svg
@@ -413,13 +414,13 @@ defineExpose({ show, hide })
               class="px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/30 rounded-md transition-colors"
               @click="onDeleteClick"
             >
-              删除
+              {{ t('common.delete') }}
             </button>
             <button
               class="px-4 py-1.5 bg-amber-500 text-gray-900 text-xs font-medium rounded-md hover:bg-amber-600 transition-colors shadow-sm"
               @click="onSaveClick"
             >
-              {{ isHighlighted ? '保存修改' : '确认高亮' }}
+              {{ isHighlighted ? t('tooltip.saveChanges') : t('tooltip.confirmHighlight') }}
             </button>
           </div>
         </div>

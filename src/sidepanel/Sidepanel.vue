@@ -16,6 +16,7 @@ import SidepanelHeader from './components/SidepanelHeader.vue'
 import TagFolder from './components/TagFolder.vue'
 import StorageManager from './components/StorageManager.vue'
 import { marksByUrl, tagsMetadata } from '~/logic/storage'
+import { t } from '~/logic/i18n'
 
 // --- Setup ---
 const isDark = usePreferredDark()
@@ -87,7 +88,7 @@ const isStorageExpanded = ref(false)
 
 async function removeAllMarksForUrl(url: string) {
   // eslint-disable-next-line no-alert
-  if (confirm(`确定要删除此页面下的所有标记吗？此操作不可撤销。`)) {
+  if (confirm(t('sidepanel.confirmDeletePageMarks'))) {
     await sendMessage('remove-marks-by-url', { url }, 'background')
     broadcastRefreshToTabs()
   }
@@ -96,7 +97,7 @@ async function removeAllMarksForUrl(url: string) {
 
 async function removeGroupMarks(url: string, group: any) {
   // eslint-disable-next-line no-alert
-  if (!confirm(`确定要删除分组「${group.title}」下的所有标记吗？`))
+  if (!confirm(t('sidepanel.confirmDeleteGroupMarks', { title: group.title })))
     return
   await sendMessage('remove-marks', { marks: group.marks.map(toRaw) }, 'background')
   broadcastRefreshToTabs()
@@ -187,12 +188,12 @@ function handleToggleNoteExpansion(markId: string) {
 async function handleDeleteTag(tagId: string) {
   if (tagId === 'inbox') {
     // eslint-disable-next-line no-alert
-    alert('收集箱 (Inbox) 是默认容器，无法删除。')
+    alert(t('sidepanel.inboxUndeletable'))
     return
   }
   const tagName = tagsMetadata.value[tagId]?.name || tagId
   // eslint-disable-next-line no-alert
-  if (!confirm(`确定要删除标签「${tagName}」吗？标记本身不会被删除，而是移回收集箱。`))
+  if (!confirm(t('sidepanel.confirmDeleteTag', { name: tagName })))
     return
   await deleteTag(tagId)
   activeFolderMenu.value = null
@@ -240,10 +241,10 @@ async function handleDeleteTag(tagId: string) {
           />
         </svg>
         <p class="mt-4">
-          还没有任何标记
+          {{ t('sidepanel.emptyTitle') }}
         </p>
         <p class="text-sm text-gray-400">
-          在网页上按住ALT，然后选中文本试试看
+          {{ t('sidepanel.emptyHint') }}
         </p>
       </div>
       <div v-else class="space-y-6">
@@ -292,12 +293,12 @@ async function handleDeleteTag(tagId: string) {
           v-if="Object.keys(filteredTree).length === 0 && searchQuery.trim()"
           class="text-center text-gray-500 py-8"
         >
-          <p>未找到包含「{{ searchQuery }}」的标记</p>
+          <p>{{ t('sidepanel.noSearchResults', { query: searchQuery }) }}</p>
           <button
             class="mt-2 text-sm text-amber-600 hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-300"
             @click="clearSearch"
           >
-            清除搜索
+            {{ t('sidepanel.clearSearch') }}
           </button>
         </div>
       </div>
@@ -320,7 +321,7 @@ async function handleDeleteTag(tagId: string) {
     >
       <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-5 w-80 max-w-full mx-4">
         <h3 class="text-base font-semibold mb-3 text-gray-800 dark:text-gray-200">
-          标签
+          {{ t('sidepanel.tagPickerTitle') }}
         </h3>
         <div class="space-y-2 max-h-60 overflow-y-auto">
           <label class="flex items-center gap-2 p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer">
@@ -330,7 +331,7 @@ async function handleDeleteTag(tagId: string) {
               class="h-4 w-4"
               @change="togglePageTag('inbox')"
             >
-            <span class="text-sm text-gray-700 dark:text-gray-200">收集箱 (Inbox)</span>
+            <span class="text-sm text-gray-700 dark:text-gray-200">{{ t('common.inbox') }}</span>
           </label>
           <label
             v-for="tag in Object.values(tagsMetadata)"
@@ -352,7 +353,7 @@ async function handleDeleteTag(tagId: string) {
             class="px-4 py-2 text-sm font-medium text-gray-900 bg-amber-500 rounded-md hover:bg-amber-700"
             @click="closeTagPicker"
           >
-            完成
+            {{ t('common.done') }}
           </button>
         </div>
       </div>
@@ -366,13 +367,13 @@ async function handleDeleteTag(tagId: string) {
     >
       <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-5 w-72 max-w-full mx-4">
         <h3 class="text-base font-semibold mb-3 text-gray-800 dark:text-gray-200">
-          重命名标签
+          {{ t('sidepanel.renameTagTitle') }}
         </h3>
         <input
           v-model="editingTagName"
           type="text"
           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
-          placeholder="输入新标签名称"
+          :placeholder="t('sidepanel.renameTagPlaceholder')"
           @keydown.enter.prevent="confirmRename"
           @keydown.esc="cancelRename"
         >
@@ -381,13 +382,13 @@ async function handleDeleteTag(tagId: string) {
             class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300 dark:bg-gray-600 dark:text-gray-200 dark:hover:bg-gray-500"
             @click="cancelRename"
           >
-            取消
+            {{ t('common.cancel') }}
           </button>
           <button
             class="px-4 py-2 text-sm font-medium text-gray-900 bg-amber-500 rounded-md hover:bg-amber-700"
             @click="confirmRename"
           >
-            确认
+            {{ t('common.confirm') }}
           </button>
         </div>
       </div>
