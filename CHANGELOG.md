@@ -1,5 +1,9 @@
 # Unreleased
 
+### [2026-08-20] docs(landing): 宣传页英文版（i18n PR-2） (#70)
+docs(landing): 宣传页英文版（i18n PR-2）
+
+
 ### [2026-08-20] feat(i18n): 英文国际化 — 扩展 UI 双语（PR-1） (#69)
 feat(i18n): 英文国际化 — 扩展 UI 双语（PR-1）
 
