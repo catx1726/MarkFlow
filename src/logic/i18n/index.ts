@@ -7,6 +7,7 @@
  * 响应式：t() 在渲染期读取 currentLocale（computed），切换语言自动重渲染
  */
 import { computed } from 'vue'
+import browser from 'webextension-polyfill'
 import { en } from './locales/en'
 import { zhCN } from './locales/zh-CN'
 import { settings } from '~/logic/settings'
@@ -18,8 +19,8 @@ const dictionaries: Record<Locale, Messages> = { 'zh-CN': zhCN, en }
 
 function detectBrowserLocale(): Locale {
   try {
-    // content script / 测试环境下 browser 可能不可用
-    const lang = (globalThis as any).browser?.i18n?.getUILanguage?.() ?? 'zh-CN'
+    // 测试环境（jsdom）下 polyfill 被 mock 为空对象，回退 zh-CN
+    const lang = browser?.i18n?.getUILanguage?.() ?? 'zh-CN'
     return lang.toLowerCase().startsWith('zh') ? 'zh-CN' : 'en'
   }
   catch {

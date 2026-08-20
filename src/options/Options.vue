@@ -10,6 +10,7 @@ import { settings } from '~/logic/settings'
 import { dataReady, marksByUrl, syncConfig, syncReady, syncStatus, tagsMetadata, tagsReady } from '~/logic/storage'
 import { createGist, getGists } from '~/logic/sync'
 import { t } from '~/logic/i18n'
+import type { Messages } from '~/logic/i18n'
 
 const isDark = usePreferredDark()
 watchEffect(() => {
@@ -214,7 +215,9 @@ async function triggerPull({ force = false, timeoutMs = 8000, token = '', gistId
 }
 
 // ========== 左侧导航与 Scroll Spy ==========
-const navItems = [
+type OptionsKey = `options.${keyof Messages['options']}`
+
+const navItems: { id: string, label: OptionsKey }[] = [
   { id: 'welcome', label: 'options.navWelcome' },
   { id: 'general', label: 'options.navGeneral' },
   { id: 'default-color', label: 'options.defaultColor' },

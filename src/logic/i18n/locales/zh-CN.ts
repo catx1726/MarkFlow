@@ -2,6 +2,7 @@
  * zh-CN 源语言字典（i18n 类型来源：Messages = typeof zhCN）
  * 组织约定：按界面区域分组（popup/sidepanel/options/tooltip/modal/sync/common）
  * 插值占位：{paramName}
+ * 维护约定：新增 key 必须同步更新 en.ts（类型强制同构，tsc 会报错）并跑 npx vitest run src/tests/i18n.spec.ts
  */
 export const zhCN = {
   common: {
