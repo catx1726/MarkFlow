@@ -15,7 +15,7 @@
 | **`ensureReady` 守卫解耦** | PR #45 | 中 | 高 | ⭐⭐⭐⭐ | 将守卫逻辑提取到独立模块，方便只读操作复用及单元测试直接引用，减少代码重复。 |
 | **ContentScripts 高亮元数据提取统一化** | 分析 | 中 | 高 | ⭐⭐⭐⭐ | `restorer.ts` 与 `ui.ts` 中存在 3 段几乎相同的 ShadowHost 构建/Rangy 序列化/上下文提取逻辑。提取为 `extractMarkPayload` 纯函数，可减少 60-80 行重复代码。 |
 | **ContentScripts DOM 清理逻辑统一化** | 分析 | 低 | 中 | ⭐⭐⭐⭐ | `unwrapHighlightElements(selector)` 逻辑在 `ui.ts` 和 `restorer.ts` 中重复 4 次。提取为共享工具函数，降低后续维护遗漏风险。 |
-| **i18n 国际化基础框架** | PR #41 / 宣传分析 | 中 | 高 | [Spec 待审] | 错误消息与全部 UI 文案均为硬编码中文。建立标准 i18n 体系是走向社区的基础；**英文界面是 Reddit 等海外社区宣传的前置门槛**。Spec：`docs/superpowers/specs/2026-08-20-i18n-english-design.md` |
+| **i18n 国际化基础框架** | PR #41 / 宣传分析 | 中 | 高 | [已完成] | 错误消息与全部 UI 文案均为硬编码中文。建立标准 i18n 体系是走向社区的基础；**英文界面是 Reddit 等海外社区宣传的前置门槛**。Spec：`docs/superpowers/specs/2026-08-20-i18n-english-design.md` |
 | **数据精简与字段剥离** | 讨论 | 高 | 高 | ⭐⭐⭐⭐ | 剥离冗余的上下文信息，比压缩算法更能提升系统健康度，且保持数据可读性。 |
 | **统一消息返回格式** | PR #37 | 中 | 中 | ⭐⭐⭐⭐ | 统一 `{success, data, error}` 格式可简化前端错误处理模板。 |
 | **search.ts `structureBoundaries` 单遍历构建** | 分析 | 中 | 高 | ⭐⭐⭐⭐ | `createSearchContext` 中对每个块级元素都调用 `getAllTextNodes(el)`，导致同一子树被反复扫描，形成 O(n²) 开销。改为一次遍历同时收集文本节点和结构边界。 |
@@ -52,7 +52,7 @@
 | **Tooltip 动态高度边界检测** | UI Review | 低 | 低 | [并入上条] | `tooltipHeight = 340` 为硬编码，标签过多时实际高度可能溢出，建议用 `getBoundingClientRect()` 动态计算。 |
 | **导出格式扩展（Obsidian/Notion/HTML）** | 分析 | 中 | 高 | ⭐⭐⭐⭐ | 当前 `useMarkActions.ts` 仅支持纯 Markdown 导出（含 Turndown 转换）。竞品（如 Highlight Sync）已提供 Obsidian frontmatter、Notion database、CSV、JSON、HTML 等多格式。MarkFlow 已记录 `contextTitle/contextLevel/tags` 等结构化元数据，扩展为 Obsidian `> [!quote]` callout + YAML frontmatter 或 Notion database properties 的成本较低，且能强化"结构化整理"这一卖点。 |
 | **品牌色统一（扩展/宣传页 → amber 琥珀橙）** | 宣传分析 2026-08-20 | 低 | 高 | [已实现待验收] | 荧光笔隐喻色系（Driver 决策 2026-08-20）：扩展 UI、宣传页、扩展图标统一 amber；主按钮 amber-500+深字保证对比度；清理 teal 残留与硬编码 blue hex。 |
-| **主题手动切换开关** | 宣传分析 2026-08-20 | 低 | 中 | ⭐⭐⭐ | 扩展界面仅跟随系统 `prefers-color-scheme`，无手动切换。宣传截图需要主动选择最美观的主题（如小红书浅色更亮眼），且宣传页已有 localStorage 切换可参照。 |
+| **主题手动切换开关** | 宣传分析 2026-08-20 | 低 | 中 | [已完成] | PR #71：settings.theme（auto/light/dark）+ 共享 isDark + localStorage 镜像防 FOUC，含 Shadow DOM 实时跟随。 |
 | **Tooltip 弹出/收起过渡动画** | 宣传分析 2026-08-20 | 低 | 中 | ⭐⭐⭐ | B 站视频演示中，划词工具栏的出现/消失流畅度直接影响观感。当前无过渡动画，补一个低成本 fade/scale 动画收益最高。 |
 | **Popup 与宣传页 Logo 统一** | 宣传分析 2026-08-20 | 低 | 低 | ⭐⭐ | Popup 头部使用铅笔图标，宣传页使用 "M" 方块 Logo，品牌符号不一致。建议统一为宣传页的 "M" Logo（"Popup 视觉层次优化"条目的延伸）。 |
 | **记忆上次使用的标签，下次标记默认预选** | 用户需求 | 低 | 高 | [已完成] | 已实现（Issue #54）：`settings.lastUsedTags`（本地偏好，不同步）；新建标记 `ui.showTooltip` 传 lastUsedTags 作为 initialTags；`Tooltip.show()` 内 `filterExistingTags` 过滤悬空 id；`createHighlight`（仅新建分支）保存后写入。原注意点已全部覆盖：①编辑已有标记用原 tags 不受影响；②标签删除后悬空 id 经 `filterExistingTags` 过滤；③"清除记忆"靠空选保存实现（YAGNI，不设独立按钮）。 |
@@ -96,19 +96,19 @@
 | 项目 | 来源 | 状态 | 关联 Issue/PR |
 | :--- | :--- | :--- | :--- |
 | **Chromium 商店上架** | 分析 | 待办 | - |
-| **宣传页 OG/Twitter Card meta + 分享图（og-image 1200×630）** | 宣传分析 2026-08-20 | PR 待合并 | 已加全套 OG/Twitter 标签 + Playwright 渲染品牌分享图 |
-| **宣传页英文版** | 宣传分析 2026-08-20 | PR 待合并 | Reddit 宣传前置；建议与扩展 UI 英文 i18n（§1）一起规划 |
+| **宣传页 OG/Twitter Card meta + 分享图（og-image 1200×630）** | 宣传分析 2026-08-20 | 已完成 | PR #64 |
+| **宣传页英文版** | 宣传分析 2026-08-20 | 已完成 | PR #70（`docs/lang/en/`） |
 | **宣传页 Tailwind CDN → 编译版迁移** | 宣传分析 2026-08-20 | 待办（P1） | 消除 production warning、可 purge、改善首屏；非阻塞 |
-| **宣传素材准备（浅色模式截图 / 三连动图 / B 站演示 GIF）** | 宣传分析 2026-08-20 | 待办 | 依赖：品牌色统一 + 主题切换 |
-| **品牌色统一（blue → amber 琥珀橙）** | 宣传分析 2026-08-20 | PR 待合并 | Issue #62, `docs/superpowers/specs/2026-08-20-brand-color-unification-design.md` |
-| **Tooltip 定位与拖拽优化** | 用户需求 2026-08-20 | PR 待合并 | Issue #62, `docs/superpowers/specs/2026-08-20-tooltip-positioning-drag-design.md` |
+| **宣传素材准备（浅色模式截图 / 三连动图 / B 站演示 GIF）** | 宣传分析 2026-08-20 | 待办（依赖已就绪） | 品牌色 ✅ 主题切换 ✅（PR #71）i18n ✅（PR #69） |
+| **品牌色统一（blue → amber 琥珀橙）** | 宣传分析 2026-08-20 | 已完成 | Issue #62, PR #63 |
+| **Tooltip 定位与拖拽优化** | 用户需求 2026-08-20 | 已完成 | Issue #62, PR #63/#67（含鼠标感知定位） |
 | **界面视觉精修 Sprint** | 设计走查 2026-08-20 | 已完成 | Issue #65, PR #66 |
 | 跳过 Level 3/4 恢复算法，侧边栏提示上下文 | `.temp/detail.md` | 已完成 | Issue #50, PR #51 |
 | 高亮标记高度自定义 (`highlightHeight`) | `.temp/detail.md` | 已完成 | Issue #50, PR #51 |
 | 侧边栏搜索功能（上下文保留 + 仅显示匹配项） | `.temp/detail.md` | 已完成 | Issue #52, PR #53 |
 
 ---
-**更新日期**: 2026-08-20
+**更新日期**: 2026-08-21
 **维护者**: OpenCode & Driver
 
 ---
