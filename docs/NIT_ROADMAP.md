@@ -51,7 +51,7 @@
 | **Tooltip 选区感知定位 + 可拖拽** | 用户需求 2026-08-20 | 中 | 高 | [已完成] | 当前 Tooltip 直接出现在鼠标松开位置（`clientX/clientY`），极易遮挡选中文字。改为以选区 Range 矩形为基准的智能定位（下方优先、上方翻转、不与选区重叠），并支持 header 拖拽。动态高度测量顺带解决下方 ⭐⭐ 条目。 |
 | **Tooltip 动态高度边界检测** | UI Review | 低 | 低 | [并入上条] | `tooltipHeight = 340` 为硬编码，标签过多时实际高度可能溢出，建议用 `getBoundingClientRect()` 动态计算。 |
 | **导出格式扩展（Obsidian/Notion/HTML）** | 分析 | 中 | 高 | ⭐⭐⭐⭐ | 当前 `useMarkActions.ts` 仅支持纯 Markdown 导出（含 Turndown 转换）。竞品（如 Highlight Sync）已提供 Obsidian frontmatter、Notion database、CSV、JSON、HTML 等多格式。MarkFlow 已记录 `contextTitle/contextLevel/tags` 等结构化元数据，扩展为 Obsidian `> [!quote]` callout + YAML frontmatter 或 Notion database properties 的成本较低，且能强化"结构化整理"这一卖点。 |
-| **品牌色统一（扩展/宣传页 → amber 琥珀橙）** | 宣传分析 2026-08-20 | 低 | 高 | [已实现待验收] | 荧光笔隐喻色系（Driver 决策 2026-08-20）：扩展 UI、宣传页、扩展图标统一 amber；主按钮 amber-500+深字保证对比度；清理 teal 残留与硬编码 blue hex。 |
+| **品牌色统一（扩展/宣传页 → amber 琥珀橙）** | 宣传分析 2026-08-20 | 低 | 高 | [已完成] | 荧光笔隐喻色系（Driver 决策 2026-08-20）：扩展 UI、宣传页、扩展图标统一 amber；主按钮 amber-500+深字保证对比度；清理 teal 残留与硬编码 blue hex。 |
 | **主题手动切换开关** | 宣传分析 2026-08-20 | 低 | 中 | [已完成] | PR #71：settings.theme（auto/light/dark）+ 共享 isDark + localStorage 镜像防 FOUC，含 Shadow DOM 实时跟随。 |
 | **Tooltip 弹出/收起过渡动画** | 宣传分析 2026-08-20 | 低 | 中 | [已完成] | PR #66：进入动画绑定 isPositioned（CSS keyframes），收起由 Transition leave 托管。 |
 | **Popup 与宣传页 Logo 统一** | 宣传分析 2026-08-20 | 低 | 低 | ⭐⭐ | Popup 头部使用铅笔图标，宣传页使用 "M" 方块 Logo，品牌符号不一致。建议统一为宣传页的 "M" Logo（"Popup 视觉层次优化"条目的延伸）。 |
