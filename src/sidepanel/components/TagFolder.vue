@@ -85,6 +85,7 @@ function onSummaryClick(e: MouseEvent) {
     foldOpen.value = false
     closeTimer = window.setTimeout(() => {
       details.open = false
+      foldAnim.value = false // 动画结束后移除裁剪窗口，避免遮挡内部菜单
     }, 150)
   }
   else {
@@ -94,6 +95,10 @@ function onSummaryClick(e: MouseEvent) {
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         foldOpen.value = true
+        // 动画结束后移除裁剪窗口，避免遮挡内部菜单
+        window.setTimeout(() => {
+          foldAnim.value = false
+        }, 160)
       })
     })
   }
@@ -270,17 +275,21 @@ function onSummaryClick(e: MouseEvent) {
 <style scoped>
 /* 文件夹展开/收起动画：Grid 0fr↔1fr（与 PageSection fold-* 同一技巧，150ms 保持同步）。
    原生 details 的 name 互斥手风琴保留；其他文件夹被浏览器自动关闭时无动画（已知限制，接受）。
-   fold-anim 仅在用户点击后启用，避免初始挂载时闪动。 */
+   注意：overflow 裁剪仅在 fold-anim 动画期生效——常驻会裁剪内部标记/分组的⋯下拉菜单。
+   收起状态下由 details 原生隐藏内容，无需 overflow。 */
 .folder-grid {
   display: grid;
   grid-template-rows: 0fr;
 }
 .fold-inner {
-  overflow: hidden;
   min-height: 0;
 }
 .folder-grid.fold-anim {
   transition: grid-template-rows 150ms ease-out;
+}
+.folder-grid.fold-anim .fold-inner {
+  overflow: hidden;
+  contain: layout paint;
 }
 .folder-grid.fold-open {
   grid-template-rows: 1fr;
