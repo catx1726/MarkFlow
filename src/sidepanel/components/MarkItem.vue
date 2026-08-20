@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue'
-import { menuPlacementClass, shouldMenuOpenUp } from '../composables/menuPosition'
+import { MENU_HEIGHTS, menuPlacementClass, shouldMenuOpenUp } from '../composables/menuPosition'
 import type { Mark } from '~/logic/storage'
 import { t } from '~/logic/i18n'
 
@@ -32,7 +32,7 @@ const menuOpensUp = ref(false)
 
 function onMenuClick(e: MouseEvent) {
   // 下方空间不足时向上弹出（页面底部标记的菜单不被视口底边/存储栏截断）
-  menuOpensUp.value = shouldMenuOpenUp(e, 260)
+  menuOpensUp.value = shouldMenuOpenUp(e, MENU_HEIGHTS.mark)
   emit('toggleMenu', props.mark.id)
 }
 const hasContext = computed(() => !!props.mark.contextTitle || !!props.mark.surroundingSnippet)

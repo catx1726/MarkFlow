@@ -1,5 +1,10 @@
-import { describe, expect, it } from 'vitest'
+import { beforeAll, describe, expect, it } from 'vitest'
 import { menuPlacementClass, shouldMenuOpenUp } from '~/sidepanel/composables/menuPosition'
+
+beforeAll(() => {
+  // 显式固定视口高度，防 jsdom 默认值漂移导致测试脆弱
+  Object.defineProperty(window, 'innerHeight', { value: 768, writable: true })
+})
 
 function mockEvent(bottomGap: number): MouseEvent {
   // window.innerHeight 在 jsdom 默认 768；通过 gap 反推 bottom

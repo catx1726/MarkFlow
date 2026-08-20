@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { menuPlacementClass, shouldMenuOpenUp } from '../composables/menuPosition'
+import { MENU_HEIGHTS, menuPlacementClass, shouldMenuOpenUp } from '../composables/menuPosition'
 import MarkItem from './MarkItem.vue'
 import type { Mark } from '~/logic/storage'
 import { t } from '~/logic/i18n'
@@ -76,12 +76,12 @@ const urlMenuUp = ref(false)
 const groupMenuUp = ref(false)
 
 function onUrlMenuClick(e: MouseEvent) {
-  urlMenuUp.value = shouldMenuOpenUp(e, 180)
+  urlMenuUp.value = shouldMenuOpenUp(e, MENU_HEIGHTS.url)
   emit('toggleUrlMenu', props.url)
 }
 
 function onGroupMenuClick(e: MouseEvent, groupTitle: string) {
-  groupMenuUp.value = shouldMenuOpenUp(e, 200)
+  groupMenuUp.value = shouldMenuOpenUp(e, MENU_HEIGHTS.group)
   emit('toggleGroupMenu', props.url, groupTitle)
 }
 
