@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { menuPlacementClass, shouldMenuOpenUp } from '../composables/menuPosition'
+import { MENU_HEIGHTS, menuPlacementClass, shouldMenuOpenUp } from '../composables/menuPosition'
 import PageSection from './PageSection.vue'
 import type { Mark } from '~/logic/storage'
 import { t } from '~/logic/i18n'
@@ -57,7 +57,7 @@ function isUrlCollapsed(url: string): boolean {
 const folderMenuUp = ref(false)
 
 function onFolderMenuClick(e: MouseEvent) {
-  folderMenuUp.value = shouldMenuOpenUp(e, 200)
+  folderMenuUp.value = shouldMenuOpenUp(e, MENU_HEIGHTS.folder)
   emit('toggleFolderMenu', props.tagId)
 }
 
