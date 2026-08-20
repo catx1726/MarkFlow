@@ -3,7 +3,7 @@ import type { Candidate } from '~/logic/search'
 import type { AnchorRect } from '~/logic/tooltipPosition'
 
 export interface TooltipInstance {
-  show: (anchorRect: AnchorRect, isHighlighted: boolean, note: string, color: string | undefined, textToCopy: string, tags?: string[]) => void
+  show: (anchorRect: AnchorRect, isHighlighted: boolean, note: string, color: string | undefined, textToCopy: string, tags?: string[], pointer?: { x: number, y: number }) => void
   hide: () => void
 }
 

@@ -54,11 +54,13 @@ function computeTooltipPosition(
 
 | 优先级 | 条件 | 位置 |
 | :--- | :--- | :--- |
-| 1 | 选区下方可容纳（`anchor.bottom + gap + height ≤ viewport.height - margin`） | 下方：`y = anchor.bottom + gap` |
-| 2 | 上方可容纳（`anchor.top - gap - height ≥ margin`） | 上方：`y = anchor.top - gap - height` |
+| 0 | tooltip 高于视口可用高度 | 贴顶 `y = margin` |
+| 1 | 指针所在侧可容纳（见下方鼠标感知规则） | 指针侧：下方 `y = anchor.bottom + gap` 或上方 `y = anchor.top - gap - height` |
+| 2 | 首选侧不足 | 翻转到另一侧 |
 | 3 | 上下均不足（如超高选区/矮视口） | 选剩余空间较大的一侧，钳制进视口 |
 
-- **水平方向**：`x = clamp(anchor.left, margin, viewport.width - width - margin)`（左对齐选区起点）
+- **鼠标感知（2026-08-20 第二版）**：有 `pointer`（鼠标坐标）时，垂直方向优先放指针所在的那一侧（正向划选指针在选区下半 → 下方；反向划选 → 上方）；水平方向 `x = clamp(pointer.x)` 跟随鼠标。无 `pointer` 时退化为第一版行为（下方优先、左对齐选区）
+- **水平方向**：`x = clamp(pointer?.x ?? anchor.left, margin, viewport.width - width - margin)`
 - 任何分支结果均最终过一遍视口钳制，保证不溢出
 
 ### 3.2 实际高度测量

@@ -181,6 +181,7 @@ async function show(
   initialColor: string | undefined,
   initialTextToCopy = '',
   initialTags: string[] = [],
+  pointer?: { x: number, y: number },
 ) {
   // 异步获取最新标签，遵循 SSOT，不使用本地缓存
   try {
@@ -217,6 +218,9 @@ async function show(
     anchorRect,
     { width: rect.width, height: rect.height },
     { width: window.innerWidth, height: window.innerHeight },
+    undefined, // margin 用默认 TOOLTIP_MARGIN
+    undefined, // gap 用默认
+    pointer,
   )
   position.x = pos.x
   position.y = pos.y
