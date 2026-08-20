@@ -218,9 +218,7 @@ async function show(
     anchorRect,
     { width: rect.width, height: rect.height },
     { width: window.innerWidth, height: window.innerHeight },
-    undefined, // margin 用默认 TOOLTIP_MARGIN
-    undefined, // gap 用默认
-    pointer,
+    { pointer },
   )
   position.x = pos.x
   position.y = pos.y

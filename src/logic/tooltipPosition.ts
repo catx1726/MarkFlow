@@ -75,14 +75,20 @@ export interface Point {
   y: number
 }
 
+export interface TooltipPositionOptions {
+  margin?: number
+  gap?: number
+  /** 鼠标坐标：提供时垂直方向优先放指针所在侧、水平跟随指针 x；不提供时保持下方优先+左对齐锚点的旧行为 */
+  pointer?: Point
+}
+
 export function computeTooltipPosition(
   anchor: AnchorRect,
   tooltip: Size,
   viewport: Size,
-  margin = TOOLTIP_MARGIN,
-  gap = 8,
-  pointer?: Point,
+  options: TooltipPositionOptions = {},
 ): { x: number, y: number } {
+  const { margin = TOOLTIP_MARGIN, gap = 8, pointer } = options
   const anchorBottom = anchor.top + anchor.height
 
   // 可用空间均指“锚点与视口边缘之间、扣除 margin 与 gap 后的净空间”
