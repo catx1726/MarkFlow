@@ -1,5 +1,9 @@
 # Unreleased
 
+### [2026-08-20] style(ui): 视觉精修 Sprint — 可读性 / 层级减负 / 微交互 (#66)
+style(ui): 视觉精修 Sprint — 可读性 / 层级减负 / 微交互
+
+
 ### [2026-08-20] docs(landing): OG/Twitter Card 分享卡片支持 (#64)
 docs(landing): OG/Twitter Card 分享卡片支持
 
