@@ -69,10 +69,46 @@ describe('computeTooltipPosition', () => {
 
   it('支持自定义 margin/gap 参数', () => {
     const anchor = { top: 100, left: 200, width: 300, height: 24 }
-    const pos = computeTooltipPosition(anchor, TOOLTIP, VIEWPORT, 20, 16)
+    const pos = computeTooltipPosition(anchor, TOOLTIP, VIEWPORT, { margin: 20, gap: 16 })
     expect(pos.y).toBe(anchor.top + anchor.height + 16)
     // 下方: 800-20-(124+16) = 640 >= 340 ✓；水平左对齐锚点
     expect(pos.x).toBe(anchor.left)
+  })
+
+  it('点锚点（点击已有标记场景）：出现在点击点下方，视口底部则翻转上方', () => {
+    // 点击页面中部 → 下方
+    expect(computeTooltipPosition({ top: 400, left: 300, width: 0, height: 0 }, TOOLTIP, VIEWPORT))
+      .toEqual({ x: 300, y: 400 + GAP })
+    // 点击靠近底部 → 翻转到上方
+    expect(computeTooltipPosition({ top: 780, left: 300, width: 0, height: 0 }, TOOLTIP, VIEWPORT))
+      .toEqual({ x: 300, y: 780 - GAP - TOOLTIP.height })
+  })
+
+  it('鼠标感知：正向划选（指针在选区下半）放下方且水平跟随鼠标', () => {
+    const anchor = { top: 100, left: 200, width: 300, height: 24 } // centerY = 112
+    const pos = computeTooltipPosition(anchor, TOOLTIP, VIEWPORT, { pointer: { x: 460, y: 118 } })
+    expect(pos.y).toBe(anchor.top + anchor.height + GAP) // 下方
+    expect(pos.x).toBe(460) // 跟随鼠标而非 rect.left=200
+  })
+
+  it('鼠标感知：反向划选（指针在选区上半）放上方', () => {
+    const anchor = { top: 500, left: 200, width: 300, height: 24 } // centerY = 512
+    const pos = computeTooltipPosition(anchor, TOOLTIP, VIEWPORT, { pointer: { x: 300, y: 505 } })
+    expect(pos.y).toBe(anchor.top - GAP - TOOLTIP.height) // 上方
+    expect(pos.x).toBe(300)
+  })
+
+  it('鼠标感知：指针贴近右缘时水平钳制不溢出', () => {
+    const anchor = { top: 100, left: 200, width: 300, height: 24 }
+    const pos = computeTooltipPosition(anchor, TOOLTIP, VIEWPORT, { pointer: { x: 1270, y: 118 } })
+    expect(pos.x).toBe(VIEWPORT.width - TOOLTIP.width - MARGIN)
+  })
+
+  it('鼠标感知：首选侧空间不足时自动翻转', () => {
+    // 指针在下半（偏下方），但下方空间不足 → 翻转上方
+    const anchor = { top: 700, left: 200, width: 300, height: 24 } // centerY=712
+    const pos = computeTooltipPosition(anchor, TOOLTIP, VIEWPORT, { pointer: { x: 300, y: 720 } })
+    expect(pos.y).toBe(anchor.top - GAP - TOOLTIP.height)
   })
 })
 

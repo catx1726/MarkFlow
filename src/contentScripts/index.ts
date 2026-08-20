@@ -230,7 +230,7 @@ function processSelection(event: {
         state.previewApplier?.applyToRange(range)
         // 定位锚点：优先选区 rect；极端环境取不到时回退鼠标坐标（与用户操作位置相关）
         const anchorRect = getRangyRangeRect(range) ?? new DOMRect(event.clientX, event.clientY, 0, 0)
-        ui.showTooltip(anchorRect, false, '', settings.value.defaultHighlightColor, capturedText, settings.value.lastUsedTags)
+        ui.showTooltip(anchorRect, false, '', settings.value.defaultHighlightColor, capturedText, settings.value.lastUsedTags, { x: event.clientX, y: event.clientY })
       }
       catch (e) {
         console.error('[WebMarker] Error during selection processing:', e)
@@ -245,7 +245,7 @@ function processSelection(event: {
   if (markElement && initialSelection.isCollapsed) {
     if (markElement.classList.contains('webext-highlight-preview'))
       return
-    handleExistingMarkClick(markElement)
+    handleExistingMarkClick(markElement, event.clientX, event.clientY)
     return
   }
   state.tooltipApp?.hide()
@@ -254,7 +254,7 @@ function processSelection(event: {
   state.currentSerializationRoot = undefined
 }
 
-function handleExistingMarkClick(markElement: HTMLElement) {
+function handleExistingMarkClick(markElement: HTMLElement, x: number, y: number) {
   const markId = getMarkIdFromElement(markElement)
   if (!markId)
     return
@@ -273,18 +273,20 @@ function handleExistingMarkClick(markElement: HTMLElement) {
   if (root instanceof ShadowRoot)
     state.currentSerializationRoot = root
   state.serializedSelection = rangy.serializeSelection(tempSelection, true, state.currentSerializationRoot)
-  // 双保险：上方已有 allSpans.length === 0 守卫，?. 防御未来重构破坏守卫
-  showTooltipForExistingMark(markId, getRangyRangeRect(range) ?? allSpans[0]?.getBoundingClientRect() ?? new DOMRect(0, 0, 0, 0))
+  // 点击已有标记：用点击点作为锚点（context-menu 式，出现在鼠标下方），
+  // 而不是整个标记矩形——长标记时矩形锚点会让 tooltip 出现在标记最前方，视觉断联。
+  // 新建标记仍用选区矩形锚定（避免遮挡刚划选的内容）。
+  showTooltipForExistingMark(markId, new DOMRect(x, y, 0, 0), { x, y })
 }
 
-async function showTooltipForExistingMark(markId: string, anchorRect: DOMRect) {
+async function showTooltipForExistingMark(markId: string, anchorRect: DOMRect, pointer?: { x: number, y: number }) {
   ui.ensureMounted()
   const mark = await sendMessage('get-mark-by-id', { id: markId, url: getCanonicalUrlForMark() }, 'background')
   const note = mark ? mark.note : ''
   const color = mark ? mark.color : settings.value.defaultHighlightColor
   const tags = mark ? mark.tags : undefined
   ui.setOriginalColorForChange(color)
-  state.tooltipApp?.show(anchorRect, true, note, color, mark?.text ?? '', tags)
+  state.tooltipApp?.show(anchorRect, true, note, color, mark?.text ?? '', tags, pointer)
 }
 
 // #endregion
