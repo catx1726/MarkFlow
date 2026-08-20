@@ -64,3 +64,4 @@
 | 2026-08-21T00:10:00+08:00 | FIX | menuPosition.ts + MarkItem/PageSection + menuPosition.spec | 第 12 轮 CR：Blocking 判定误报（Vue 模板监听器驼峰化机制）；MENU_HEIGHTS 常量收口；测试固定 innerHeight。注：Driver 本地边距调整（SidepanelHeader/TagFolder）保留未提交 | pending | git checkout HEAD -- src/sidepanel/ src/tests/menuPosition.spec.ts |
 | 2026-08-21T00:40:00+08:00 | FIX | TagFolder.vue(部分 hunk) + menuPosition.ts + 测试移位 | 第 13 轮 CR：TagFolder 魔法数字→MENU_HEIGHTS.folder（部分暂存，Driver 边距调整保留工作区）；菜单项数注释；测试移至 composables/__tests__；.gemini 日志时间序修正 | pending | git checkout HEAD -- src/sidepanel/ |
 | 2026-08-21T09:00:00+08:00 | DOCS | docs/NIT_ROADMAP.md | 宣传战役收尾：OG meta/英文版/品牌色/Tooltip/视觉精修/主题切换/i18n 全部标记已完成（PR #63-#72）；素材准备依赖就绪 | pending | git checkout HEAD -- docs/NIT_ROADMAP.md |
+| 2026-08-21T09:10:00+08:00 | DOCS | docs/RELEASE_v0.8.0.md | 发布说明补录 PR #70/#71/#72：主题手动切换、菜单翻向、宣传页英文版、边距微调、测试基建修复 | pending | git checkout HEAD -- docs/RELEASE_v0.8.0.md |
