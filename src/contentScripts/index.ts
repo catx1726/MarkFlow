@@ -228,7 +228,9 @@ function processSelection(event: {
         state.currentMarkIdForColorChange = null
 
         state.previewApplier?.applyToRange(range)
-        ui.showTooltip(getRangyRangeRect(range), false, '', settings.value.defaultHighlightColor, capturedText, settings.value.lastUsedTags)
+        // 定位锚点：优先选区 rect；极端环境取不到时回退鼠标坐标（与用户操作位置相关）
+        const anchorRect = getRangyRangeRect(range) ?? new DOMRect(event.clientX, event.clientY, 0, 0)
+        ui.showTooltip(anchorRect, false, '', settings.value.defaultHighlightColor, capturedText, settings.value.lastUsedTags)
       }
       catch (e) {
         console.error('[WebMarker] Error during selection processing:', e)
@@ -271,7 +273,7 @@ function handleExistingMarkClick(markElement: HTMLElement) {
   if (root instanceof ShadowRoot)
     state.currentSerializationRoot = root
   state.serializedSelection = rangy.serializeSelection(tempSelection, true, state.currentSerializationRoot)
-  showTooltipForExistingMark(markId, getRangyRangeRect(range))
+  showTooltipForExistingMark(markId, getRangyRangeRect(range) ?? allSpans[0].getBoundingClientRect())
 }
 
 async function showTooltipForExistingMark(markId: string, anchorRect: DOMRect) {

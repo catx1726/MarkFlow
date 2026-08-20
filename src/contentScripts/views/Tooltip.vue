@@ -4,7 +4,7 @@ import { computed, nextTick, onMounted, onUnmounted, reactive, ref, toRaw, watch
 import { sendMessage } from 'webext-bridge/content-script'
 import { getMaxZIndex } from '../../logic/dom'
 import { filterExistingTags } from '../../logic/tags'
-import { clamp, computeTooltipPosition } from '~/logic/tooltipPosition'
+import { TOOLTIP_MARGIN, clamp, computeTooltipPosition } from '~/logic/tooltipPosition'
 import type { AnchorRect } from '~/logic/tooltipPosition'
 import { settings } from '~/logic/settings'
 import type { Tag } from '~/logic/storage'
@@ -21,9 +21,8 @@ const isPositioned = ref(false)
 const tooltipRef = ref<HTMLElement | null>(null)
 const isDragging = ref(false)
 const dragOffset = { x: 0, y: 0 }
-const DRAG_MARGIN = 8
 let dragRafId: number | null = null
-let pendingDragEvent: PointerEvent | null = null
+let pendingDragPoint: { clientX: number, clientY: number } | null = null
 const isHighlighted = ref(false)
 const noteValue = ref('')
 const selectedTags = ref<string[]>([])
@@ -206,16 +205,21 @@ async function show(
   visible.value = true
   await nextTick()
   const el = tooltipRef.value
-  if (el) {
-    const rect = el.getBoundingClientRect()
-    const pos = computeTooltipPosition(
-      anchorRect,
-      { width: rect.width, height: rect.height },
-      { width: window.innerWidth, height: window.innerHeight },
-    )
-    position.x = pos.x
-    position.y = pos.y
+  if (!el) {
+    // 防御：元素未挂载时至少以默认位置显示，避免 Tooltip 永久不可见
+    console.warn('[MarkFlow] Tooltip 元素未挂载，跳过智能定位')
+    isPositioned.value = true
+    textareaRef.value?.focus()
+    return
   }
+  const rect = el.getBoundingClientRect()
+  const pos = computeTooltipPosition(
+    anchorRect,
+    { width: rect.width, height: rect.height },
+    { width: window.innerWidth, height: window.innerHeight },
+  )
+  position.x = pos.x
+  position.y = pos.y
   isPositioned.value = true
   textareaRef.value?.focus()
 }
@@ -232,26 +236,28 @@ function onHeaderPointerDown(e: PointerEvent) {
   window.addEventListener('pointermove', onDragMove, true)
   window.addEventListener('pointerup', onDragEnd, true)
   e.preventDefault()
+  // 阻止冒泡到页面，避免触发页面全局 pointerdown 监听（如“点击空白关闭”逻辑）
+  e.stopPropagation()
 }
 
 function onDragMove(e: PointerEvent) {
   if (!isDragging.value)
     return
   // rAF 节流：高频 pointermove 下避免每帧多次 getBoundingClientRect + 响应式更新
-  pendingDragEvent = e
+  pendingDragPoint = { clientX: e.clientX, clientY: e.clientY }
   if (dragRafId !== null)
     return
   dragRafId = requestAnimationFrame(() => {
     dragRafId = null
-    const ev = pendingDragEvent
-    pendingDragEvent = null
-    if (!ev || !isDragging.value)
+    const point = pendingDragPoint
+    pendingDragPoint = null
+    if (!point || !isDragging.value)
       return
     const rect = tooltipRef.value?.getBoundingClientRect()
     const width = rect?.width ?? 320
     const height = rect?.height ?? 340
-    position.x = clamp(ev.clientX - dragOffset.x, DRAG_MARGIN, window.innerWidth - DRAG_MARGIN - width)
-    position.y = clamp(ev.clientY - dragOffset.y, DRAG_MARGIN, window.innerHeight - DRAG_MARGIN - height)
+    position.x = clamp(point.clientX - dragOffset.x, TOOLTIP_MARGIN, window.innerWidth - TOOLTIP_MARGIN - width)
+    position.y = clamp(point.clientY - dragOffset.y, TOOLTIP_MARGIN, window.innerHeight - TOOLTIP_MARGIN - height)
   })
 }
 
@@ -261,12 +267,15 @@ function onDragEnd() {
     cancelAnimationFrame(dragRafId)
     dragRafId = null
   }
-  pendingDragEvent = null
+  pendingDragPoint = null
   window.removeEventListener('pointermove', onDragMove, true)
   window.removeEventListener('pointerup', onDragEnd, true)
 }
 
 function hide() {
+  // 拖拽中通过 Escape 等途径关闭时，先清理拖拽态与 window 监听器
+  if (isDragging.value)
+    onDragEnd()
   if (visible.value && !isHighlighted.value) {
     emit('clearPreview')
   }

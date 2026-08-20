@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { computeTooltipPosition, getRangyRangeRect } from '~/logic/tooltipPosition'
+import { clamp, computeTooltipPosition, getRangyRangeRect } from '~/logic/tooltipPosition'
 
 const VIEWPORT = { width: 1280, height: 800 }
 const TOOLTIP = { width: 320, height: 340 }
@@ -60,11 +60,31 @@ describe('computeTooltipPosition', () => {
     expect(pos.y).toBe(444 + GAP)
   })
 
-  it('tooltip 高于视口时，钳制到 margin 不报错', () => {
+  it('tooltip 高于视口时，贴顶显示（规则 0 显式分支）', () => {
     const tall = { width: 320, height: 900 }
     const anchor = { top: 100, left: 200, width: 300, height: 24 }
     const pos = computeTooltipPosition(anchor, tall, VIEWPORT)
     expect(pos.y).toBe(MARGIN)
+  })
+
+  it('支持自定义 margin/gap 参数', () => {
+    const anchor = { top: 100, left: 200, width: 300, height: 24 }
+    const pos = computeTooltipPosition(anchor, TOOLTIP, VIEWPORT, 20, 16)
+    expect(pos.y).toBe(anchor.top + anchor.height + 16)
+    // 下方: 800-20-(124+16) = 640 >= 340 ✓；水平左对齐锚点
+    expect(pos.x).toBe(anchor.left)
+  })
+})
+
+describe('clamp', () => {
+  it('常规范围钳制', () => {
+    expect(clamp(5, 0, 10)).toBe(5)
+    expect(clamp(-1, 0, 10)).toBe(0)
+    expect(clamp(11, 0, 10)).toBe(10)
+  })
+
+  it('max < min 时退化为返回 min（tooltip 高于视口场景）', () => {
+    expect(clamp(100, 8, -20)).toBe(8)
   })
 })
 
@@ -80,10 +100,13 @@ describe('getRangyRangeRect（rangy WrappedRange 兼容）', () => {
     expect(getRangyRangeRect(rangyRange)).toBe(mockRect)
   })
 
-  it('无 nativeRange 时退回视口上部中央，不抛错', () => {
-    const rect = getRangyRangeRect({})
-    expect(rect.width).toBe(0)
-    expect(rect.x).toBe(window.innerWidth / 2)
-    expect(rect.y).toBe(window.innerHeight / 3)
+  it('兼容原生 Range（自身实现 getBoundingClientRect 的对象）', () => {
+    const mockRect = new DOMRect(50, 60, 200, 30)
+    const nativeRange = { getBoundingClientRect: () => mockRect }
+    expect(getRangyRangeRect(nativeRange)).toBe(mockRect)
+  })
+
+  it('无法获取 rect 时返回 null，由调用方降级', () => {
+    expect(getRangyRangeRect({})).toBeNull()
   })
 })

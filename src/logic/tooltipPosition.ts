@@ -22,8 +22,13 @@ export interface Size {
   height: number
 }
 
+export const TOOLTIP_MARGIN = 8
+
 export function clamp(value: number, min: number, max: number): number {
-  return Math.min(Math.max(value, min), Math.max(min, max))
+  // 当 max < min 时（如 tooltip 高于视口），退化为返回 min
+  if (max < min)
+    return min
+  return Math.min(Math.max(value, min), max)
 }
 
 /**
@@ -32,21 +37,27 @@ export function clamp(value: number, min: number, max: number): number {
  * 注意：@types/rangy 声明 `RangyRange extends Range`（原生 DOM Range），
  * 但 rangy 1.3 的 WrappedRange **运行时并未实现** `getBoundingClientRect()`，
  * 直接调用会抛 TypeError。必须通过其包装的 `nativeRange` 获取。
+ *
+ * 返回 `null` 表示无法获取，由调用方决定降级策略（如回退鼠标坐标）。
  */
-export function getRangyRangeRect(range: unknown): DOMRect {
-  const nativeRange = (range as { nativeRange?: Range }).nativeRange
-  if (nativeRange)
-    return nativeRange.getBoundingClientRect()
-  // 竟底：无原生 Range 的罕见环境，退回视口上部中央（打日志便于追踪异常路径）
-  console.warn('[MarkFlow] getRangyRangeRect: 未找到 nativeRange，使用 fallback 定位', range)
-  return new DOMRect(window.innerWidth / 2, window.innerHeight / 3, 0, 0)
+export function getRangyRangeRect(range: unknown): DOMRect | null {
+  const r = range as { nativeRange?: Range } & Partial<Range>
+  // rangy WrappedRange：经其包装的原生 Range 获取
+  if (r.nativeRange)
+    return r.nativeRange.getBoundingClientRect()
+  // 原生 Range 或其他实现了 getBoundingClientRect 的对象
+  if (typeof r.getBoundingClientRect === 'function')
+    return r.getBoundingClientRect()
+  // 罕见环境：无法获取，打日志并返回 null 交给调用方降级
+  console.warn('[MarkFlow] getRangyRangeRect: 无法获取选区 rect，返回 null', range)
+  return null
 }
 
 export function computeTooltipPosition(
   anchor: AnchorRect,
   tooltip: Size,
   viewport: Size,
-  margin = 8,
+  margin = TOOLTIP_MARGIN,
   gap = 8,
 ): { x: number, y: number } {
   const anchorBottom = anchor.top + anchor.height
@@ -55,7 +66,11 @@ export function computeTooltipPosition(
   const spaceAbove = anchor.top - gap - margin
 
   let y: number
-  if (spaceBelow >= tooltip.height) {
+  if (tooltip.height > viewport.height - 2 * margin) {
+    // 规则 0：tooltip 比视口可用高度还高，贴顶显示（内容自身可滚动）
+    y = margin
+  }
+  else if (spaceBelow >= tooltip.height) {
     // 规则 1：下方可容纳
     y = anchorBottom + gap
   }

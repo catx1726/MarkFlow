@@ -19,7 +19,7 @@ const emit = defineEmits<{
     class="p-3 border border-gray-200 rounded mb-2 cursor-pointer transition-colors"
     :class="{
       'border-amber-500 bg-amber-50': isSelected,
-      'border-orange-400 bg-orange-50': isHovered && !isSelected,
+      'border-amber-300 bg-amber-50': isHovered && !isSelected,
     }"
     @mouseover="emit('hoverListItem', item)"
     @mouseleave="emit('leaveListItem', item)"
