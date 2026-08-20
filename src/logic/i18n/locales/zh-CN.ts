@@ -74,8 +74,8 @@ export const zhCN = {
     confirmCleanupOld: '确定要清理 {days} 天前的所有标记吗？此操作不可撤销。',
     confirmCleanupNoNote: '确定要清理所有没有备注的标记吗？此操作不可撤销。',
     markLabel: '标记：',
-    noteLabel: '备注：',
-    sourceLabel: '来源：',
+    noteLabel: '备注：', // 标点/尾随分隔符属翻译一部分（en 为 'Note: '），勿修剪尾随空格
+    sourceLabel: '来源：', // 同上
     tagLabel: '标签：',
     groupLabel: '分组：',
   },

@@ -74,8 +74,8 @@ export const en: Messages = {
     confirmCleanupOld: 'Clear all marks older than {days} days? This cannot be undone.',
     confirmCleanupNoNote: 'Clear all marks without notes? This cannot be undone.',
     markLabel: 'Mark: ',
-    noteLabel: 'Note: ',
-    sourceLabel: 'Source: ',
+    noteLabel: 'Note: ', // Trailing space is intentional (zh uses full-width colon instead) — do not trim
+    sourceLabel: 'Source: ', // ditto
     tagLabel: 'Tag: ',
     groupLabel: 'Group: ',
   },

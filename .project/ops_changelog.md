@@ -54,3 +54,4 @@
 | 2026-08-20T20:50:00+08:00 | FEAT | Options.vue + options/main.ts + sidepanel/main.ts | 设置页板块重排（GitHub 同步前移、错误日志沉底）；页面 title 接入 i18n（watchEffect 响应式，options/sidepanel），popup 保持品牌名 | pending | git checkout HEAD -- src/options/ src/sidepanel/main.ts |
 | 2026-08-20T21:10:00+08:00 | FIX | i18n/index.ts + zh-CN.ts + Options.vue | 第 9 轮 CR：browser 改 polyfill 显式导入（B1）；navItems key 模板字面量类型约束（N4）；字典维护约定注释（N8）；B2 时序问题回复说明（仅毫秒级窗口且仅影响手动设语言用户） | pending | git checkout HEAD -- src/logic/i18n/ src/options/Options.vue |
 | 2026-08-20T21:40:00+08:00 | FEAT | TagFolder.vue | 文件夹级收起/展开高度动画：拦截 summary 点击，Grid 0fr↔1fr（与 PageSection 同技巧同节奏），保留 details name 互斥手风琴；初始挂载不播动画 | pending | git checkout HEAD -- src/sidepanel/components/TagFolder.vue |
+| 2026-08-20T22:00:00+08:00 | DOCS | locales/zh-CN.ts + en.ts | 第 10 轮 CR：Blocking 判定误报（en 标签自带尾随空格，输出格式正确），补"尾随分隔符属翻译一部分"注释防误修剪 | pending | git checkout HEAD -- src/logic/i18n/locales/ |
