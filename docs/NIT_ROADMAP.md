@@ -44,16 +44,16 @@
 | **DisambiguationModal.vue 暗黑模式适配** | UI Review | 低 | 高 | [已完成] | 搜索框、列表、底部背景均未适配暗黑模式，与 Tooltip 的精致感形成反差。 |
 | **Popup 视觉层次与品牌感优化** | UI Review | 低 | 中 | [已完成] | 当前仅文字统计 + 三个等权灰色按钮，缺乏 Logo 和视觉重点。建议主操作（打开侧边栏）使用主色按钮。 |
 | **点击已有标记的 Tooltip 锚点改为点击位置 + 鼠标感知定位** | 用户反馈 2026-08-20 | 低 | 高 | [已完成] | PR #67：点击点锚点 + pointer 感知（水平跟随鼠标、垂直沿指针侧脱离选区），options 对象签名。 |
-| **界面视觉精修 Sprint（可读性 / 层级减负 / 微交互）** | 设计走查 2026-08-20 | 中 | 高 | [PR 待验收] | 结构不需重设计（与 Readwise/Glasp 同构）。精修范围：①Tooltip 小字 10→12px（保 px，Shadow DOM 反 rem 污染）②侧边栏嵌套卡片改缩进+引导线 ③Tooltip/文件夹展开动画。**宣传素材质量的前置杠杆，应在英文 i18n 前完成**。 |
+| **界面视觉精修 Sprint（可读性 / 层级减负 / 微交互）** | 设计走查 2026-08-20 | 中 | 高 | [已完成] | 结构不需重设计（与 Readwise/Glasp 同构）。精修范围：①Tooltip 小字 10→12px（保 px，Shadow DOM 反 rem 污染）②侧边栏嵌套卡片改缩进+引导线 ③Tooltip/文件夹展开动画。**宣传素材质量的前置杠杆，应在英文 i18n 前完成**。 |
 | **统一模态框替代原生 confirm/alert** | UI Review | 中 | 中 | ⭐⭐⭐⭐ | Sidepanel 删除操作多处使用原生 `confirm()`/`alert()`，样式不统一且阻塞执行。建议复用自定义 Dialog。 |
 | **图标系统统一化** | UI Review | 中 | 中 | ⭐⭐⭐ | 内联 SVG 与 UnoCSS Iconify（`i-carbon-*`）混用，增加维护负担。建议统一为单一方案。 |
 | **Sidepanel 设置按钮固定定位** | UI Review | 低 | 低 | [已完成] | 当前设置按钮在 Header 内随页面滚动，长列表时难以访问。建议改为 `fixed`/`sticky`。 |
-| **Tooltip 选区感知定位 + 可拖拽** | 用户需求 2026-08-20 | 中 | 高 | [已实现待验收] | 当前 Tooltip 直接出现在鼠标松开位置（`clientX/clientY`），极易遮挡选中文字。改为以选区 Range 矩形为基准的智能定位（下方优先、上方翻转、不与选区重叠），并支持 header 拖拽。动态高度测量顺带解决下方 ⭐⭐ 条目。 |
+| **Tooltip 选区感知定位 + 可拖拽** | 用户需求 2026-08-20 | 中 | 高 | [已完成] | 当前 Tooltip 直接出现在鼠标松开位置（`clientX/clientY`），极易遮挡选中文字。改为以选区 Range 矩形为基准的智能定位（下方优先、上方翻转、不与选区重叠），并支持 header 拖拽。动态高度测量顺带解决下方 ⭐⭐ 条目。 |
 | **Tooltip 动态高度边界检测** | UI Review | 低 | 低 | [并入上条] | `tooltipHeight = 340` 为硬编码，标签过多时实际高度可能溢出，建议用 `getBoundingClientRect()` 动态计算。 |
 | **导出格式扩展（Obsidian/Notion/HTML）** | 分析 | 中 | 高 | ⭐⭐⭐⭐ | 当前 `useMarkActions.ts` 仅支持纯 Markdown 导出（含 Turndown 转换）。竞品（如 Highlight Sync）已提供 Obsidian frontmatter、Notion database、CSV、JSON、HTML 等多格式。MarkFlow 已记录 `contextTitle/contextLevel/tags` 等结构化元数据，扩展为 Obsidian `> [!quote]` callout + YAML frontmatter 或 Notion database properties 的成本较低，且能强化"结构化整理"这一卖点。 |
 | **品牌色统一（扩展/宣传页 → amber 琥珀橙）** | 宣传分析 2026-08-20 | 低 | 高 | [已实现待验收] | 荧光笔隐喻色系（Driver 决策 2026-08-20）：扩展 UI、宣传页、扩展图标统一 amber；主按钮 amber-500+深字保证对比度；清理 teal 残留与硬编码 blue hex。 |
 | **主题手动切换开关** | 宣传分析 2026-08-20 | 低 | 中 | [已完成] | PR #71：settings.theme（auto/light/dark）+ 共享 isDark + localStorage 镜像防 FOUC，含 Shadow DOM 实时跟随。 |
-| **Tooltip 弹出/收起过渡动画** | 宣传分析 2026-08-20 | 低 | 中 | ⭐⭐⭐ | B 站视频演示中，划词工具栏的出现/消失流畅度直接影响观感。当前无过渡动画，补一个低成本 fade/scale 动画收益最高。 |
+| **Tooltip 弹出/收起过渡动画** | 宣传分析 2026-08-20 | 低 | 中 | [已完成] | PR #66：进入动画绑定 isPositioned（CSS keyframes），收起由 Transition leave 托管。 |
 | **Popup 与宣传页 Logo 统一** | 宣传分析 2026-08-20 | 低 | 低 | ⭐⭐ | Popup 头部使用铅笔图标，宣传页使用 "M" 方块 Logo，品牌符号不一致。建议统一为宣传页的 "M" Logo（"Popup 视觉层次优化"条目的延伸）。 |
 | **记忆上次使用的标签，下次标记默认预选** | 用户需求 | 低 | 高 | [已完成] | 已实现（Issue #54）：`settings.lastUsedTags`（本地偏好，不同步）；新建标记 `ui.showTooltip` 传 lastUsedTags 作为 initialTags；`Tooltip.show()` 内 `filterExistingTags` 过滤悬空 id；`createHighlight`（仅新建分支）保存后写入。原注意点已全部覆盖：①编辑已有标记用原 tags 不受影响；②标签删除后悬空 id 经 `filterExistingTags` 过滤；③"清除记忆"靠空选保存实现（YAGNI，不设独立按钮）。 |
 
@@ -62,6 +62,8 @@
 | 建议项目 | 来源 | 成本 | 收益 | 推荐等级 | 评估理由 |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | **typecheck 改用 vue-tsc 覆盖 .vue 文件** | 事故复盘 2026-08-20 | 低 | 高 | ⭐⭐⭐⭐ | 当前 `tsc --noEmit` 不解析 .vue SFC，导致 Tooltip.vue 中 `clampToViewport` 未导入的引用错误穿过 typecheck/lint/build 三层直到运行时才暴露。换 `vue-tsc --noEmit` 后 SFC 内 TS 错误可被 CI 拦截。 |
+| **审计日志双写统一（.gemini vs .project）** | 流程复盘 2026-08-20 | 低 | 中 | ⭐⭐⭐ | CI（Audit Guard）强制 `.gemini/ops_changelog.md`，AGENTS.md 索引 `.project/ops_changelog.md`，目前每次变更双写且曾遗漏导致 CI 失败。建议统一为单一日志（保留 CI 强制路径），并同步更新 AGENTS.md 与 PR 模板引用。 |
+| **git add 路径遗漏防护** | 事故复盘 2026-08-21 | 低 | 中 | ⭐⭐⭐ | PR #69 的 `vite.config.mts` setupFiles 行因 `git add src/ extension/` 路径枚举遗漏未提交，导致 main 测试崩溃。约定：提交前用 `git status` 全量核对替代路径枚举；PR 描述中列变更文件清单。 |
 | **导入顺序规范化 (Lint)** | PR #45 | 低 | 中 | ⭐⭐⭐ | 统一脚本的导入分组（外部库、内部模块、别名），提升代码扫描效率和可读性。 |
 | **统一 `catch` 块格式** | PR #45 | 低 | 低 | ⭐⭐ | 全局清理 `catch {}` 为 `catch (error) {}`，保持代码风格一致性，符合现代 TS 实践。 |
 | **ContentScripts 类型安全增强** | 分析 | 低 | 中 | ⭐⭐⭐ | `state.ts` 中 `previewApplier: any` 可收窄为 `rangy.ClassApplier \| null`；`restorer.ts` 中的 `as any` payload 可替换为强类型接口。 |
@@ -103,6 +105,7 @@
 | **品牌色统一（blue → amber 琥珀橙）** | 宣传分析 2026-08-20 | 已完成 | Issue #62, PR #63 |
 | **Tooltip 定位与拖拽优化** | 用户需求 2026-08-20 | 已完成 | Issue #62, PR #63/#67（含鼠标感知定位） |
 | **界面视觉精修 Sprint** | 设计走查 2026-08-20 | 已完成 | Issue #65, PR #66 |
+| **侧边栏菜单翻向 + vitest setupFiles 补登** | 用户反馈 2026-08-20 | 已完成 | PR #72（底部 ⋯ 菜单向上弹出；修复 main 测试崩溃） |
 | 跳过 Level 3/4 恢复算法，侧边栏提示上下文 | `.temp/detail.md` | 已完成 | Issue #50, PR #51 |
 | 高亮标记高度自定义 (`highlightHeight`) | `.temp/detail.md` | 已完成 | Issue #50, PR #51 |
 | 侧边栏搜索功能（上下文保留 + 仅显示匹配项） | `.temp/detail.md` | 已完成 | Issue #52, PR #53 |
