@@ -127,7 +127,7 @@ watch(
             v-model="searchTerm"
             type="text"
             placeholder="在歧义项中搜索..."
-            class="w-full pl-10 pr-4 py-2 border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+            class="w-full pl-10 pr-4 py-2 border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all"
           >
         </div>
       </div>
@@ -135,9 +135,9 @@ watch(
       <!-- List -->
       <div class="flex-1 overflow-y-auto p-4 custom-scrollbar">
         <div v-for="(group, markId) in groupedMarks" :key="markId" class="mb-8">
-          <div class="flex items-center justify-between mb-4 pb-2 border-b border-blue-100 dark:border-blue-900/30">
+          <div class="flex items-center justify-between mb-4 pb-2 border-b border-amber-100 dark:border-amber-900/30">
             <div class="flex items-center gap-2">
-              <div class="px-2 py-0.5 bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 text-xs font-bold rounded flex-shrink-0">
+              <div class="px-2 py-0.5 bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 text-xs font-bold rounded flex-shrink-0">
                 寻找位置
               </div>
               <span class="text-sm font-bold text-gray-700 dark:text-gray-200">“{{ group.text }}”</span>
@@ -174,7 +174,7 @@ watch(
         </button>
         <button
           :disabled="selectedCandidateIds.size === 0"
-          class="px-6 py-2 bg-blue-600 text-white rounded font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+          class="px-6 py-2 bg-amber-500 text-gray-900 rounded font-medium hover:bg-amber-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
           @click="handleConfirm"
         >
           确认恢复 ({{ selectedCandidateIds.size }})

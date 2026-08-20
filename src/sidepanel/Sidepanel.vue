@@ -26,7 +26,7 @@ watchEffect(() => {
 })
 
 // --- Logic Composables ---
-const { structuredMarks, searchQuery, compactMode, clearSearch, filteredTree, refreshAllMarks } = useSidepanelData()
+const { searchQuery, compactMode, clearSearch, filteredTree, refreshAllMarks } = useSidepanelData()
 const {
   collapsedStates,
   collapsedUrls,
@@ -45,7 +45,6 @@ const editingMarkId = ref<string | null>(null)
 const {
   newTagName,
   isCreatingTag,
-  tagInputRef,
   tagPickerVisible,
   editingTagId: _editingTagId,
   editingTagName,
@@ -278,7 +277,7 @@ async function handleDeleteTag(tagId: string) {
         >
           <p>未找到包含「{{ searchQuery }}」的标记</p>
           <button
-            class="mt-2 text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+            class="mt-2 text-sm text-amber-600 hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-300"
             @click="clearSearch"
           >
             清除搜索
@@ -333,7 +332,7 @@ async function handleDeleteTag(tagId: string) {
         </div>
         <div class="flex justify-end mt-4">
           <button
-            class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
+            class="px-4 py-2 text-sm font-medium text-gray-900 bg-amber-500 rounded-md hover:bg-amber-700"
             @click="closeTagPicker"
           >
             完成
@@ -355,7 +354,7 @@ async function handleDeleteTag(tagId: string) {
         <input
           v-model="editingTagName"
           type="text"
-          class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+          class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
           placeholder="输入新标签名称"
           @keydown.enter.prevent="confirmRename"
           @keydown.esc="cancelRename"
@@ -368,7 +367,7 @@ async function handleDeleteTag(tagId: string) {
             取消
           </button>
           <button
-            class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
+            class="px-4 py-2 text-sm font-medium text-gray-900 bg-amber-500 rounded-md hover:bg-amber-700"
             @click="confirmRename"
           >
             确认

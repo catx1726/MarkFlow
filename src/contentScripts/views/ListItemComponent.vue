@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { type Candidate } from '~/logic/search'
+import type { Candidate } from '~/logic/search'
 
-const props = defineProps<{
+defineProps<{
   item: Candidate
   isSelected: boolean
   isHovered: boolean
@@ -17,9 +17,9 @@ const emit = defineEmits<{
 <template>
   <div
     class="p-3 border border-gray-200 rounded mb-2 cursor-pointer transition-colors"
-    :class="{ 
-      'border-blue-500 bg-blue-50': isSelected, 
-      'border-orange-400 bg-orange-50': isHovered && !isSelected 
+    :class="{
+      'border-amber-500 bg-amber-50': isSelected,
+      'border-orange-400 bg-orange-50': isHovered && !isSelected,
     }"
     @mouseover="emit('hoverListItem', item)"
     @mouseleave="emit('leaveListItem', item)"

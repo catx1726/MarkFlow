@@ -113,7 +113,7 @@ function handleSave() {
         <textarea
           ref="textareaRef"
           v-model="editingNote"
-          class="border-gray-300 dark:bg-gray-700 dark:border-gray-600 w-full rounded-md p-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+          class="border-gray-300 dark:bg-gray-700 dark:border-gray-600 w-full rounded-md p-2 text-sm focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
           @keydown.enter.prevent="handleSave"
           @keydown.esc="emit('cancel')"
         />
@@ -125,7 +125,7 @@ function handleSave() {
             取消
           </button>
           <button
-            class="action-button bg-blue-600 hover:bg-blue-700 rounded-md px-3 py-1 text-sm font-medium text-white"
+            class="action-button bg-amber-500 hover:bg-amber-600 rounded-md px-3 py-1 text-sm font-medium text-gray-900"
             @click.stop="handleSave"
           >
             保存
@@ -135,7 +135,7 @@ function handleSave() {
       <p
         v-else
         :title="mark.note"
-        class="text-gray-500 dark:text-gray-400 dark:hover:text-blue-400 ease-in-out mt-1 cursor-pointer overflow-hidden text-xs transition-all duration-300 hover:text-blue-600"
+        class="text-gray-500 dark:text-gray-400 dark:hover:text-amber-400 ease-in-out mt-1 cursor-pointer overflow-hidden text-xs transition-all duration-300 hover:text-amber-600"
         :class="isNoteExpanded ? 'max-h-96' : 'max-h-5'"
         @click.stop="emit('edit', mark)"
       >
