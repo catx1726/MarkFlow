@@ -122,7 +122,7 @@ onMounted(() => {
 
   // 测量主 header 实际高度并写入 CSS 变量，供文件夹行 sticky 吸顶定位
   // （header 高度可变：新建标签行展开时会变高，用 ResizeObserver 跟踪）
-  const headerEl = (headerCompRef.value as any)?.$el as HTMLElement | undefined
+  const headerEl = headerCompRef.value?.$el as HTMLElement | undefined
   if (headerEl) {
     const updateHeaderHeight = () => {
       document.documentElement.style.setProperty('--sidepanel-header-h', `${headerEl.offsetHeight}px`)

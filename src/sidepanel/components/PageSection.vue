@@ -282,21 +282,27 @@ function isGroupCollapsed(groupTitle: string): boolean {
 
 <style scoped>
 /* 手风琴高度过渡：CSS Grid 0fr↔1fr 技巧（与 StorageManager 同一约定），
-   fr 轨道尺寸可插值，子元素 overflow-hidden 被挤压；
-   Transition 负责收起动画播完后再卸载（v-if）的时机 */
+   fr 轨道尺寸可插值；Transition 负责收起动画播完后再卸载（v-if）的时机。
+   兼容性：Chrome 107+ / Firefox 66+ / Safari 16+ 支持 fr 轨道插值；
+   更老浏览器退化为瞬开瞬关（无动画但功能正常），可接受，不加 @supports 降级。
+   注意：overflow/contain 裁剪只在 enter/leave 激活期生效（*-active 类），
+   动画结束即移除——常驻会裁剪标记的⋯下拉菜单（absolute 定位超出容器） */
 .fold-grid {
   display: grid;
   grid-template-rows: 1fr;
 }
 .fold-inner {
-  overflow: hidden;
   min-height: 0;
-  /* 隔离重排范围：高度动画每帧只在此子树内布局，避免整面板 reflow（大列表卡顿的主要来源） */
-  contain: layout paint;
 }
 .fold-collapsed {
   grid-template-rows: 0fr;
   opacity: 0;
+}
+.fold-enter-active > .fold-inner,
+.fold-leave-active > .fold-inner {
+  overflow: hidden;
+  /* 隔离重排范围：动画每帧只在此子树内布局（大列表卡顿优化） */
+  contain: layout paint;
 }
 .fold-enter-active {
   transition: grid-template-rows 150ms ease-out, opacity 130ms ease-out;

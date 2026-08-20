@@ -303,7 +303,7 @@ defineExpose({ show, hide })
       v-if="visible"
       ref="tooltipRef"
       class="tooltip-card fixed z-[9999] w-[320px] rounded-lg bg-white p-[12px] font-sans shadow-xl border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200"
-      :class="{ 'select-none': isDragging }"
+      :class="{ 'select-none': isDragging, 'tooltip-pop-in': isPositioned }"
       :style="{ top: `${position.y}px`, left: `${position.x}px`, zIndex, visibility: isPositioned ? 'visible' : 'hidden' }"
       @mousedown.stop
       @mouseup.stop
@@ -427,14 +427,23 @@ defineExpose({ show, hide })
 </template>
 
 <style scoped>
-/* Tooltip 弹出/收起过渡：fade + scale + 轻微上浮（与 visibility 测量阶段兼容，测量仅 1 帧不影响观感） */
-.tooltip-pop-enter-active {
-  transition: opacity 150ms ease-out, transform 150ms ease-out;
+/* Tooltip 弹出/收起过渡：
+   进入动画用 CSS keyframes 并绑定 isPositioned（定位完成的瞬间才开始播放），
+   而不是绑定 mount——两阶段渲染中 mount 时元素还在 visibility:hidden 测量阶段，
+   若用 Transition 的 enter 会在不可见时空跑动画（CR B1）。
+   收起动画仍由 Transition 的 leave 托管。 */
+.tooltip-pop-in {
+  animation: tooltip-pop-in 150ms ease-out;
+}
+@keyframes tooltip-pop-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(4px);
+  }
 }
 .tooltip-pop-leave-active {
   transition: opacity 100ms ease-in, transform 100ms ease-in;
 }
-.tooltip-pop-enter-from,
 .tooltip-pop-leave-to {
   opacity: 0;
   transform: scale(0.96) translateY(4px);

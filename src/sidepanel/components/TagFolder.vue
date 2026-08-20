@@ -57,6 +57,7 @@ function isUrlCollapsed(url: string): boolean {
     :open="isOpen"
     class="mb-6 group/folder"
   >
+    <!-- sticky 吸顶：z-30 介于主 header（z-40）与内容之间；top 由 --sidepanel-header-h 驱动（Sidepanel.vue ResizeObserver 测量），调整任一侧时注意联动 -->
     <summary
       class="flex items-center gap-2 p-2 bg-white dark:bg-gray-700 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors border border-gray-200 dark:border-gray-700 list-none sticky z-30 top-[var(--sidepanel-header-h,104px)]"
       :class="{ 'opacity-50 grayscale': folder.totalMarks === 0 }"
