@@ -55,10 +55,11 @@ function isUrlCollapsed(url: string): boolean {
   <details
     name="tag-folder"
     :open="isOpen"
-    class="mb-6 shadow-sm group/folder"
+    class="mb-6 group/folder"
   >
+    <!-- sticky 吸顶：z-30 介于主 header（z-40）与内容之间；top 由 --sidepanel-header-h 驱动（Sidepanel.vue ResizeObserver 测量），调整任一侧时注意联动 -->
     <summary
-      class="flex items-center gap-2 p-2 bg-gray-200 dark:bg-gray-700 rounded-t-lg cursor-pointer hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors border border-gray-200 dark:border-gray-700 list-none rounded-b-lg group-open/folder:rounded-b-none"
+      class="flex items-center gap-2 p-2 bg-white dark:bg-gray-700 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors border border-gray-200 dark:border-gray-700 list-none sticky z-30 top-[var(--sidepanel-header-h,104px)]"
       :class="{ 'opacity-50 grayscale': folder.totalMarks === 0 }"
     >
       <svg
@@ -75,7 +76,7 @@ function isUrlCollapsed(url: string): boolean {
       </svg>
       <span class="font-bold text-gray-700 dark:text-gray-200 flex-1">{{ folder.tagName }}</span>
       <span
-        class="px-2 py-0.5 text-xs font-semibold bg-gray-300 dark:bg-gray-600 text-gray-600 dark:text-gray-300 rounded-full mr-2"
+        class="px-2 py-0.5 text-xs font-semibold bg-gray-100 dark:bg-gray-600 text-gray-500 dark:text-gray-300 rounded-full mr-2"
       >
         {{ folder.totalMarks }}
       </span>
@@ -162,7 +163,7 @@ function isUrlCollapsed(url: string): boolean {
     </summary>
 
     <div
-      class="space-y-4 p-2 border-x border-b border-gray-200 dark:border-gray-700 rounded-b-lg bg-gray-50 dark:bg-gray-800"
+      class="folder-content space-y-4 py-2 pr-1 ml-3 pl-3 border-l-2 border-gray-200 dark:border-gray-600"
     >
       <div
         v-if="Object.keys(folder.pages).length === 0"
@@ -207,3 +208,22 @@ function isUrlCollapsed(url: string): boolean {
     </div>
   </details>
 </template>
+
+<style scoped>
+/* 文件夹展开动画：fade + 轻微下滑（原生 details 无收起动画，已知限制，接受）。
+   注意：与 PageSection.vue 的 fold-* 折叠动画是两套机制（details 无法参与 Transition），
+   修改时长时需与 fold-enter-active（150ms）保持同步，避免同面板内动画节奏不一致。 */
+details[open] > .folder-content {
+  animation: fold-in 150ms ease-out;
+}
+@keyframes fold-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+</style>
