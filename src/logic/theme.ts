@@ -15,15 +15,16 @@ export type ThemePref = 'auto' | 'light' | 'dark'
 
 export const THEME_CACHE_KEY = 'markflow-theme'
 
-/** 纯函数：解析最终是否深色（抽出以便单测） */
-export function resolveTheme(pref: ThemePref, systemDark: boolean): boolean {
-  return pref === 'auto' ? systemDark : pref === 'dark'
+/** 纯函数：解析最终是否深色（抽出以便单测）；pref 缺失时按 auto 处理 */
+export function resolveTheme(pref: ThemePref | undefined, systemDark: boolean): boolean {
+  const p = pref ?? 'auto'
+  return p === 'auto' ? systemDark : p === 'dark'
 }
 
 const preferredDark = usePreferredDark()
 
-/** 解析后的当前主题（响应式，语言切换式自动生效） */
-export const isDark = computed(() => resolveTheme(settings.value.theme ?? 'auto', preferredDark.value))
+/** 解析后的当前主题（响应式，主题切换时自动生效） */
+export const isDark = computed(() => resolveTheme(settings.value.theme, preferredDark.value))
 
 // 镜像到 localStorage 供 theme-init.ts 防 FOUC 使用
 watch(

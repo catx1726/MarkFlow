@@ -217,6 +217,9 @@ async function triggerPull({ force = false, timeoutMs = 8000, token = '', gistId
 // ========== 左侧导航与 Scroll Spy ==========
 type OptionsKey = `options.${keyof Messages['options']}`
 
+// 通用设置区下拉框共享样式
+const formSelectClass = 'px-[12px] py-[8px] text-[14px] rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-amber-500'
+
 const navItems: { id: string, label: OptionsKey }[] = [
   { id: 'welcome', label: 'options.navWelcome' },
   { id: 'general', label: 'options.navGeneral' },
@@ -440,7 +443,7 @@ onUnmounted(() => {
           </p>
           <select
             v-model="localSettings.language"
-            class="px-[12px] py-[8px] text-[14px] rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-amber-500"
+            :class="formSelectClass"
           >
             <option value="auto">
               {{ t('options.languageAuto') }}
@@ -461,7 +464,7 @@ onUnmounted(() => {
           </p>
           <select
             v-model="localSettings.theme"
-            class="px-[12px] py-[8px] text-[14px] rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-amber-500"
+            :class="formSelectClass"
           >
             <option value="auto">
               {{ t('options.themeAuto') }}

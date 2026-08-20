@@ -11,4 +11,9 @@ describe('resolveTheme', () => {
     expect(resolveTheme('dark', false)).toBe(true)
     expect(resolveTheme('light', true)).toBe(false)
   })
+
+  it('非法/缺失偏好回退 auto 行为（跟随系统）', () => {
+    expect(resolveTheme(undefined as any, true)).toBe(true)
+    expect(resolveTheme(undefined as any, false)).toBe(false)
+  })
 })
