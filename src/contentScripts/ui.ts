@@ -30,7 +30,7 @@ export class UIManager {
   ) {}
 
   ensureMounted(): void {
-    // ⚠️ 样式约定：Shadow DOM 内的视图（Tooltip/DisambiguationModal 等）一律使用 px 任意值
+    // 【样式约定】Shadow DOM 内的视图（Tooltip/DisambiguationModal 等）一律使用 px 任意值
     // （如 p-[12px]、text-[12px]），禁止使用 rem 类（p-3、text-xs）——rem 相对宿主页
     // <html> 的 font-size 计算，会被宿主网站污染；px 绝对单位免疫。见
     // docs/superpowers/specs/2026-08-20-ui-polish-sprint-design.md §1

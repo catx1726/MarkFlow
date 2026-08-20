@@ -210,7 +210,9 @@ function isUrlCollapsed(url: string): boolean {
 </template>
 
 <style scoped>
-/* 文件夹展开动画：fade + 轻微下滑（原生 details 无收起动画，已知限制，接受） */
+/* 文件夹展开动画：fade + 轻微下滑（原生 details 无收起动画，已知限制，接受）。
+   注意：与 PageSection.vue 的 fold-* 折叠动画是两套机制（details 无法参与 Transition），
+   修改时长时需与 fold-enter-active（150ms）保持同步，避免同面板内动画节奏不一致。 */
 details[open] > .folder-content {
   animation: fold-in 150ms ease-out;
 }
