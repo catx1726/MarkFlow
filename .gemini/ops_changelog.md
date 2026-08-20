@@ -102,3 +102,4 @@
 1. **数据一致性与软删除**：在 Local-first 系统中，简单的物理删除无法同步到其他离线设备。通过引入 `deletedAt` 时间戳并在拉取合并后执行物理清理，既实现了删除同步又防止了数据无限增长。
 2. **并发控制**：网络请求（Push/Pull）与本地存储写入的异步性可能导致竞争。通过互斥锁和序列化队列的结合，确保了存储状态的确定性。
 3. **环境限制与调试**：由于沙盒环境的网络限制，`gh` 工具在大数据包请求时可能失败，通过拆分任务和本地验证确保了工程质量。
+| 2026-08-20 13:20:00 | Unify brand color to amber + Tooltip anchor-aware positioning & drag | src/ (12 style files), src/logic/tooltipPosition.ts, src/contentScripts/{index,ui,state}.ts, src/contentScripts/views/Tooltip.vue, docs/index.html, assets/, extension/assets/ | Brand unification (blue/indigo→amber highlighter metaphor), selection-aware tooltip placement with header drag; fix rangy WrappedRange lacking runtime getBoundingClientRect (Issue #62) | a7b9749,5e7626f | git revert a7b9749 5e7626f |
