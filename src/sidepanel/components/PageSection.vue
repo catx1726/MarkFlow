@@ -58,14 +58,14 @@ function getLevelClass(level: number) {
 
 function getLevelBorderStyle(level: number) {
   const styles: Record<number, Record<string, string>> = {
-    1: { borderLeft: '4px solid #3B82F6' },
-    2: { borderLeft: '3px solid #60A5FA' },
-    3: { borderLeft: '2px solid #93C5FD' },
-    4: { borderLeft: '1px solid #BFDBFE' },
-    5: { borderLeft: '1px solid #BFDBFE' },
-    6: { borderLeft: '1px solid #BFDBFE' },
+    1: { borderLeft: '4px solid #F59E0B' },
+    2: { borderLeft: '3px solid #FBBF24' },
+    3: { borderLeft: '2px solid #FCD34D' },
+    4: { borderLeft: '1px solid #FDE68A' },
+    5: { borderLeft: '1px solid #FDE68A' },
+    6: { borderLeft: '1px solid #FDE68A' },
   }
-  return styles[level] || { borderLeft: '1px solid #BFDBFE' }
+  return styles[level] || { borderLeft: '1px solid #FDE68A' }
 }
 
 function isGroupCollapsed(groupTitle: string): boolean {

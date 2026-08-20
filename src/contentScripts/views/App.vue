@@ -15,12 +15,14 @@ const [show, toggle] = useToggle(false)
       transition="opacity duration-300"
       :class="show ? 'opacity-100' : 'opacity-0'"
     >
-      <h1 class="text-[18px]">MarkFlow</h1>
+      <h1 class="text-[18px]">
+        MarkFlow
+      </h1>
       <SharedSubtitle />
     </div>
     <button
       class="flex w-10 h-10 rounded-full shadow cursor-pointer border-none"
-      bg="teal-600 hover:teal-700"
+      bg="amber-600 hover:amber-700"
       @click="toggle()"
     >
       <pixelarticons-power class="block m-auto text-white text-[18px]" />

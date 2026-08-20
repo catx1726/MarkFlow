@@ -188,6 +188,7 @@ async function connectSync() {
 
 async function triggerPull({ force = false, timeoutMs = 8000, token = '', gistId = '' } = {}) {
   const payload = { force, token, gistId }
+  // eslint-disable-next-line no-console -- 同步诊断日志，待 Logger 封装（见 NIT_ROADMAP §3）统一处理
   console.log('[Options] triggerPull started', { force, hasToken: !!token, hasGistId: !!gistId })
   try {
     const result = await withTimeout(
@@ -195,6 +196,7 @@ async function triggerPull({ force = false, timeoutMs = 8000, token = '', gistId
       timeoutMs,
       'trigger-sync timeout',
     )
+    // eslint-disable-next-line no-console -- 同步诊断日志，待 Logger 封装统一处理
     console.log('[Options] webext-bridge trigger-sync succeeded:', result)
     return result
   }
@@ -205,6 +207,7 @@ async function triggerPull({ force = false, timeoutMs = 8000, token = '', gistId
       timeoutMs,
       'trigger-sync-pull timeout',
     )
+    // eslint-disable-next-line no-console -- 同步诊断日志，待 Logger 封装统一处理
     console.log('[Options] runtime fallback trigger-sync-pull result:', fallbackResult)
     return fallbackResult
   }
@@ -310,13 +313,13 @@ onUnmounted(() => {
                 :key="item.id"
                 class="w-full text-left px-[12px] py-[8px] rounded-md text-[14px] transition-colors relative"
                 :class="activeSection === item.id
-                  ? 'text-blue-600 dark:text-blue-400 font-medium bg-blue-50 dark:bg-blue-900/20'
+                  ? 'text-amber-600 dark:text-amber-400 font-medium bg-amber-50 dark:bg-amber-900/20'
                   : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50'"
                 @click="scrollToSection(item.id)"
               >
                 <span
                   v-if="activeSection === item.id"
-                  class="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-[16px] bg-blue-500 rounded-r-full"
+                  class="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-[16px] bg-amber-500 rounded-r-full"
                 />
                 {{ item.label }}
               </button>
@@ -326,7 +329,7 @@ onUnmounted(() => {
                 class="w-full px-[16px] py-[8px] text-[14px] font-medium rounded-md transition-colors"
                 :class="isJustSaved
                   ? 'bg-green-600 text-white cursor-default'
-                  : 'bg-blue-600 text-white hover:bg-blue-700'"
+                  : 'bg-amber-500 text-gray-900 hover:bg-amber-600'"
                 :disabled="isJustSaved"
                 @click="saveSettings"
               >
@@ -340,7 +343,7 @@ onUnmounted(() => {
       <!-- 右侧内容 -->
       <div class="space-y-8">
         <!-- Welcome Guide -->
-        <div id="welcome" class="setting-card border-l-4 border-blue-500 scroll-mt-8">
+        <div id="welcome" class="setting-card border-l-4 border-amber-500 scroll-mt-8">
           <h2 class="text-[18px] font-semibold mb-[16px] flex items-center gap-2">
             👋 欢迎使用 MarkFlow
           </h2>
@@ -403,14 +406,14 @@ onUnmounted(() => {
                 <a
                   href="https://github.com/catx1726/MarkFlow"
                   target="_blank"
-                  class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 underline"
+                  class="text-amber-600 hover:text-amber-800 dark:text-amber-400 dark:hover:text-amber-300 underline"
                 >
                   GitHub
                 </a>
                 <a
                   href="https://addons.mozilla.org/zh-CN/firefox/addon/markflow/"
                   target="_blank"
-                  class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 underline"
+                  class="text-amber-600 hover:text-amber-800 dark:text-amber-400 dark:hover:text-amber-300 underline"
                 >
                   Firefox Add-ons
                 </a>
@@ -510,7 +513,7 @@ onUnmounted(() => {
             </div>
           </div>
           <button
-            class="mt-[16px] px-[16px] py-2 text-[14px] font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
+            class="mt-[16px] px-[16px] py-2 text-[14px] font-medium text-gray-900 bg-amber-500 rounded-md hover:bg-amber-600"
             @click="addColor"
           >
             添加颜色
@@ -558,7 +561,7 @@ onUnmounted(() => {
           <textarea
             v-model="blacklistText"
             rows="5"
-            class="w-full p-[8px] border rounded-md bg-gray-50 dark:bg-gray-800 focus:ring-2 focus:ring-blue-500"
+            class="w-full p-[8px] border rounded-md bg-gray-50 dark:bg-gray-800 focus:ring-2 focus:ring-amber-500"
             placeholder="google.com&#10;github.com"
           />
         </div>
@@ -572,7 +575,7 @@ onUnmounted(() => {
             如果扩展运行异常，请导出错误日志发送给我们。
           </p>
           <button
-            class="px-[16px] py-2 text-[14px] font-medium text-white bg-amber-600 rounded-md hover:bg-amber-700"
+            class="px-[16px] py-2 text-[14px] font-medium text-gray-900 bg-amber-500 rounded-md hover:bg-amber-600"
             @click="exportLogs"
           >
             导出错误日志
@@ -586,7 +589,7 @@ onUnmounted(() => {
               GitHub 同步
             </h2>
             <button
-              class="text-blue-500 hover:text-blue-700 flex items-center gap-1 text-[13px]"
+              class="text-amber-500 hover:text-amber-700 flex items-center gap-1 text-[13px]"
               @click="showSyncHelp"
             >
               <div class="i-carbon-help text-[16px]" />
@@ -602,7 +605,7 @@ onUnmounted(() => {
               <input
                 v-model="syncConfig.token"
                 type="password"
-                class="w-full px-[8px] py-[4px] border rounded-md bg-gray-50 dark:bg-gray-800 focus:ring-2 focus:ring-blue-500"
+                class="w-full px-[8px] py-[4px] border rounded-md bg-gray-50 dark:bg-gray-800 focus:ring-2 focus:ring-amber-500"
                 placeholder="ghp_xxxxxxxxxxxxxxxxxxxxxxxx"
               >
               <p class="text-[12px] text-gray-400">
@@ -610,19 +613,19 @@ onUnmounted(() => {
                 <a
                   href="https://github.com/settings/tokens/new?scopes=gist&description=MarkFlow-Sync"
                   target="_blank"
-                  class="text-blue-500 hover:underline"
+                  class="text-amber-500 hover:underline"
                 >
                   点此快速生成 Token
                 </a>
               </p>
-              <p class="text-[11px] text-amber-600/80 mt-1">
+              <p class="text-[11px] text-amber-700 dark:text-amber-400 mt-1">
                 ⚠️ 注意：Token 将以加密/私有形式存储在浏览器本地，建议使用最小权限。
               </p>
             </div>
 
             <div class="flex items-center gap-4">
               <button
-                class="px-[16px] py-2 text-[14px] font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50"
+                class="px-[16px] py-2 text-[14px] font-medium text-gray-900 bg-amber-500 rounded-md hover:bg-amber-600 disabled:opacity-50"
                 :disabled="!syncConfig.token || syncConnectStatus !== ''"
                 @click="connectSync"
               >
@@ -638,7 +641,7 @@ onUnmounted(() => {
                 </p>
               </div>
             </div>
-            <p v-if="syncConnectStatus !== ''" class="text-[13px] text-blue-600">
+            <p v-if="syncConnectStatus !== ''" class="text-[13px] text-amber-700 dark:text-amber-400">
               {{ syncConnectStatus }}
             </p>
 
@@ -657,7 +660,7 @@ onUnmounted(() => {
         >
           <span v-if="saveStatus" class="text-green-600 text-[14px] transition-opacity duration-300">{{ saveStatus }}</span>
           <button
-            class="px-[16px] py-[8px] text-[14px] font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
+            class="px-[16px] py-[8px] text-[14px] font-medium text-gray-900 bg-amber-500 rounded-md hover:bg-amber-600"
             @click="saveSettings"
           >
             保存设置
@@ -684,7 +687,7 @@ onUnmounted(() => {
         </p>
         <div class="flex justify-end">
           <button
-            class="px-[16px] py-2 text-[14px] font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
+            class="px-[16px] py-2 text-[14px] font-medium text-gray-900 bg-amber-500 rounded-md hover:bg-amber-600"
             @click="hideAlert"
           >
             确认

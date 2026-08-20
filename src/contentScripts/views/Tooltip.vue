@@ -4,6 +4,8 @@ import { computed, nextTick, onMounted, onUnmounted, reactive, ref, toRaw, watch
 import { sendMessage } from 'webext-bridge/content-script'
 import { getMaxZIndex } from '../../logic/dom'
 import { filterExistingTags } from '../../logic/tags'
+import { TOOLTIP_MARGIN, clamp, computeTooltipPosition } from '~/logic/tooltipPosition'
+import type { AnchorRect } from '~/logic/tooltipPosition'
 import { settings } from '~/logic/settings'
 import type { Tag } from '~/logic/storage'
 
@@ -15,6 +17,12 @@ const emit = defineEmits<{
 }>()
 const visible = ref(false)
 const position = reactive({ x: 0, y: 0 })
+const isPositioned = ref(false)
+const tooltipRef = ref<HTMLElement | null>(null)
+const isDragging = ref(false)
+const dragOffset = { x: 0, y: 0 }
+let dragRafId: number | null = null
+let pendingDragPoint: { clientX: number, clientY: number } | null = null
 const isHighlighted = ref(false)
 const noteValue = ref('')
 const selectedTags = ref<string[]>([])
@@ -167,8 +175,7 @@ function onDeleteClick() {
 }
 
 async function show(
-  x: number,
-  y: number,
+  anchorRect: AnchorRect,
   highlighted: boolean,
   initialNote = '',
   initialColor: string | undefined,
@@ -186,36 +193,94 @@ async function show(
   }
 
   zIndex.value = getMaxZIndex() + 100
-  const tooltipWidth = 320
-  const tooltipHeight = 340
-  const margin = 10
-  if (x + tooltipWidth > window.innerWidth)
-    x = window.innerWidth - tooltipWidth - margin
-  if (y + tooltipHeight > window.innerHeight)
-    y = window.innerHeight - tooltipHeight - margin
-  if (x < margin)
-    x = margin
-  if (y < margin)
-    y = margin
-  position.x = x
-  position.y = y
   isHighlighted.value = highlighted
   noteValue.value = initialNote
   // 过滤掉已删除标签的悬空 id（lastUsedTags 或旧 mark.tags 可能引用已删除标签）
   selectedTags.value = filterExistingTags(initialTags, allTags.value)
   selectedColor.value = initialColor || defaultHighlightColor.value
   textToCopy.value = initialTextToCopy
+
+  // 两阶段渲染：先隐藏挂载测量实际尺寸，再基于选区矩形智能定位，最后显示
+  isPositioned.value = false
   visible.value = true
-  nextTick(() => {
+  await nextTick()
+  const el = tooltipRef.value
+  if (!el) {
+    // 防御：元素未挂载时至少以默认位置显示，避免 Tooltip 永久不可见
+    console.warn('[MarkFlow] Tooltip 元素未挂载，跳过智能定位')
+    isPositioned.value = true
     textareaRef.value?.focus()
+    return
+  }
+  const rect = el.getBoundingClientRect()
+  const pos = computeTooltipPosition(
+    anchorRect,
+    { width: rect.width, height: rect.height },
+    { width: window.innerWidth, height: window.innerHeight },
+  )
+  position.x = pos.x
+  position.y = pos.y
+  isPositioned.value = true
+  textareaRef.value?.focus()
+}
+
+function onHeaderPointerDown(e: PointerEvent) {
+  if (e.button !== 0)
+    return
+  // 色板按钮等交互元素不触发拖拽
+  if ((e.target as HTMLElement).closest('button'))
+    return
+  isDragging.value = true
+  dragOffset.x = e.clientX - position.x
+  dragOffset.y = e.clientY - position.y
+  window.addEventListener('pointermove', onDragMove, true)
+  window.addEventListener('pointerup', onDragEnd, true)
+  e.preventDefault()
+  // 阻止冒泡到页面，避免触发页面全局 pointerdown 监听（如“点击空白关闭”逻辑）
+  e.stopPropagation()
+}
+
+function onDragMove(e: PointerEvent) {
+  if (!isDragging.value)
+    return
+  // rAF 节流：高频 pointermove 下避免每帧多次 getBoundingClientRect + 响应式更新
+  pendingDragPoint = { clientX: e.clientX, clientY: e.clientY }
+  if (dragRafId !== null)
+    return
+  dragRafId = requestAnimationFrame(() => {
+    dragRafId = null
+    const point = pendingDragPoint
+    pendingDragPoint = null
+    if (!point || !isDragging.value)
+      return
+    const rect = tooltipRef.value?.getBoundingClientRect()
+    const width = rect?.width ?? 320
+    const height = rect?.height ?? 340
+    position.x = clamp(point.clientX - dragOffset.x, TOOLTIP_MARGIN, window.innerWidth - TOOLTIP_MARGIN - width)
+    position.y = clamp(point.clientY - dragOffset.y, TOOLTIP_MARGIN, window.innerHeight - TOOLTIP_MARGIN - height)
   })
 }
 
+function onDragEnd() {
+  isDragging.value = false
+  if (dragRafId !== null) {
+    cancelAnimationFrame(dragRafId)
+    dragRafId = null
+  }
+  pendingDragPoint = null
+  window.removeEventListener('pointermove', onDragMove, true)
+  window.removeEventListener('pointerup', onDragEnd, true)
+}
+
 function hide() {
+  // 拖拽中通过 Escape 等途径关闭时，先清理拖拽态与 window 监听器
+  if (isDragging.value)
+    onDragEnd()
   if (visible.value && !isHighlighted.value) {
     emit('clearPreview')
   }
   visible.value = false
+  isPositioned.value = false
 }
 
 onMounted(() => {
@@ -224,6 +289,8 @@ onMounted(() => {
 
 onUnmounted(() => {
   window.removeEventListener('keydown', handleKeydown, true)
+  window.removeEventListener('pointermove', onDragMove, true)
+  window.removeEventListener('pointerup', onDragEnd, true)
 })
 
 defineExpose({ show, hide })
@@ -232,20 +299,25 @@ defineExpose({ show, hide })
 <template>
   <div
     v-if="visible"
+    ref="tooltipRef"
     class="tooltip-card fixed z-[9999] w-[320px] rounded-lg bg-white p-[12px] font-sans shadow-xl border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200"
-    :style="{ top: `${position.y}px`, left: `${position.x}px`, zIndex }"
+    :class="{ 'select-none': isDragging }"
+    :style="{ top: `${position.y}px`, left: `${position.x}px`, zIndex, visibility: isPositioned ? 'visible' : 'hidden' }"
     @mousedown.stop
     @mouseup.stop
   >
     <div class="tooltip-content flex flex-col gap-[12px]">
-      <div class="tooltip-header flex justify-between items-center mb-[-4px]">
+      <div
+        class="tooltip-header flex justify-between items-center mb-[-4px] cursor-move select-none"
+        @pointerdown="onHeaderPointerDown"
+      >
         <div class="tooltip-colors flex gap-[4px] items-center">
           <button
             v-for="color in highlightColors"
             :key="color"
             class="color-swatch h-[18px] w-[18px] cursor-pointer rounded-full border-[2px] border-transparent p-0 transition-all duration-200 ease-in-out transform hover:scale-110 relative dark:border-gray-800"
             :style="{ backgroundColor: color }"
-            :class="{ 'is-selected !border-blue-500 dark:!border-blue-400': selectedColor === color }"
+            :class="{ 'is-selected !border-amber-500 dark:!border-amber-400': selectedColor === color }"
             @click="selectedColor = color"
           />
         </div>
@@ -268,8 +340,8 @@ defineExpose({ show, hide })
             class="text-[10px] px-2 py-0.5 rounded-full border transition-all duration-200"
             :class="
               selectedTags.includes(tag.id)
-                ? 'bg-blue-100 border-blue-300 text-blue-800 dark:bg-blue-900/40 dark:border-blue-700 dark:text-blue-300'
-                : 'bg-white border-gray-200 text-gray-600 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-400 hover:border-blue-400'
+                ? 'bg-amber-100 border-amber-300 text-amber-800 dark:bg-amber-900/40 dark:border-amber-700 dark:text-amber-300'
+                : 'bg-white border-gray-200 text-gray-600 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-400 hover:border-amber-400'
             "
             @click="toggleTag(tag.id)"
           >
@@ -281,12 +353,12 @@ defineExpose({ show, hide })
           <input
             v-model="newTagInput"
             placeholder="+ 新建标签"
-            class="flex-1 px-2 py-1 text-[10px] border border-gray-200 dark:border-gray-600 rounded dark:bg-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            class="flex-1 px-2 py-1 text-[10px] border border-gray-200 dark:border-gray-600 rounded dark:bg-gray-700 focus:outline-none focus:ring-1 focus:ring-amber-500"
             @keydown.enter.prevent="handleCreateTag"
           >
           <button
             class="px-2 py-1 text-[10px] rounded hover:opacity-90 disabled:opacity-50 transition-colors"
-            :class="tagCreateSuccess ? 'bg-green-600 text-white' : 'bg-blue-600 text-white hover:bg-blue-700'"
+            :class="tagCreateSuccess ? 'bg-green-600 text-white' : 'bg-amber-500 text-gray-900 hover:bg-amber-600'"
             :disabled="!newTagInput.trim()"
             @click="handleCreateTag"
           >
@@ -298,7 +370,7 @@ defineExpose({ show, hide })
       <textarea
         ref="textareaRef"
         v-model="noteValue"
-        class="tooltip-textarea min-h-[80px] w-full resize-y rounded-md border border-gray-300 p-[8px] text-[14px] leading-relaxed focus:border-blue-500 focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:placeholder-gray-400 dark:focus:border-blue-400 dark:focus:ring-blue-400"
+        class="tooltip-textarea min-h-[80px] w-full resize-y rounded-md border border-gray-300 p-[8px] text-[14px] leading-relaxed focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:placeholder-gray-400 dark:focus:border-amber-400 dark:focus:ring-amber-400"
         placeholder="在这里记录你的笔记或思考..."
         @keydown.enter.ctrl.prevent="onSaveClick"
         @keydown.esc="hide"
@@ -307,7 +379,7 @@ defineExpose({ show, hide })
       <div class="tooltip-actions flex justify-between items-center w-full">
         <div class="flex gap-2">
           <button
-            class="action-button p-[6px] text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-md transition-colors"
+            class="action-button p-[6px] text-gray-400 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/30 rounded-md transition-colors"
             title="复制文本"
             @click="onCopyClick"
           >
@@ -340,7 +412,7 @@ defineExpose({ show, hide })
             删除
           </button>
           <button
-            class="px-4 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-md hover:bg-blue-700 transition-colors shadow-sm"
+            class="px-4 py-1.5 bg-amber-500 text-gray-900 text-xs font-medium rounded-md hover:bg-amber-600 transition-colors shadow-sm"
             @click="onSaveClick"
           >
             {{ isHighlighted ? '保存修改' : '确认高亮' }}

@@ -12,13 +12,13 @@ const emit = defineEmits<{
   (e: 'open-options'): void
   (e: 'update:searchQuery', value: string): void
   (e: 'update:compactMode', value: boolean): void
-  (e: 'clear-search'): void
-  (e: 'start-creating-tag'): void
-  (e: 'cancel-creating-tag'): void
+  (e: 'clearSearch'): void
+  (e: 'startCreatingTag'): void
+  (e: 'cancelCreatingTag'): void
 }>()
 
 function onClearSearch() {
-  emit('clear-search')
+  emit('clearSearch')
 }
 </script>
 
@@ -46,16 +46,16 @@ function onClearSearch() {
             :value="searchQuery"
             type="search"
             placeholder="搜索标记、页面或标签..."
-            class="w-full pl-9 pr-3 py-1.5 text-sm rounded-md border border-gray-200 dark:bg-gray-700 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            class="w-full pl-9 pr-3 py-1.5 text-sm rounded-md border border-gray-200 dark:bg-gray-700 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-amber-500"
             @input="e => emit('update:searchQuery', (e.target as HTMLInputElement).value)"
           >
         </div>
 
         <button
           class="p-1.5 rounded-md transition-colors"
-          :class="isCreatingTag ? 'bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-300' : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700'"
+          :class="isCreatingTag ? 'bg-amber-100 text-amber-600 dark:bg-amber-900 dark:text-amber-300' : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700'"
           title="新建标签"
-          @click="emit(isCreatingTag ? 'cancel-creating-tag' : 'start-creating-tag')"
+          @click="emit(isCreatingTag ? 'cancelCreatingTag' : 'startCreatingTag')"
         >
           <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
@@ -92,13 +92,13 @@ function onClearSearch() {
         <input
           :value="newTagName"
           placeholder="新建标签..."
-          class="border-gray-200 dark:bg-gray-700 dark:border-gray-600 focus:ring-blue-500 flex-1 rounded-md border px-3 py-1.5 text-sm focus:outline-none focus:ring-2"
+          class="border-gray-200 dark:bg-gray-700 dark:border-gray-600 focus:ring-amber-500 flex-1 rounded-md border px-3 py-1.5 text-sm focus:outline-none focus:ring-2"
           @input="e => emit('update:newTagName', (e.target as HTMLInputElement).value)"
           @keydown.enter="emit('create-tag')"
-          @keydown.esc="emit('cancel-creating-tag')"
+          @keydown.esc="emit('cancelCreatingTag')"
         >
         <button
-          class="bg-blue-600 hover:bg-blue-700 rounded-md px-4 py-1.5 text-sm font-medium text-white shadow-sm transition-colors"
+          class="bg-amber-500 hover:bg-amber-600 rounded-md px-4 py-1.5 text-sm font-medium text-gray-900 shadow-sm transition-colors"
           @click="emit('create-tag')"
         >
           创建
@@ -108,18 +108,17 @@ function onClearSearch() {
         v-if="searchQuery.trim()"
         class="flex items-center justify-between px-2 py-1"
       >
-        <label class="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400 cursor-pointer select-none"
-        >
+        <label class="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400 cursor-pointer select-none">
           <input
             type="checkbox"
             :checked="compactMode"
-            class="h-3.5 w-3.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+            class="h-3.5 w-3.5 rounded border-gray-300 text-amber-600 focus:ring-amber-500"
             @change="e => emit('update:compactMode', (e.target as HTMLInputElement).checked)"
           >
           仅显示匹配项
         </label>
         <button
-          class="text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+          class="text-xs text-amber-600 hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-300"
           @click="onClearSearch"
         >
           清除搜索

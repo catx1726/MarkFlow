@@ -27,7 +27,7 @@ const barColorClass = computed(() => {
     return 'bg-red-500'
   if (p >= 50)
     return 'bg-yellow-500'
-  return 'bg-blue-600'
+  return 'bg-amber-600'
 })
 </script>
 

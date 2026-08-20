@@ -261,11 +261,11 @@ export class UIManager {
     parentsToNormalize.forEach(parent => parent.normalize())
   }
 
-  showTooltip(x: number, y: number, isHighlighted: boolean, note: string, color: string, text: string, tags: string[] = []): void {
+  showTooltip(anchorRect: DOMRect, isHighlighted: boolean, note: string, color: string, text: string, tags: string[] = []): void {
     clearTimeout(this._tooltipDebounceTimer)
     this._tooltipDebounceTimer = window.setTimeout(() => {
       this.ensureMounted()
-      this.state.tooltipApp?.show(x, y, isHighlighted, note, color, text, tags)
+      this.state.tooltipApp?.show(anchorRect, isHighlighted, note, color, text, tags)
     }, 50)
   }
 
