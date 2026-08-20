@@ -57,3 +57,5 @@
 | 2026-08-20T22:00:00+08:00 | DOCS | locales/zh-CN.ts + en.ts | 第 10 轮 CR：Blocking 判定误报（en 标签自带尾随空格，输出格式正确），补"尾随分隔符属翻译一部分"注释防误修剪 | pending | git checkout HEAD -- src/logic/i18n/locales/ |
 | 2026-08-20T22:30:00+08:00 | DOCS | docs/RELEASE_v0.8.0.md + package.json | v0.8.0 发布说明（品牌焕新/i18n/智能定位2.0/视觉精修），版本号 0.7.2→0.8.0 | pending | git checkout HEAD -- docs/RELEASE_v0.8.0.md package.json |
 | 2026-08-20T22:50:00+08:00 | DOCS | docs/lang/en/index.html + docs/index.html | PR-2 宣传页英文版：整页翻译（hero/7 特性卡/4 步/FAQ 本地化 YouTube-Reddit/CTA/footer），双向语言链接，og:locale en_US + og:url /lang/en/；Playwright CDP 截图三段验收无溢出 | pending | git checkout HEAD -- docs/index.html && rm -rf docs/lang/ |
+| 2026-08-20T23:50:00+08:00 | FIX | vite.config.mts | 关键遗漏修复：PR #69 的 setupFiles 行当时未入 commit（git add 路径未含根配置），导致 main 上 11 个测试文件因 polyfill 在 jsdom throw 而崩溃；本次补登 | pending | git checkout HEAD -- vite.config.mts |
+| 2026-08-20T23:50:00+08:00 | FIX | sidepanel 菜单翻向 | 页面底部 ⋯ 菜单被截断：新增 menuPosition 工具（shouldMenuOpenUp/menuPlacementClass），MarkItem/PageSection(url+group)/TagFolder 四处菜单下方空间不足时向上弹出；+4 单测；4 个事件改 camelCase | pending | git checkout HEAD -- src/sidepanel/ src/tests/menuPosition.spec.ts |
