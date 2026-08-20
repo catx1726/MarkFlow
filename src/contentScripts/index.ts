@@ -9,6 +9,7 @@ import { ContentChangeMonitor } from './monitor'
 import { HighlightRestorer } from './restorer'
 import { getCanonicalUrlForMark, getMarkIdFromElement, querySelectorAllDeep, querySelectorDeep } from '~/logic/dom'
 import { isPageBlacklisted, settings, settingsReady } from '~/logic/settings'
+import { getRangyRangeRect } from '~/logic/tooltipPosition'
 import { highlightDefaultStyle, shortcuts } from '~/logic/config'
 import '../styles'
 
@@ -227,7 +228,7 @@ function processSelection(event: {
         state.currentMarkIdForColorChange = null
 
         state.previewApplier?.applyToRange(range)
-        ui.showTooltip(event.clientX, event.clientY, false, '', settings.value.defaultHighlightColor, capturedText, settings.value.lastUsedTags)
+        ui.showTooltip(getRangyRangeRect(range), false, '', settings.value.defaultHighlightColor, capturedText, settings.value.lastUsedTags)
       }
       catch (e) {
         console.error('[WebMarker] Error during selection processing:', e)
@@ -242,7 +243,7 @@ function processSelection(event: {
   if (markElement && initialSelection.isCollapsed) {
     if (markElement.classList.contains('webext-highlight-preview'))
       return
-    handleExistingMarkClick(markElement, event.clientX, event.clientY)
+    handleExistingMarkClick(markElement)
     return
   }
   state.tooltipApp?.hide()
@@ -251,7 +252,7 @@ function processSelection(event: {
   state.currentSerializationRoot = undefined
 }
 
-function handleExistingMarkClick(markElement: HTMLElement, x: number, y: number) {
+function handleExistingMarkClick(markElement: HTMLElement) {
   const markId = getMarkIdFromElement(markElement)
   if (!markId)
     return
@@ -270,17 +271,17 @@ function handleExistingMarkClick(markElement: HTMLElement, x: number, y: number)
   if (root instanceof ShadowRoot)
     state.currentSerializationRoot = root
   state.serializedSelection = rangy.serializeSelection(tempSelection, true, state.currentSerializationRoot)
-  showTooltipForExistingMark(markId, x, y)
+  showTooltipForExistingMark(markId, getRangyRangeRect(range))
 }
 
-async function showTooltipForExistingMark(markId: string, x: number, y: number) {
+async function showTooltipForExistingMark(markId: string, anchorRect: DOMRect) {
   ui.ensureMounted()
   const mark = await sendMessage('get-mark-by-id', { id: markId, url: getCanonicalUrlForMark() }, 'background')
   const note = mark ? mark.note : ''
   const color = mark ? mark.color : settings.value.defaultHighlightColor
   const tags = mark ? mark.tags : undefined
   ui.setOriginalColorForChange(color)
-  state.tooltipApp?.show(x, y, true, note, color, mark?.text ?? '', tags)
+  state.tooltipApp?.show(anchorRect, true, note, color, mark?.text ?? '', tags)
 }
 
 // #endregion
@@ -313,7 +314,7 @@ onMessage('goto-chapter', ({ data }) => {
     element.scrollIntoView({ behavior: 'smooth', block: 'center' })
     if (element instanceof HTMLElement) {
       element.style.transition = 'outline 0.1s ease-in-out'
-      element.style.outline = '3px solid #3B82F6'
+      element.style.outline = '3px solid #F59E0B'
       setTimeout(() => {
         element.style.outline = ''
       }, 1500)
