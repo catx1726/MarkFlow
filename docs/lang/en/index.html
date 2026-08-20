@@ -1,47 +1,47 @@
 <!DOCTYPE html>
-<html lang="zh-CN" class="scroll-smooth">
+<html lang="en" class="scroll-smooth">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>MarkFlow - 一款能够精准跳转的网页文本标记工具</title>
+    <title>MarkFlow - Web Highlighter with Precise Jump-Back</title>
     <meta
       name="description"
-      content="MarkFlow 是一款能够精准跳转的网页文本标记工具。按住 Alt 划词标记，点击侧边栏笔记瞬间回跳原文位置。支持标签归类、章节大纲、Markdown 导出，并可基于 GitHub Gist 实现多端同步。"
+      content="MarkFlow is a web highlighter with precise jump-back. Hold Alt to highlight any text, then click a note in the Side Panel to instantly jump back to the exact spot. Tag-based organization, smart outlines, Markdown export, and optional multi-device sync via GitHub Gist."
     />
     <meta
       name="keywords"
-      content="网页高亮, 浏览器扩展, 网页批注, 笔记工具, 精准跳转, 划词工具, 侧边栏笔记, Markdown 导出, MarkFlow, 标签管理, 网页标记"
+      content="web highlighter, browser extension, web annotation, note taking, precise jump-back, select and highlight, side panel notes, Markdown export, MarkFlow, tag management, local-first, text marker"
     />
-    <!-- Open Graph / 社交分享卡片 -->
+    <!-- Open Graph / social share card -->
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="MarkFlow" />
-    <meta property="og:title" content="MarkFlow - 一款能够精准跳转的网页文本标记工具" />
+    <meta property="og:title" content="MarkFlow - Web Highlighter with Precise Jump-Back" />
     <meta
       property="og:description"
-      content="按住 Alt 划词标记，点击侧边栏笔记瞬间回跳原文位置。标签归类、章节大纲、Markdown 导出、GitHub Gist 多端同步，100% 本地存储。"
+      content="Hold Alt to highlight any text, then click a note in the Side Panel to jump back to the exact spot. Tag-based knowledge management, smart outlines, Markdown export, GitHub Gist sync, and 100% local storage."
     />
-    <meta property="og:url" content="https://flow.soulboy.site/" />
+    <meta property="og:url" content="https://flow.soulboy.site/lang/en/" />
     <meta property="og:image" content="https://flow.soulboy.site/og-image.png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
-    <meta property="og:locale" content="zh_CN" />
-    <!-- Twitter/X 卡片 -->
+    <meta property="og:locale" content="en_US" />
+    <!-- Twitter/X card -->
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="MarkFlow - 一款能够精准跳转的网页文本标记工具" />
+    <meta name="twitter:title" content="MarkFlow - Web Highlighter with Precise Jump-Back" />
     <meta
       name="twitter:description"
-      content="按住 Alt 划词标记，点击侧边栏笔记瞬间回跳原文位置。100% 本地存储，支持 GitHub Gist 同步。"
+      content="Hold Alt to highlight any text, then click a note in the Side Panel to jump back to the exact spot. 100% local storage with optional GitHub Gist sync."
     />
     <meta name="twitter:image" content="https://flow.soulboy.site/og-image.png" />
-    <link rel="icon" href="./icon.png" />
+    <link rel="icon" href="../../icon.png" />
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
-      // 1. 配置 Tailwind 使用 class 模式
+      // 1. Configure Tailwind to use class mode
       tailwind.config = {
         darkMode: 'class'
       }
 
-      // 2. 初始化主题：优先看本地缓存，没有缓存再看系统偏好
+      // 2. Initialize theme: prefer local cache, fall back to system preference
       function initTheme() {
         if (
           localStorage.theme === 'dark' ||
@@ -53,7 +53,7 @@
         }
       }
       initTheme()
-      // 暗黑模式初始化脚本
+      // Dark mode initialization script
       if (
         localStorage.theme === 'dark' ||
         (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)
@@ -64,7 +64,7 @@
       }
     </script>
     <style>
-      /* 简单的滚动动画 */
+      /* Simple scroll animation */
       .fade-up {
         opacity: 0;
         transform: translateY(20px);
@@ -74,7 +74,7 @@
         opacity: 1;
         transform: translateY(0);
       }
-      /* 针对暗黑模式的微调 */
+      /* Dark mode tweak */
       .dark .animate-blob {
         mix-blend-mode: plus-lighter;
       }
@@ -97,13 +97,13 @@
               href="#features"
               class="text-gray-600 dark:text-gray-300 hover:text-amber-600 dark:hover:text-amber-400 transition"
             >
-              功能
+              Features
             </a>
             <a
               href="#how-it-works"
               class="text-gray-600 dark:text-gray-300 hover:text-amber-600 dark:hover:text-amber-400 transition"
             >
-              指南
+              Guide
             </a>
             <a
               href="#faq"
@@ -115,14 +115,14 @@
               href="#download"
               class="text-gray-600 dark:text-gray-300 hover:text-amber-600 dark:hover:text-amber-400 transition"
             >
-              立即安装
+              Install
             </a>
           </div>
           <a
-            href="./lang/en/"
+            href="../../"
             class="text-sm text-gray-600 dark:text-gray-300 hover:text-amber-600 dark:hover:text-amber-400 transition"
           >
-            EN
+            中文
           </a>
           <button
             id="theme-toggle"
@@ -143,14 +143,14 @@
           <h1 class="text-5xl lg:text-6xl font-extrabold text-gray-900 dark:text-white tracking-tight leading-tight">
             MarkFlow
             <br />
-            <span class="text-amber-600 dark:text-amber-400 text-4xl lg:text-5xl">精准跳转的网页文本标记工具</span>
+            <span class="text-amber-600 dark:text-amber-400 text-4xl lg:text-5xl">Web Highlighter with Precise Jump-Back</span>
           </h1>
           <p class="mt-6 text-xl text-gray-500 dark:text-gray-400 mx-auto lg:mx-0">
-            按住 <b>Alt</b> 划词标记，点击侧边栏笔记，<b>瞬间回跳原文位置</b>。
-            标记自动按章节归类，打上标签后跨网页构建知识图谱。
+            Hold <b>Alt</b> to highlight any text, then click a note in the Side Panel to <b>jump back to the exact spot</b>.
+            Highlights are auto-grouped by section — add tags to build a knowledge graph across pages.
           </p>
 
-          <p class="mt-4 text-sm text-gray-400 dark:text-gray-500">* 100% 本地存储，无需注册；可选 GitHub Gist 多端同步，隐私可控。</p>
+          <p class="mt-4 text-sm text-gray-400 dark:text-gray-500">* 100% local storage, no sign-up required; optional GitHub Gist sync across devices, privacy under your control.</p>
         </div>
         <div class="fade-up relative flex justify-center items-center">
           <div
@@ -158,7 +158,7 @@
           >
             <img
               src="https://flow.soulboy.site/Highlight-Mark-Flow_4.gif"
-              alt="MarkFlow 功能演示"
+              alt="MarkFlow feature demo"
               class="max-w-full h-auto rounded-lg object-contain shadow-inner"
             />
           </div>
@@ -175,8 +175,8 @@
     <section id="features" class="py-24 bg-gray-50 dark:bg-gray-800/50">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="text-center mb-16 fade-up">
-          <h2 class="text-base font-semibold text-amber-600 dark:text-amber-400 tracking-wide uppercase">核心特性</h2>
-          <p class="mt-2 text-3xl font-extrabold text-gray-900 dark:text-white sm:text-4xl">为什么选择 MarkFlow?</p>
+          <h2 class="text-base font-semibold text-amber-600 dark:text-amber-400 tracking-wide uppercase">Core Features</h2>
+          <p class="mt-2 text-3xl font-extrabold text-gray-900 dark:text-white sm:text-4xl">Why MarkFlow?</p>
         </div>
 
         <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-10">
@@ -188,9 +188,9 @@
             >
               🏷️
             </div>
-            <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-3">标签化知识管理</h3>
+            <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-3">Tag-Based Knowledge Management</h3>
             <p class="text-gray-500 dark:text-gray-400">
-              跨网页为标记添加标签/课题维度，构建个人知识图谱。三级树状侧边栏（标签→网页→标记）让碎片信息有机归集。
+              Tag highlights across pages by topic or project to build your personal knowledge graph. A three-level tree Side Panel (tags → pages → highlights) keeps scattered info neatly organized.
             </p>
           </div>
           <div
@@ -201,9 +201,9 @@
             >
               🔗
             </div>
-            <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-3">书签式精准跳转</h3>
+            <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-3">Bookmark-Style Precise Jump-Back</h3>
             <p class="text-gray-500 dark:text-gray-400">
-              每一处标记都是一个锚点。侧边栏一键跳转，原文自动定位，再也不用手动翻找网页重点。
+              Every highlight is an anchor. One click in the Side Panel takes you right back to the original spot — no more scrolling around hunting for that key passage.
             </p>
           </div>
           <div
@@ -214,9 +214,9 @@
             >
               📑
             </div>
-            <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-3">智能大纲与排序</h3>
+            <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-3">Smart Outlines &amp; Sorting</h3>
             <p class="text-gray-500 dark:text-gray-400">
-              自动解析文章标题层级构建目录，标记按阅读顺序排列，最近活跃的网页自动置顶。
+              Automatically parses article headings into a table of contents, orders highlights by reading sequence, and pins your most recently active pages to the top.
             </p>
           </div>
           <div
@@ -227,9 +227,9 @@
             >
               🌐
             </div>
-            <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-3">自适应恢复</h3>
+            <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-3">Adaptive Recovery</h3>
             <p class="text-gray-500 dark:text-gray-400">
-              页面结构漂移或容器复用？系统会尝试自动修复。若内容发生实质性增删或布局重构，也会在侧边栏保留上下文供你确认。
+              Page structure drift or container reuse? MarkFlow tries to auto-repair. If content is substantially changed or the layout is rebuilt, it keeps the context in the Side Panel for you to confirm.
             </p>
           </div>
           <div
@@ -240,9 +240,9 @@
             >
               📤
             </div>
-            <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-3">Markdown 一键导出</h3>
+            <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-3">One-Click Markdown Export</h3>
             <p class="text-gray-500 dark:text-gray-400">
-              支持按标签或按网页导出为 Markdown，格式零层级入侵，完美嵌入 Obsidian、Notion 等笔记工具。
+              Export by tag or by page to Markdown, with a zero-hierarchy-intrusion format that drops perfectly into Obsidian, Notion, and other note-taking tools.
             </p>
           </div>
           <div
@@ -253,9 +253,9 @@
             >
               🔄
             </div>
-            <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-3">GitHub Gist 多端同步</h3>
+            <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-3">Multi-Device Sync via GitHub Gist</h3>
             <p class="text-gray-500 dark:text-gray-400">
-              基于私有 Gist 实现跨浏览器数据同步。首次连接先拉取合并，避免本地空数据覆盖云端；支持 Tombstone 墓碑机制，删除状态也能可靠同步。
+              Sync your data across browsers with a private Gist. First connect pulls and merges before writing, so empty local data never overwrites the cloud; a Tombstone mechanism ensures deletions sync reliably too.
             </p>
           </div>
           <div
@@ -266,8 +266,8 @@
             >
               🛡️
             </div>
-            <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-3">极致本地安全</h3>
-            <p class="text-gray-500 dark:text-gray-400">不采集、不上传，数据 100% 留存在你的设备中，无需注册登录。Token 仅存储在扩展私有空间。</p>
+            <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-3">Local-First Security</h3>
+            <p class="text-gray-500 dark:text-gray-400">No tracking, no uploads — 100% of your data stays on your device, with no sign-up or login required. Your token lives only in the extension's private storage.</p>
           </div>
         </div>
       </div>
@@ -276,8 +276,8 @@
     <section id="how-it-works" class="py-24 bg-gray-50 dark:bg-gray-800/50 transition-colors">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="text-center mb-16 fade-up">
-          <h2 class="text-base font-semibold text-amber-600 dark:text-amber-400 tracking-wide uppercase">快速上手</h2>
-          <p class="mt-2 text-3xl font-extrabold text-gray-900 dark:text-white sm:text-4xl">如呼吸般自然的交互体验</p>
+          <h2 class="text-base font-semibold text-amber-600 dark:text-amber-400 tracking-wide uppercase">Quick Start</h2>
+          <p class="mt-2 text-3xl font-extrabold text-gray-900 dark:text-white sm:text-4xl">An experience as natural as breathing</p>
         </div>
 
         <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-10 relative">
@@ -287,11 +287,11 @@
             >
               1
             </div>
-            <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-3">划词高亮</h3>
+            <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-3">Select &amp; Highlight</h3>
             <p class="text-gray-600 dark:text-gray-400">
-              按住
+              Hold
               <kbd class="px-2 py-1 bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-sm">Alt</kbd>
-              键（macOS 为 Option）并选中文字，即可唤起高亮工具栏。
+              (Option on macOS) and select any text to summon the highlight toolbar.
             </p>
           </div>
 
@@ -301,9 +301,9 @@
             >
               2
             </div>
-            <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-3">添加标签</h3>
+            <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-3">Add Tags</h3>
             <p class="text-gray-600 dark:text-gray-400">
-              在浮动工具栏中为标记关联标签，构建你的知识分类体系。未归类的标记自动进入<b>收集箱</b>。
+              Attach tags to highlights from the floating toolbar to build your own taxonomy. Untagged highlights land in the <b>Inbox</b> automatically.
             </p>
           </div>
 
@@ -313,11 +313,11 @@
             >
               3
             </div>
-            <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-3">结构化回顾</h3>
+            <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-3">Structured Review</h3>
             <p class="text-gray-600 dark:text-gray-400">
-              点击浏览器图标开启
-              <b>SidePanel</b>
-              ，笔记按标签 → 网页 → 章节自动排版，阅读顺序与标记顺序一致。
+              Click the browser icon to open the
+              <b>Side Panel</b>
+              — notes are auto-laid out by tag → page → section, matching your reading and highlight order.
             </p>
           </div>
 
@@ -327,9 +327,9 @@
             >
               4
             </div>
-            <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-3">精准回跳</h3>
+            <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-3">Precise Jump-Back</h3>
             <p class="text-gray-600 dark:text-gray-400">
-              在侧边栏点击任意笔记，页面将自动跳转至对应位置，并伴有视觉闪烁提示。
+              Click any note in the Side Panel and the page jumps straight to the matching spot, with a visual flash so you never lose your place.
             </p>
           </div>
         </div>
@@ -338,38 +338,38 @@
 
     <section id="faq" class="py-24 bg-white dark:bg-gray-900">
       <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        <h2 class="text-3xl font-extrabold text-center text-gray-900 dark:text-white mb-16 fade-up">常见问题</h2>
+        <h2 class="text-3xl font-extrabold text-center text-gray-900 dark:text-white mb-16 fade-up">FAQ</h2>
         <div class="space-y-8 fade-up">
           <div class="p-6 rounded-xl bg-gray-50 dark:bg-gray-800">
-            <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-2">Q: 如何快速开始标记？</h3>
+            <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-2">Q: How do I start highlighting quickly?</h3>
             <p class="text-gray-600 dark:text-gray-400">
-              A: 按住键盘上的
+              A: Hold
               <kbd class="px-2 py-1 bg-gray-200 dark:bg-gray-700 rounded">Alt</kbd>
-              键（Mac为Option）并拖拽或者点击选中文字即可弹出颜色选择栏。
+              (Option on Mac) and drag or click to select text — the color picker pops right up.
             </p>
           </div>
           <div class="p-6 rounded-xl bg-gray-50 dark:bg-gray-800">
-            <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-2">Q: 标签系统怎么用？一个标记可以打多个标签吗？</h3>
+            <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-2">Q: How does the tag system work? Can one highlight have multiple tags?</h3>
             <p class="text-gray-600 dark:text-gray-400">
-              A: 高亮后在浮动工具栏中点击"添加标签"即可关联。一个标记可以属于多个标签，它会出现在每个对应的标签文件夹下。未打标签的标记默认存放在"收集箱"中。
+              A: After highlighting, click "Add Tag" in the floating toolbar to attach tags. A highlight can belong to multiple tags and will appear under each corresponding tag folder. Untagged highlights go to the "Inbox" by default.
             </p>
           </div>
           <div class="p-6 rounded-xl bg-gray-50 dark:bg-gray-800">
-            <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-2">Q: 数据可以导出吗？</h3>
+            <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-2">Q: Can I export my data?</h3>
             <p class="text-gray-600 dark:text-gray-400">
-              A: 当然可以。MarkFlow 支持按标签或按网页一键导出为 Markdown 格式，零层级入侵设计可无缝嵌入 Obsidian、Notion 等笔记工具。
+              A: Absolutely. MarkFlow exports by tag or by page to Markdown in one click, with a zero-hierarchy-intrusion design that fits seamlessly into Obsidian, Notion, and other note tools.
             </p>
           </div>
           <div class="p-6 rounded-xl bg-gray-50 dark:bg-gray-800">
-            <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-2">Q: 我的高亮在哔哩哔哩/Reddit 等动态页面会丢失吗？</h3>
+            <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-2">Q: Will my highlights get lost on dynamic pages like YouTube or Reddit?</h3>
             <p class="text-gray-600 dark:text-gray-400">
-              A: 页面结构漂移、容器复用等常见场景下，系统会尝试自动恢复。若页面内容发生实质性增删或布局重构，可能无法自动恢复，此时会在侧边栏保留上下文供你确认。
+              A: For common cases like page structure drift or container reuse, MarkFlow tries to auto-recover. If the page content is substantially changed or the layout is rebuilt, automatic recovery may not be possible — in that case, the context is kept in the Side Panel for you to confirm.
             </p>
           </div>
           <div class="p-6 rounded-xl bg-gray-50 dark:bg-gray-800">
-            <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-2">Q: 数据可以跨设备同步吗？</h3>
+            <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-2">Q: Can I sync data across devices?</h3>
             <p class="text-gray-600 dark:text-gray-400">
-              A: 可以。在设置页配置 GitHub Personal Access Token（仅需 gist 权限），即可通过私有 Gist 在多台设备间同步。首次连接会自动拉取并合并远程数据，不会覆盖云端。
+              A: Yes. Configure a GitHub Personal Access Token (gist scope only) in the settings page to sync across devices via a private Gist. The first connection automatically pulls and merges remote data, so your cloud data is never overwritten.
             </p>
           </div>
         </div>
@@ -386,18 +386,18 @@
 
       <div class="max-w-5xl mx-auto text-center fade-up">
         <h2 class="text-4xl md:text-5xl font-extrabold mb-6 text-gray-900 dark:text-white tracking-tight">
-          准备好升级你的阅读体验了吗？
+          Ready to upgrade your reading experience?
         </h2>
         <p class="text-xl mb-12 text-gray-600 dark:text-gray-400 max-w-2xl mx-auto leading-relaxed">
-          MarkFlow 永久免费，数据完全本地存储。加入我们，让你的每一次深度阅读都留下清晰、可回溯的逻辑轨迹。
+          MarkFlow is free forever, with fully local storage. Join us and make every deep reading session leave a clear, traceable trail of thought.
         </p>
 
         <div class="flex flex-col sm:flex-row justify-center items-center gap-6">
           <a
-            href="https://addons.mozilla.org/zh-CN/firefox/addon/markflow/"
+            href="https://addons.mozilla.org/en-US/firefox/addon/markflow/"
             class="group relative flex items-center justify-center w-full sm:w-auto px-8 py-4 bg-amber-500 hover:bg-amber-600 text-gray-900 font-bold text-lg rounded-2xl shadow-xl shadow-amber-500/20 transition-all transform hover:-translate-y-1 active:scale-95 no-underline"
           >
-            立即为 Firefox 安装
+            Add to Firefox
           </a>
 
           <a
@@ -410,14 +410,14 @@
 
         <div class="mt-12 pt-8 border-t border-gray-200 dark:border-gray-800">
           <p class="text-sm text-gray-500 dark:text-gray-500">
-            想要体验最新开发版？前往
+            Want the latest dev build? Head to
             <a
               href="https://github.com/catx1726/MarkFlow/releases/"
               class="text-amber-600 dark:text-amber-400 font-semibold hover:underline decoration-2 underline-offset-4"
             >
               GitHub Releases
             </a>
-            获取全部版本
+            for all versions
           </p>
         </div>
       </div>
@@ -434,18 +434,18 @@
             </div>
             <span class="font-bold tracking-tight">MarkFlow</span>
           </div>
-          <p class="text-sm text-gray-500">© 2025 MarkFlow. 基于 MIT 协议开源。</p>
+          <p class="text-sm text-gray-500">© 2025 MarkFlow. Open sourced under the MIT License.</p>
         </div>
         <div class="flex gap-10 text-sm text-gray-500">
-          <a href="https://github.com/catx1726/MarkFlow" class="hover:text-amber-600 transition">GitHub 项目页</a>
-          <a href="#faq" class="hover:text-amber-600 transition">常见问题</a>
+          <a href="https://github.com/catx1726/MarkFlow" class="hover:text-amber-600 transition">GitHub Project</a>
+          <a href="#faq" class="hover:text-amber-600 transition">FAQ</a>
           <p class="hidden sm:block">Made with ❤️ for Readers</p>
         </div>
       </div>
     </footer>
 
     <script>
-      // 滚动显现脚本
+      // Scroll-reveal script
       const observer = new IntersectionObserver(
         (entries) => {
           entries.forEach((entry) => {
@@ -456,7 +456,7 @@
       )
       document.querySelectorAll('.fade-up').forEach((el) => observer.observe(el))
 
-      // 暗黑模式切换逻辑
+      // Dark mode toggle logic
       const themeToggleBtn = document.getElementById('theme-toggle')
       const darkIcon = document.getElementById('theme-toggle-dark-icon')
       const lightIcon = document.getElementById('theme-toggle-light-icon')

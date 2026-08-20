@@ -56,3 +56,4 @@
 | 2026-08-20T21:40:00+08:00 | FEAT | TagFolder.vue | 文件夹级收起/展开高度动画：拦截 summary 点击，Grid 0fr↔1fr（与 PageSection 同技巧同节奏），保留 details name 互斥手风琴；初始挂载不播动画 | pending | git checkout HEAD -- src/sidepanel/components/TagFolder.vue |
 | 2026-08-20T22:00:00+08:00 | DOCS | locales/zh-CN.ts + en.ts | 第 10 轮 CR：Blocking 判定误报（en 标签自带尾随空格，输出格式正确），补"尾随分隔符属翻译一部分"注释防误修剪 | pending | git checkout HEAD -- src/logic/i18n/locales/ |
 | 2026-08-20T22:30:00+08:00 | DOCS | docs/RELEASE_v0.8.0.md + package.json | v0.8.0 发布说明（品牌焕新/i18n/智能定位2.0/视觉精修），版本号 0.7.2→0.8.0 | pending | git checkout HEAD -- docs/RELEASE_v0.8.0.md package.json |
+| 2026-08-20T22:50:00+08:00 | DOCS | docs/lang/en/index.html + docs/index.html | PR-2 宣传页英文版：整页翻译（hero/7 特性卡/4 步/FAQ 本地化 YouTube-Reddit/CTA/footer），双向语言链接，og:locale en_US + og:url /lang/en/；Playwright CDP 截图三段验收无溢出 | pending | git checkout HEAD -- docs/index.html && rm -rf docs/lang/ |

@@ -97,7 +97,7 @@
 | :--- | :--- | :--- | :--- |
 | **Chromium 商店上架** | 分析 | 待办 | - |
 | **宣传页 OG/Twitter Card meta + 分享图（og-image 1200×630）** | 宣传分析 2026-08-20 | PR 待合并 | 已加全套 OG/Twitter 标签 + Playwright 渲染品牌分享图 |
-| **宣传页英文版** | 宣传分析 2026-08-20 | 待办（P0） | Reddit 宣传前置；建议与扩展 UI 英文 i18n（§1）一起规划 |
+| **宣传页英文版** | 宣传分析 2026-08-20 | PR 待合并 | Reddit 宣传前置；建议与扩展 UI 英文 i18n（§1）一起规划 |
 | **宣传页 Tailwind CDN → 编译版迁移** | 宣传分析 2026-08-20 | 待办（P1） | 消除 production warning、可 purge、改善首屏；非阻塞 |
 | **宣传素材准备（浅色模式截图 / 三连动图 / B 站演示 GIF）** | 宣传分析 2026-08-20 | 待办 | 依赖：品牌色统一 + 主题切换 |
 | **品牌色统一（blue → amber 琥珀橙）** | 宣传分析 2026-08-20 | PR 待合并 | Issue #62, `docs/superpowers/specs/2026-08-20-brand-color-unification-design.md` |
