@@ -78,7 +78,7 @@ function isGroupCollapsed(groupTitle: string): boolean {
 
 <template>
   <section
-    class="bg-white border-gray-100 dark:bg-gray-800 dark:border-gray-700 rounded-lg border shadow-sm p-[12px]"
+    class="bg-white border-gray-100 dark:bg-gray-800 dark:border-gray-700 rounded-lg border p-[12px]"
   >
     <header
       class="border-gray-200 dark:border-gray-700 group/page flex cursor-pointer items-center justify-between border-b pb-[8px] mb-[8px]"

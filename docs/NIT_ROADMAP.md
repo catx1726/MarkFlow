@@ -43,7 +43,7 @@
 | **清理未使用的 Prompt.vue 组件** | UI Review | 低 | 中 | [已完成] | `src/contentScripts/views/Prompt.vue` 无任何引用，且使用纯手写 CSS 与项目风格脱节，建议直接删除以减少维护负担。 |
 | **DisambiguationModal.vue 暗黑模式适配** | UI Review | 低 | 高 | [已完成] | 搜索框、列表、底部背景均未适配暗黑模式，与 Tooltip 的精致感形成反差。 |
 | **Popup 视觉层次与品牌感优化** | UI Review | 低 | 中 | [已完成] | 当前仅文字统计 + 三个等权灰色按钮，缺乏 Logo 和视觉重点。建议主操作（打开侧边栏）使用主色按钮。 |
-| **界面视觉精修 Sprint（设计 token / 层级减负 / 字号节律 / 微交互）** | 设计走查 2026-08-20 | 中 | 高 | ⭐⭐⭐⭐ | 结构不需重设计（与 Readwise/Glasp 同构），但存在：魔法值泛滥（`p-[12px]`/`text-[10px]`）、侧边栏盒子套盒子、最小 10px 字号、展开/hover 无微交互。精修范围：①设计 token 层（间距/字号/语义色）②侧边栏嵌套卡片改缩进+层级线 ③最小字号 12px、间距 4 倍数 ④折叠/弹出/hover 动画。**宣传素材质量的前置杠杆，应在英文 i18n 前完成（英文文案改变布局，先定版式防返工）**。 |
+| **界面视觉精修 Sprint（可读性 / 层级减负 / 微交互）** | 设计走查 2026-08-20 | 中 | 高 | [PR 待验收] | 结构不需重设计（与 Readwise/Glasp 同构）。精修范围：①Tooltip 小字 10→12px（保 px，Shadow DOM 反 rem 污染）②侧边栏嵌套卡片改缩进+引导线 ③Tooltip/文件夹展开动画。**宣传素材质量的前置杠杆，应在英文 i18n 前完成**。 |
 | **统一模态框替代原生 confirm/alert** | UI Review | 中 | 中 | ⭐⭐⭐⭐ | Sidepanel 删除操作多处使用原生 `confirm()`/`alert()`，样式不统一且阻塞执行。建议复用自定义 Dialog。 |
 | **图标系统统一化** | UI Review | 中 | 中 | ⭐⭐⭐ | 内联 SVG 与 UnoCSS Iconify（`i-carbon-*`）混用，增加维护负担。建议统一为单一方案。 |
 | **Sidepanel 设置按钮固定定位** | UI Review | 低 | 低 | [已完成] | 当前设置按钮在 Header 内随页面滚动，长列表时难以访问。建议改为 `fixed`/`sticky`。 |
@@ -100,7 +100,7 @@
 | **宣传素材准备（浅色模式截图 / 三连动图 / B 站演示 GIF）** | 宣传分析 2026-08-20 | 待办 | 依赖：品牌色统一 + 主题切换 |
 | **品牌色统一（blue → amber 琥珀橙）** | 宣传分析 2026-08-20 | PR 待合并 | Issue #62, `docs/superpowers/specs/2026-08-20-brand-color-unification-design.md` |
 | **Tooltip 定位与拖拽优化** | 用户需求 2026-08-20 | PR 待合并 | Issue #62, `docs/superpowers/specs/2026-08-20-tooltip-positioning-drag-design.md` |
-| **界面视觉精修 Sprint** | 设计走查 2026-08-20 | 待办（P1） | Issue 62 闭环后启动；i18n 前置 |
+| **界面视觉精修 Sprint** | 设计走查 2026-08-20 | PR 待验收合并 | Issue #65, `docs/superpowers/specs/2026-08-20-ui-polish-sprint-design.md` |
 | 跳过 Level 3/4 恢复算法，侧边栏提示上下文 | `.temp/detail.md` | 已完成 | Issue #50, PR #51 |
 | 高亮标记高度自定义 (`highlightHeight`) | `.temp/detail.md` | 已完成 | Issue #50, PR #51 |
 | 侧边栏搜索功能（上下文保留 + 仅显示匹配项） | `.temp/detail.md` | 已完成 | Issue #52, PR #53 |

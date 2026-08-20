@@ -55,7 +55,7 @@ function isUrlCollapsed(url: string): boolean {
   <details
     name="tag-folder"
     :open="isOpen"
-    class="mb-6 shadow-sm group/folder"
+    class="mb-6 group/folder"
   >
     <summary
       class="flex items-center gap-2 p-2 bg-gray-200 dark:bg-gray-700 rounded-t-lg cursor-pointer hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors border border-gray-200 dark:border-gray-700 list-none rounded-b-lg group-open/folder:rounded-b-none"
@@ -162,7 +162,7 @@ function isUrlCollapsed(url: string): boolean {
     </summary>
 
     <div
-      class="space-y-4 p-2 border-x border-b border-gray-200 dark:border-gray-700 rounded-b-lg bg-gray-50 dark:bg-gray-800"
+      class="folder-content space-y-4 py-2 pr-1 ml-3 pl-3 border-l-2 border-gray-200 dark:border-gray-700"
     >
       <div
         v-if="Object.keys(folder.pages).length === 0"
@@ -207,3 +207,20 @@ function isUrlCollapsed(url: string): boolean {
     </div>
   </details>
 </template>
+
+<style scoped>
+/* 文件夹展开动画：fade + 轻微下滑（原生 details 无收起动画，已知限制，接受） */
+details[open] > .folder-content {
+  animation: fold-in 150ms ease-out;
+}
+@keyframes fold-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+</style>
