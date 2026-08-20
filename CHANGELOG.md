@@ -1,5 +1,9 @@
 # Unreleased
 
+### [2026-08-20] feat(theme): 主题手动切换（跟随系统/浅色/深色） (#71)
+feat(theme): 主题手动切换（跟随系统/浅色/深色）
+
+
 ### [2026-08-20] docs(landing): 宣传页英文版（i18n PR-2） (#70)
 docs(landing): 宣传页英文版（i18n PR-2）
 
