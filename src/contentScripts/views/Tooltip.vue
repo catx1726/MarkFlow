@@ -4,7 +4,7 @@ import { computed, nextTick, onMounted, onUnmounted, reactive, ref, toRaw, watch
 import { sendMessage } from 'webext-bridge/content-script'
 import { getMaxZIndex } from '../../logic/dom'
 import { filterExistingTags } from '../../logic/tags'
-import { TOOLTIP_MARGIN, clamp, computeTooltipPosition } from '~/logic/tooltipPosition'
+import { computeTooltipPosition } from '~/logic/tooltipPosition'
 import type { AnchorRect } from '~/logic/tooltipPosition'
 import { settings } from '~/logic/settings'
 import type { Tag } from '~/logic/storage'
@@ -254,10 +254,11 @@ function onDragMove(e: PointerEvent) {
     if (!point || !isDragging.value)
       return
     const rect = tooltipRef.value?.getBoundingClientRect()
-    const width = rect?.width ?? 320
-    const height = rect?.height ?? 340
-    position.x = clamp(point.clientX - dragOffset.x, TOOLTIP_MARGIN, window.innerWidth - TOOLTIP_MARGIN - width)
-    position.y = clamp(point.clientY - dragOffset.y, TOOLTIP_MARGIN, window.innerHeight - TOOLTIP_MARGIN - height)
+    const size = { width: rect?.width ?? 320, height: rect?.height ?? 340 }
+    const viewport = { width: window.innerWidth, height: window.innerHeight }
+    const pos = clampToViewport(point.clientX - dragOffset.x, point.clientY - dragOffset.y, size, viewport)
+    position.x = pos.x
+    position.y = pos.y
   })
 }
 

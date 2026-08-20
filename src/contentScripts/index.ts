@@ -273,7 +273,8 @@ function handleExistingMarkClick(markElement: HTMLElement) {
   if (root instanceof ShadowRoot)
     state.currentSerializationRoot = root
   state.serializedSelection = rangy.serializeSelection(tempSelection, true, state.currentSerializationRoot)
-  showTooltipForExistingMark(markId, getRangyRangeRect(range) ?? allSpans[0].getBoundingClientRect())
+  // 双保险：上方已有 allSpans.length === 0 守卫，?. 防御未来重构破坏守卫
+  showTooltipForExistingMark(markId, getRangyRangeRect(range) ?? allSpans[0]?.getBoundingClientRect() ?? new DOMRect(0, 0, 0, 0))
 }
 
 async function showTooltipForExistingMark(markId: string, anchorRect: DOMRect) {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { clamp, computeTooltipPosition, getRangyRangeRect } from '~/logic/tooltipPosition'
+import { clamp, clampToViewport, computeTooltipPosition, getRangyRangeRect } from '~/logic/tooltipPosition'
 
 const VIEWPORT = { width: 1280, height: 800 }
 const TOOLTIP = { width: 320, height: 340 }
@@ -85,6 +85,22 @@ describe('clamp', () => {
 
   it('max < min 时退化为返回 min（tooltip 高于视口场景）', () => {
     expect(clamp(100, 8, -20)).toBe(8)
+  })
+})
+
+describe('clampToViewport（拖拽位置约束）', () => {
+  const size = { width: 320, height: 340 }
+
+  it('视口内坐标原样返回', () => {
+    expect(clampToViewport(100, 100, size, VIEWPORT)).toEqual({ x: 100, y: 100 })
+  })
+
+  it('拖出右/下边缘时钳制到视口内', () => {
+    expect(clampToViewport(2000, 2000, size, VIEWPORT)).toEqual({ x: 952, y: 452 })
+  })
+
+  it('拖出左/上边缘时钳制到 margin', () => {
+    expect(clampToViewport(-50, -50, size, VIEWPORT)).toEqual({ x: 8, y: 8 })
   })
 })
 

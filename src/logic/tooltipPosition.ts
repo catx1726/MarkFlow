@@ -32,6 +32,23 @@ export function clamp(value: number, min: number, max: number): number {
 }
 
 /**
+ * 将坐标点钳制在视口内（考虑元素自身尺寸与边距）。
+ * 用于拖拽等高频交互场景的位置约束。
+ */
+export function clampToViewport(
+  x: number,
+  y: number,
+  size: Size,
+  viewport: Size,
+  margin = TOOLTIP_MARGIN,
+): { x: number, y: number } {
+  return {
+    x: clamp(x, margin, viewport.width - margin - size.width),
+    y: clamp(y, margin, viewport.height - margin - size.height),
+  }
+}
+
+/**
  * 从 rangy Range 获取选区的 bounding rect。
  *
  * 注意：@types/rangy 声明 `RangyRange extends Range`（原生 DOM Range），
@@ -62,6 +79,7 @@ export function computeTooltipPosition(
 ): { x: number, y: number } {
   const anchorBottom = anchor.top + anchor.height
 
+  // 可用空间均指“锚点与视口边缘之间、扣除 margin 与 gap 后的净空间”
   const spaceBelow = viewport.height - margin - (anchorBottom + gap)
   const spaceAbove = anchor.top - gap - margin
 
