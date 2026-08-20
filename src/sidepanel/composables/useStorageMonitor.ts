@@ -1,6 +1,7 @@
 import { computed, ref } from 'vue'
 import { sendMessage } from 'webext-bridge/options'
 import { CLEANUP_DAYS_THRESHOLD } from '~/logic/config'
+import { t } from '~/logic/i18n'
 
 export function useStorageMonitor() {
   const storageUsage = ref(0)
@@ -22,7 +23,7 @@ export function useStorageMonitor() {
 
   async function cleanupOldMarks() {
     // eslint-disable-next-line no-alert
-    if (confirm(`确定要清理 ${CLEANUP_DAYS_THRESHOLD} 天前的所有标记吗？此操作不可撤销。`)) {
+    if (confirm(t('sidepanel.confirmCleanupOld', { days: CLEANUP_DAYS_THRESHOLD }))) {
       await sendMessage('cleanup-old-marks', { days: CLEANUP_DAYS_THRESHOLD }, 'background')
       await refreshUsage()
       return true
@@ -32,7 +33,7 @@ export function useStorageMonitor() {
 
   async function cleanupUselessMarks() {
     // eslint-disable-next-line no-alert
-    if (confirm('确定要清理所有没有备注的标记吗？此操作不可撤销。')) {
+    if (confirm(t('sidepanel.confirmCleanupNoNote'))) {
       await sendMessage('cleanup-useless-marks', undefined, 'background')
       await refreshUsage()
       return true

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import PageSection from './PageSection.vue'
 import type { Mark } from '~/logic/storage'
+import { t } from '~/logic/i18n'
 import type { TagTree } from '~/logic/tagTree'
 
 const props = defineProps<{
@@ -116,7 +117,7 @@ function isUrlCollapsed(url: string): boolean {
                       d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
                     />
                   </svg>
-                  <span>导出</span>
+                  <span>{{ t('common.export') }}</span>
                 </button>
               </li>
               <li>
@@ -138,7 +139,7 @@ function isUrlCollapsed(url: string): boolean {
                       d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
                     />
                   </svg>
-                  <span>重命名</span>
+                  <span>{{ t('common.rename') }}</span>
                 </button>
               </li>
               <li v-if="tagId !== 'inbox'">
@@ -153,7 +154,7 @@ function isUrlCollapsed(url: string): boolean {
                       clip-rule="evenodd"
                     />
                   </svg>
-                  <span>删除标签</span>
+                  <span>{{ t('sidepanel.deleteTag') }}</span>
                 </button>
               </li>
             </ul>
@@ -169,7 +170,7 @@ function isUrlCollapsed(url: string): boolean {
         v-if="Object.keys(folder.pages).length === 0"
         class="text-center py-8 text-gray-400 dark:text-gray-500 text-sm"
       >
-        暂无标记
+        {{ t('sidepanel.emptyFolder') }}
       </div>
       <PageSection
         v-for="[url, urlData] in Object.entries(folder.pages)"

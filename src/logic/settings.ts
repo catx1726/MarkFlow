@@ -15,6 +15,7 @@ export const defaultSettings = {
   autoAssociation: true,
   highlightHeight: 5,
   lastUsedTags: [] as string[], // 上次新建标记时选中的标签 id（本地偏好，不同步）
+  language: 'auto' as 'auto' | 'zh-CN' | 'en', // UI 语言：auto 跟随浏览器（本地偏好，不同步）
 }
 
 export function isPageBlacklisted(url: string, blacklist: string[]): boolean {

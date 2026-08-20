@@ -1,13 +1,14 @@
-import { onMounted, onUnmounted, computed, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useDebounceFn } from '@vueuse/core'
 import { sendMessage } from 'webext-bridge/options'
 import browser from 'webextension-polyfill'
+import { filterTagTree } from './searchFilter'
 import { marksByUrl, tagsMetadata } from '~/logic/storage'
 import { type TagTree, buildTagTree } from '~/logic/tagTree'
-import { filterTagTree } from './searchFilter'
+import { t } from '~/logic/i18n'
 
 export function useSidepanelData() {
-  const structuredMarks = ref<TagTree>({ inbox: { tagName: '收集箱 (Inbox)', totalMarks: 0, pages: {} } })
+  const structuredMarks = ref<TagTree>({ inbox: { tagName: t('common.inbox'), totalMarks: 0, pages: {} } })
   const searchQuery = ref('')
   const debouncedSearchQuery = ref('')
   const compactMode = ref(false)

@@ -7,6 +7,7 @@
  */
 
 import rangy from 'rangy/lib/rangy-core'
+import { t } from '~/logic/i18n'
 
 /**
  * [DOMScanner] 负责 DOM 树的递归遍历与查询
@@ -94,7 +95,7 @@ export class DOMScanner {
       return preRange.toString().length
     }
     catch (e) {
-      console.warn('[DOMScanner] Failed to calculate precise offset, falling back to indexOf')
+      console.warn('[DOMScanner] Failed to calculate precise offset, falling back to indexOf', e)
       return (container.textContent || '').indexOf(range.toString())
     }
   }
@@ -275,14 +276,14 @@ export class Highlighter {
 
     const root = startNode.getRootNode()
     const container = (root instanceof ShadowRoot) ? root : document.body
-    
+
     // [精益化] 使用提取出的原子偏移量计算方法
     const index = DOMScanner.calculatePreciseOffset(range, container)
     const containerText = container.textContent || ''
     const contextLength = 20
     const rangeText = range.toString()
     let surroundingSnippet = ''
-    
+
     if (index !== -1) {
       const start = Math.max(0, index - contextLength)
       const end = Math.min(containerText.length, index + rangeText.length + contextLength)
@@ -293,7 +294,7 @@ export class Highlighter {
       const heading = lastHeadingBeforeSelection
       const level = Number.parseInt(heading.tagName.toLowerCase().replace('h', ''), 10)
       return {
-        contextTitle: heading.textContent?.trim() || '无标题章节',
+        contextTitle: heading.textContent?.trim() || t('common.untitledSection'),
         contextSelector: DOMSelector.getElementSelector(heading),
         contextLevel: level,
         contextOrder: allHeadings.indexOf(heading),
@@ -302,7 +303,7 @@ export class Highlighter {
     }
 
     return {
-      contextTitle: '未分类笔记',
+      contextTitle: t('common.uncategorizedNotes'),
       contextSelector: 'body',
       contextLevel: 7,
       contextOrder: -1,
@@ -333,8 +334,15 @@ export class Highlighter {
  */
 export class URLNormalizer {
   private static readonly DEFAULT_TRACKING_PARAMS = [
-    'vd_source', 'spm_id_from', 'from_source', 'from',
-    'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content',
+    'vd_source',
+    'spm_id_from',
+    'from_source',
+    'from',
+    'utm_source',
+    'utm_medium',
+    'utm_campaign',
+    'utm_term',
+    'utm_content',
   ]
 
   /**
@@ -344,7 +352,7 @@ export class URLNormalizer {
   static getCanonicalUrl(customParams: string[] = []): string {
     const url = new URL(window.location.href)
     url.hash = ''
-    
+
     const paramsToRemove = [...URLNormalizer.DEFAULT_TRACKING_PARAMS, ...customParams]
     paramsToRemove.forEach(param => url.searchParams.delete(param))
 
@@ -366,8 +374,9 @@ export class TextAnalyzer {
   static cleanText(str: string): string {
     return str
       .replace(/[\u200B-\u200D\uFEFF]/g, '') // 移除零宽字符
-      .replace(/[\x00-\x1F\x7F-\x9F]/g, '')  // 移除控制字符
-      .replace(/\s+/g, '')                   // 移除所有空白
+      // eslint-disable-next-line no-control-regex -- 有意匹配并移除控制字符
+      .replace(/[\x00-\x1F\x7F-\x9F]/g, '') // 移除控制字符
+      .replace(/\s+/g, '') // 移除所有空白
       .toLowerCase()
   }
 
@@ -377,7 +386,7 @@ export class TextAnalyzer {
   static calculateSimilarity(str1: string, str2: string): number {
     const s1 = TextAnalyzer.cleanText(str1)
     const s2 = TextAnalyzer.cleanText(str2)
-    
+
     if (s1 === s2)
       return 100
     if (!s1 || !s2)

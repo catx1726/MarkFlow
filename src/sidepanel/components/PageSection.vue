@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import MarkItem from './MarkItem.vue'
 import type { Mark } from '~/logic/storage'
+import { t } from '~/logic/i18n'
 import type { MarkGroup } from '~/logic/tagTree'
 
 const props = defineProps<{
@@ -138,7 +139,7 @@ function isGroupCollapsed(groupTitle: string): boolean {
                       d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
                     />
                   </svg>
-                  <span>导出</span>
+                  <span>{{ t('common.export') }}</span>
                 </button>
               </li>
               <li>
@@ -149,7 +150,7 @@ function isGroupCollapsed(groupTitle: string): boolean {
                   <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
                     <path fill-rule="evenodd" d="M17.707 9.293a1 1 0 010 1.414l-7 7a1 1 0 01-1.414 0l-7-7A.997.997 0 012 10V5a3 3 0 013-3h5c.266 0 .52.105.707.293l7 7zM5 6a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd" />
                   </svg>
-                  <span>管理标签</span>
+                  <span>{{ t('common.manageTags') }}</span>
                 </button>
               </li>
               <li>
@@ -160,7 +161,7 @@ function isGroupCollapsed(groupTitle: string): boolean {
                   <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
                     <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" />
                   </svg>
-                  <span>清空标记</span>
+                  <span>{{ t('sidepanel.clearMarks') }}</span>
                 </button>
               </li>
             </ul>
@@ -189,7 +190,7 @@ function isGroupCollapsed(groupTitle: string): boolean {
               <div class="relative ml-2 flex-shrink-0" @click.stop>
                 <button
                   class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-full p-1 opacity-0 transition-opacity group-hover:opacity-100"
-                  title="分组操作"
+                  :title="t('sidepanel.groupActions')"
                   @click="emit('toggle-group-menu', url, group.title)"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
@@ -212,7 +213,7 @@ function isGroupCollapsed(groupTitle: string): boolean {
                           <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                           </svg>
-                          <span>导出</span>
+                          <span>{{ t('common.export') }}</span>
                         </button>
                       </li>
                       <li>
@@ -223,7 +224,7 @@ function isGroupCollapsed(groupTitle: string): boolean {
                           <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
                             <path fill-rule="evenodd" d="M17.707 9.293a1 1 0 010 1.414l-7 7a1 1 0 01-1.414 0l-7-7A.997.997 0 012 10V5a3 3 0 013-3h5c.266 0 .52.105.707.293l7 7zM5 6a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd" />
                           </svg>
-                          <span>管理标签</span>
+                          <span>{{ t('common.manageTags') }}</span>
                         </button>
                       </li>
                       <li>
@@ -234,7 +235,7 @@ function isGroupCollapsed(groupTitle: string): boolean {
                           <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
                             <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" />
                           </svg>
-                          <span>删除标记</span>
+                          <span>{{ t('sidepanel.deleteMark') }}</span>
                         </button>
                       </li>
                     </ul>

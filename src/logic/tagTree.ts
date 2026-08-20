@@ -1,4 +1,5 @@
 import type { Mark, Tag } from './storage'
+import { t } from '~/logic/i18n'
 
 export interface MarkGroup {
   title: string
@@ -26,7 +27,7 @@ export function buildTagTree(
   tagsMetadata: Record<string, Tag>,
 ): TagTree {
   const tree: TagTree = {
-    inbox: { tagName: '收集箱 (Inbox)', totalMarks: 0, pages: {} }
+    inbox: { tagName: t('common.inbox'), totalMarks: 0, pages: {} },
   }
 
   Object.values(tagsMetadata).forEach((tag) => {
@@ -37,7 +38,7 @@ export function buildTagTree(
     .map(([url, marks]) => ({
       url,
       marks: marks.filter(m => !m.deletedAt),
-      lastActive: marks.length > 0 ? Math.max(...marks.map(m => Math.max(m.createdAt, m.deletedAt || 0))) : 0
+      lastActive: marks.length > 0 ? Math.max(...marks.map(m => Math.max(m.createdAt, m.deletedAt || 0))) : 0,
     }))
     .filter(({ marks }) => marks.length > 0)
     .sort((a, b) => b.lastActive - a.lastActive)
@@ -59,12 +60,12 @@ export function buildTagTree(
         pageEntry.totalMarks++
         tree[actualTagId].totalMarks++
 
-        const contextTitle = mark.contextTitle || '未分类标记'
+        const contextTitle = mark.contextTitle || t('common.uncategorizedMark')
         const contextLevel = mark.contextLevel || 7
         const contextSelector = mark.contextSelector || 'body'
         const contextOrder = mark.contextOrder ?? -1
 
-        let group = pageEntry.groups.find((g) => g.title === contextTitle)
+        let group = pageEntry.groups.find(g => g.title === contextTitle)
         if (!group) {
           group = {
             title: contextTitle,
@@ -72,7 +73,7 @@ export function buildTagTree(
             selector: contextSelector,
             marks: [],
             count: 0,
-            order: contextOrder
+            order: contextOrder,
           }
           pageEntry.groups.push(group)
         }
@@ -85,7 +86,8 @@ export function buildTagTree(
     Object.values(folder.pages).forEach((page) => {
       page.groups.forEach((group) => {
         group.marks.sort((a, b) => {
-          if (a.domIndex !== undefined && b.domIndex !== undefined) return a.domIndex - b.domIndex
+          if (a.domIndex !== undefined && b.domIndex !== undefined)
+            return a.domIndex - b.domIndex
           return a.createdAt - b.createdAt
         })
         group.count = group.marks.length

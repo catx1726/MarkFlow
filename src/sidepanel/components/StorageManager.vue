@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { CLEANUP_DAYS_THRESHOLD } from '~/logic/config'
+import { t } from '~/logic/i18n'
 
 const props = defineProps<{
   storageUsage: number
@@ -68,13 +69,13 @@ const barColorClass = computed(() => {
           </span>
         </div>
         <div v-else class="text-sm font-medium text-gray-700 dark:text-gray-200 truncate">
-          存储空间
+          {{ t('sidepanel.storageSpace') }}
         </div>
       </div>
 
       <button
         class="p-1 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors flex-shrink-0"
-        :title="isExpanded ? '收起' : '展开存储管理'"
+        :title="isExpanded ? t('sidepanel.collapse') : t('sidepanel.expandStorage')"
         @click="toggleExpanded"
       >
         <svg
@@ -114,9 +115,9 @@ const barColorClass = computed(() => {
       <div class="overflow-hidden">
         <div class="mt-2 text-gray-600 dark:text-gray-400 text-sm">
           <p>
-            已用空间: {{ (storageUsage / 1024).toFixed(2) }} KB /
+            {{ t('sidepanel.usedSpace') }}{{ (storageUsage / 1024).toFixed(2) }} KB /
             <span v-if="storageQuota">{{ (storageQuota / 1024 / 1024).toFixed(2) }} MB</span>
-            <span v-else>无已知限制</span>
+            <span v-else>{{ t('sidepanel.noKnownLimit') }}</span>
           </p>
           <div class="bg-gray-200 dark:bg-gray-700 mt-1 h-2 w-full rounded-full overflow-hidden">
             <div
@@ -132,13 +133,13 @@ const barColorClass = computed(() => {
             class="bg-red-100 text-red-800 hover:bg-red-200 dark:bg-red-900/50 dark:text-red-400 dark:hover:bg-red-900 rounded-md px-3 py-1 text-sm font-medium transition-colors"
             @click="emit('cleanup-old')"
           >
-            清理 {{ CLEANUP_DAYS_THRESHOLD }} 天前的标记
+            {{ t('sidepanel.cleanupOldMarks', { days: CLEANUP_DAYS_THRESHOLD }) }}
           </button>
           <button
             class="bg-yellow-100 text-yellow-800 hover:bg-yellow-200 dark:bg-yellow-900/50 dark:text-yellow-400 dark:hover:bg-yellow-900 rounded-md px-3 py-1 text-sm font-medium transition-colors"
             @click="emit('cleanup-useless')"
           >
-            清理无备注的标记
+            {{ t('sidepanel.cleanupNoNoteMarks') }}
           </button>
         </div>
       </div>

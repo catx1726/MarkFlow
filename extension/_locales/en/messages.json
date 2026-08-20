@@ -1,0 +1,10 @@
+{
+  "appName": {
+    "message": "MarkFlow",
+    "description": "Extension name (brand, not translated)"
+  },
+  "appDesc": {
+    "message": "More than a highlighter — your web content navigator. Build structured outlines automatically and jump back to the exact source position.",
+    "description": "Extension description shown in store listing and extension management page"
+  }
+}
