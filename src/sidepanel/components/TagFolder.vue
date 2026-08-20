@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { MENU_HEIGHTS, menuPlacementClass, shouldMenuOpenUp } from '../composables/menuPosition'
+import { MENU_HEIGHTS, shouldMenuOpenUp } from '../composables/menuPosition'
 import PageSection from './PageSection.vue'
 import type { Mark } from '~/logic/storage'
 import { t } from '~/logic/i18n'
@@ -146,7 +146,7 @@ function onSummaryClick(e: MouseEvent) {
           <div
             v-if="activeFolderMenu === tagId"
             class="absolute right-0 w-40 bg-white dark:bg-gray-700 rounded-md shadow-lg z-20 border border-gray-200 dark:border-gray-600"
-            :class="menuPlacementClass(folderMenuUp)"
+            :class="folderMenuUp ? 'bottom-full mb-2' : 'mt-2'"
           >
             <ul class="py-1">
               <li>

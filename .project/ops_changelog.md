@@ -66,3 +66,4 @@
 | 2026-08-21T09:00:00+08:00 | DOCS | docs/NIT_ROADMAP.md | 宣传战役收尾：OG meta/英文版/品牌色/Tooltip/视觉精修/主题切换/i18n 全部标记已完成（PR #63-#72）；素材准备依赖就绪 | pending | git checkout HEAD -- docs/NIT_ROADMAP.md |
 | 2026-08-21T09:10:00+08:00 | DOCS | docs/RELEASE_v0.8.0.md | 发布说明补录 PR #70/#71/#72：主题手动切换、菜单翻向、宣传页英文版、边距微调、测试基建修复 | pending | git checkout HEAD -- docs/RELEASE_v0.8.0.md |
 | 2026-08-21T09:25:00+08:00 | DOCS | docs/NIT_ROADMAP.md | 全面状态刷新：视觉精修/Tooltip定位/动画转正为已完成；新增审计日志双写统一、git add 遗漏防护两条流程负债；§6 补录菜单翻向+setupFiles 修复（PR #72） | pending | git checkout HEAD -- docs/NIT_ROADMAP.md |
+| 2026-08-21T09:50:00+08:00 | FIX | MarkItem/PageSection/TagFolder + menuPosition | 修复菜单翻向未生效：UnoCSS 默认不扫描 .ts 文件字符串字面量，menuPlacementClass 返回的 bottom-full/mb-2 从未进入编译 CSS；改为模板内联三元（.vue 可被扫描），删除 menuPlacementClass 及对应测试 | pending | git checkout HEAD -- src/sidepanel/ |

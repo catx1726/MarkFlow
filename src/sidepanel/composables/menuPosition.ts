@@ -22,8 +22,3 @@ export function shouldMenuOpenUp(e: MouseEvent, estimatedHeight: number): boolea
   const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
   return window.innerHeight - rect.bottom < estimatedHeight
 }
-
-/** 生成条件 class：向上弹出用 bottom-full，向下用 mt- */
-export function menuPlacementClass(opensUp: boolean, marginClass = 'mt-2'): string {
-  return opensUp ? 'bottom-full mb-2' : marginClass
-}
