@@ -1,5 +1,9 @@
 # Unreleased
 
+### [2026-08-20] feat(i18n): 英文国际化 — 扩展 UI 双语（PR-1） (#69)
+feat(i18n): 英文国际化 — 扩展 UI 双语（PR-1）
+
+
 ### [2026-08-20] fix(content): 已有标记 Tooltip 改用点击点锚点 (#67)
 fix(content): 已有标记 Tooltip 改用点击点锚点
 
