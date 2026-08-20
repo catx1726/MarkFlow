@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref, toRaw, watchEffect } from 'vue'
-import { usePreferredDark } from '@vueuse/core'
 import { sendMessage } from 'webext-bridge/options'
 import browser from 'webextension-polyfill'
 
@@ -19,7 +18,8 @@ import { marksByUrl, tagsMetadata } from '~/logic/storage'
 import { t } from '~/logic/i18n'
 
 // --- Setup ---
-const isDark = usePreferredDark()
+import { isDark } from '~/logic/theme'
+
 watchEffect(() => {
   if (isDark.value)
     document.documentElement.classList.add('dark')

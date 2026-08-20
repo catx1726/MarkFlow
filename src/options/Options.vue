@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, reactive, ref, watch, watchEffect } from 'vue'
-import { usePreferredDark } from '@vueuse/core'
 import { cloneDeep } from 'lodash-es'
 import browser from 'webextension-polyfill'
 import { sendMessage } from 'webext-bridge/options'
@@ -12,7 +11,8 @@ import { createGist, getGists } from '~/logic/sync'
 import { t } from '~/logic/i18n'
 import type { Messages } from '~/logic/i18n'
 
-const isDark = usePreferredDark()
+import { isDark } from '~/logic/theme'
+
 watchEffect(() => {
   if (isDark.value)
     document.documentElement.classList.add('dark')
@@ -216,6 +216,9 @@ async function triggerPull({ force = false, timeoutMs = 8000, token = '', gistId
 
 // ========== 左侧导航与 Scroll Spy ==========
 type OptionsKey = `options.${keyof Messages['options']}`
+
+// 通用设置区下拉框共享样式
+const formSelectClass = 'px-[12px] py-[8px] text-[14px] rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-amber-500'
 
 const navItems: { id: string, label: OptionsKey }[] = [
   { id: 'welcome', label: 'options.navWelcome' },
@@ -440,7 +443,7 @@ onUnmounted(() => {
           </p>
           <select
             v-model="localSettings.language"
-            class="px-[12px] py-[8px] text-[14px] rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-amber-500"
+            :class="formSelectClass"
           >
             <option value="auto">
               {{ t('options.languageAuto') }}
@@ -450,6 +453,27 @@ onUnmounted(() => {
             </option>
             <option value="en">
               {{ t('options.languageEn') }}
+            </option>
+          </select>
+
+          <p class="text-[14px] text-gray-500 mt-[20px] mb-[4px]">
+            {{ t('options.themeLabel') }}
+          </p>
+          <p class="text-[13px] text-gray-400 mb-[12px]">
+            {{ t('options.themeDesc') }}
+          </p>
+          <select
+            v-model="localSettings.theme"
+            :class="formSelectClass"
+          >
+            <option value="auto">
+              {{ t('options.themeAuto') }}
+            </option>
+            <option value="light">
+              {{ t('options.themeLight') }}
+            </option>
+            <option value="dark">
+              {{ t('options.themeDark') }}
             </option>
           </select>
         </div>
