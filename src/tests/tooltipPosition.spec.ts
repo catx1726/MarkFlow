@@ -74,6 +74,15 @@ describe('computeTooltipPosition', () => {
     // 下方: 800-20-(124+16) = 640 >= 340 ✓；水平左对齐锚点
     expect(pos.x).toBe(anchor.left)
   })
+
+  it('点锚点（点击已有标记场景）：出现在点击点下方，视口底部则翻转上方', () => {
+    // 点击页面中部 → 下方
+    expect(computeTooltipPosition({ top: 400, left: 300, width: 0, height: 0 }, TOOLTIP, VIEWPORT))
+      .toEqual({ x: 300, y: 400 + GAP })
+    // 点击靠近底部 → 翻转到上方
+    expect(computeTooltipPosition({ top: 780, left: 300, width: 0, height: 0 }, TOOLTIP, VIEWPORT))
+      .toEqual({ x: 300, y: 780 - GAP - TOOLTIP.height })
+  })
 })
 
 describe('clamp', () => {

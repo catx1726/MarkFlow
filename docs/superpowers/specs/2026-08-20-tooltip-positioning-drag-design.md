@@ -75,7 +75,7 @@ function computeTooltipPosition(
 |---|---|---|---|
 | 1 | `src/logic/tooltipPosition.ts` | — | **新建**：`computeTooltipPosition` 纯函数 |
 | 2 | `src/contentScripts/index.ts:230`（新建标记） | 传 `event.clientX/Y` | 改传 `range.nativeRange.getBoundingClientRect()`（需确认 rangy Range 的 nativeRange 访问方式，fallback：`rangy.getSelection().getRangeAt(0).getBoundingClientRect()`） |
-| 3 | `src/contentScripts/index.ts:273`（已有标记点击） | 传点击 `x, y` | 改传被点击高亮元素的 `getBoundingClientRect()` |
+| 3 | `src/contentScripts/index.ts`（已有标记点击） | 传点击 `x, y` | 传**点击点锚点** `new DOMRect(x, y, 0, 0)`（context-menu 式出现在鼠标下方；2026-08-20 修订：初版传整个标记矩形，长标记时 tooltip 出现在标记最前方，视觉断联） |
 | 4 | `src/contentScripts/ui.ts:264` `showTooltip` | 签名 `(x, y, ...)` | 签名改为 `(anchorRect: Rect, ...)`，透传 |
 | 5 | `src/contentScripts/views/Tooltip.vue` `show()` | 硬编码 320×340 + margin 钳制 | 两阶段渲染 + 调纯函数 |
 
