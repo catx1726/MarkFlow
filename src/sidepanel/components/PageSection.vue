@@ -95,7 +95,7 @@ function isGroupCollapsed(groupTitle: string): boolean {
 
 <template>
   <section
-    class="bg-white border-gray-100 dark:bg-gray-800 dark:border-gray-700 rounded-lg border p-[12px]"
+    class="bg-white border-gray-200 dark:bg-gray-800 dark:border-gray-700 rounded-lg border p-[12px]"
   >
     <!-- 网页级吸顶：top = 主 header 高 + 文件夹行高；两个 CSS 变量分别由
          Sidepanel.vue / TagFolder.vue 用 ResizeObserver 运行时测量写入，fallback 值（120/40）为估计值，

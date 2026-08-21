@@ -224,7 +224,7 @@ async function handleDeleteTag(tagId: string) {
     >
       <div
         v-if="Object.keys(marksByUrl).length === 0 && Object.keys(tagsMetadata).length === 0"
-        class="w-full flex flex-col items-center justify-center text-gray-500 rounded-lg bg-white dark:bg-gray-800 p-6 shadow-md py-12"
+        class="w-full flex flex-col items-center justify-center text-gray-500 rounded-lg bg-white dark:bg-gray-800 p-6 py-12 border border-gray-200 dark:border-gray-700"
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"

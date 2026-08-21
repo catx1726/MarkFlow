@@ -1,5 +1,9 @@
 # Unreleased
 
+### [2026-08-21] style(sidepanel): 统一卡片层级——常驻层零阴影，阴影只表达浮层 (#76)
+style(sidepanel): 统一卡片层级——常驻层零阴影，阴影只表达浮层
+
+
 ### [2026-08-21] fix(sidepanel): 长标题不再挤出数量统计 (#75)
 fix(sidepanel): 长标题不再挤出数量统计
 

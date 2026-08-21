@@ -34,7 +34,7 @@ function onClearSearch() {
 
     <div class="space-y-2">
       <div
-        class="flex gap-2 bg-white dark:bg-gray-800 p-2 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700"
+        class="flex gap-2 bg-white dark:bg-gray-800 p-2 rounded-lg border border-gray-200 dark:border-gray-700"
       >
         <div class="relative flex-1">
           <svg
@@ -91,7 +91,7 @@ function onClearSearch() {
 
       <div
         v-if="isCreatingTag"
-        class="flex gap-2 bg-white dark:bg-gray-800 p-2 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700"
+        class="flex gap-2 bg-white dark:bg-gray-800 p-2 rounded-lg border border-gray-200 dark:border-gray-700"
       >
         <input
           :value="newTagName"
