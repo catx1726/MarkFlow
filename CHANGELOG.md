@@ -1,5 +1,9 @@
 # Unreleased
 
+### [2026-08-21] feat(sidepanel): 网页级标题补标记计数 (#74)
+feat(sidepanel): 网页级标题补标记计数
+
+
 ### [2026-08-20] fix: 底部菜单翻向 + 补登 vitest setupFiles（修 main 测试崩溃） (#72)
 fix: 底部菜单翻向 + 补登 vitest setupFiles（修 main 测试崩溃）
 
