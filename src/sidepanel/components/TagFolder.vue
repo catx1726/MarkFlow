@@ -130,7 +130,7 @@ function onSummaryClick(e: MouseEvent) {
           clip-rule="evenodd"
         />
       </svg>
-      <span class="font-bold text-gray-700 dark:text-gray-200 flex-1">{{ folder.tagName }}</span>
+      <span class="font-bold text-gray-700 dark:text-gray-200 flex-1 min-w-0 truncate" :title="folder.tagName">{{ folder.tagName }}</span>
       <span
         class="px-2 py-0.5 text-xs font-semibold bg-gray-100 dark:bg-gray-600 text-gray-500 dark:text-gray-300 rounded-full mr-2"
       >

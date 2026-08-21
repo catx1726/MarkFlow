@@ -115,7 +115,7 @@ function isGroupCollapsed(groupTitle: string): boolean {
             clip-rule="evenodd"
           />
         </svg>
-        <h2 class="dark:text-gray-300 truncate text-sm font-semibold text-gray-700" :title="url">
+        <h2 class="dark:text-gray-300 min-w-0 flex-1 truncate text-sm font-semibold text-gray-700" :title="url">
           {{ urlData.pageTitle }}
         </h2>
         <span class="text-gray-400 text-xs font-normal flex-shrink-0">({{ urlData.totalMarks }})</span>
@@ -203,8 +203,8 @@ function isGroupCollapsed(groupTitle: string): boolean {
             >
               <h3 class="min-w-0 flex-1 truncate" :class="getLevelClass(group.level)">
                 {{ group.title }}
-                <span class="text-gray-400 text-xs font-normal">({{ group.count }})</span>
               </h3>
+              <span class="text-gray-400 text-xs font-normal flex-shrink-0">({{ group.count }})</span>
               <div class="relative ml-2 flex-shrink-0" @click.stop>
                 <button
                   class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-full p-1 opacity-0 transition-opacity group-hover:opacity-100"
