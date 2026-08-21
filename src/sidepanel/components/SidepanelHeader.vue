@@ -25,8 +25,10 @@ function onClearSearch() {
 </script>
 
 <template>
-  <header class="sticky top-0 z-40 bg-gray-100 dark:bg-gray-900 pb-2">
-    <h1 class="text-xl font-bold text-center text-gray-800 dark:text-gray-200 mt-4 mb-2">
+  <!-- sticky top-0 + pt-4：顶部间距由 header 自身 padding 提供（背景同步覆盖），
+       吸顶位置=初始位置，无跳变；滚动内容不会从 header 上方穿透 -->
+  <header class="sticky top-0 z-40 bg-gray-100 dark:bg-gray-900 pt-4 pb-2">
+    <h1 class="text-xl font-bold text-center text-gray-800 dark:text-gray-200 mb-2">
       {{ t('sidepanel.title') }}
     </h1>
 

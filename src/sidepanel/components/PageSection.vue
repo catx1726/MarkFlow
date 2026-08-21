@@ -97,8 +97,11 @@ function isGroupCollapsed(groupTitle: string): boolean {
   <section
     class="bg-white border-gray-200 dark:bg-gray-800 dark:border-gray-700 rounded-lg border p-[12px]"
   >
+    <!-- 网页级吸顶：top = 主 header 高 + 文件夹行高；两个 CSS 变量分别由
+         Sidepanel.vue / TagFolder.vue 用 ResizeObserver 运行时测量写入，fallback 值（120/40）为估计值，
+         调整任一侧高度时无需改此处（变量会覆盖）。层级：z-40 主header > z-30 标签夹 > z-20 网页 -->
     <header
-      class="border-gray-200 dark:border-gray-700 group/page flex cursor-pointer items-center justify-between border-b pb-[8px] mb-[8px]"
+      class="border-gray-200 dark:border-gray-700 group/page sticky z-20 top-[calc(var(--sidepanel-header-h,120px)+var(--folder-row-h,40px))] flex cursor-pointer items-center justify-between border-b bg-gray-50 pb-[8px] mb-[8px] dark:bg-gray-900"
       @click="emit('toggle-url-collapse', url)"
     >
       <div class="min-w-0 flex-1 flex items-center gap-2">

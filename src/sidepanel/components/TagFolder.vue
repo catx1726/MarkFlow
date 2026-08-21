@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onMounted, onUnmounted, ref } from 'vue'
 import { MENU_HEIGHTS, shouldMenuOpenUp } from '../composables/menuPosition'
 import PageSection from './PageSection.vue'
 import type { Mark } from '~/logic/storage'
@@ -61,6 +61,10 @@ function onFolderMenuClick(e: MouseEvent) {
   emit('toggleFolderMenu', props.tagId)
 }
 
+// --- 文件夹行高测量（供网页级 header 吸顶定位） ---
+// ResizeObserver 持续跟踪（字体加载/窗口变化会改变行高），与 Sidepanel 测 header 同一模式
+let rowHeightObserver: ResizeObserver | null = null
+
 // --- 文件夹展开/收起高度动画（Grid 0fr↔1fr） ---
 // 拦截 summary 原生瞬切：收起时先播动画再真正关闭 details
 const detailsRef = ref<HTMLDetailsElement | null>(null)
@@ -71,6 +75,19 @@ let closeTimer: number | undefined
 onMounted(() => {
   // 初始状态同步（如 inbox 默认展开），不播动画
   foldOpen.value = props.isOpen
+  const summaryEl = detailsRef.value?.querySelector('summary')
+  if (summaryEl) {
+    const updateVar = () => {
+      document.documentElement.style.setProperty('--folder-row-h', `${summaryEl.offsetHeight}px`)
+    }
+    updateVar()
+    rowHeightObserver = new ResizeObserver(updateVar)
+    rowHeightObserver.observe(summaryEl)
+  }
+})
+
+onUnmounted(() => {
+  rowHeightObserver?.disconnect()
 })
 
 function onSummaryClick(e: MouseEvent) {
@@ -114,7 +131,7 @@ function onSummaryClick(e: MouseEvent) {
   >
     <!-- sticky 吸顶：z-30 介于主 header（z-40）与内容之间；top 由 --sidepanel-header-h 驱动（Sidepanel.vue ResizeObserver 测量），调整任一侧时注意联动 -->
     <summary
-      class="flex items-center gap-2 p-2 bg-white dark:bg-gray-800 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors border border-gray-200 dark:border-gray-700 list-none sticky z-30 top-[var(--sidepanel-header-h,104px)]"
+      class="flex items-center gap-2 p-2 bg-white dark:bg-gray-800 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors border border-gray-200 dark:border-gray-700 list-none sticky z-30 top-[var(--sidepanel-header-h,120px)]"
       :class="{ 'opacity-50 grayscale': folder.totalMarks === 0 }"
       @click="onSummaryClick"
     >

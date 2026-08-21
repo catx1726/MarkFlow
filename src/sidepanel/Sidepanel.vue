@@ -202,7 +202,7 @@ async function handleDeleteTag(tagId: string) {
 
 <template>
   <main
-    class="min-h-screen bg-gray-100 dark:bg-gray-900 p-4 font-sans relative text-gray-800 dark:text-gray-200 flex flex-col gap-4"
+    class="min-h-screen bg-gray-100 dark:bg-gray-900 px-4 font-sans relative text-gray-800 dark:text-gray-200 flex flex-col gap-4"
     :class="isStorageExpanded ? 'pb-48' : 'pb-16'"
   >
     <SidepanelHeader
