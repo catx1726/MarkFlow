@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { onMounted, ref } from 'vue'
 import { MENU_HEIGHTS, shouldMenuOpenUp } from '../composables/menuPosition'
 import MarkItem from './MarkItem.vue'
 import type { Mark } from '~/logic/storage'
@@ -74,6 +74,15 @@ function getLevelBorderStyle(level: number) {
 // --- 菜单翻向：底部空间不足时向上弹出（同 MarkItem） ---
 const urlMenuUp = ref(false)
 const groupMenuUp = ref(false)
+
+// --- 网页 header 高度测量（供章节组吸顶定位） ---
+const pageHeaderRef = ref<HTMLElement | null>(null)
+
+onMounted(() => {
+  // 所有网页 header 行高一致，任一实例测量即可
+  if (pageHeaderRef.value)
+    document.documentElement.style.setProperty('--page-header-h', `${pageHeaderRef.value.offsetHeight}px`)
+})
 
 function onUrlMenuClick(e: MouseEvent) {
   urlMenuUp.value = shouldMenuOpenUp(e, MENU_HEIGHTS.url)
@@ -200,7 +209,7 @@ function isGroupCollapsed(groupTitle: string): boolean {
         <div class="fold-inner">
           <div v-for="group in urlData.groups" :key="group.title" class="group-container mt-1">
             <header
-              class="group group-header -mx-2 flex cursor-pointer items-center justify-between px-2 py-2 transition-colors"
+              class="group group-header sticky z-10 top-[calc(var(--sidepanel-header-h,120px)+var(--folder-row-h,40px)+var(--page-header-h,38px))] -mx-2 flex cursor-pointer items-center justify-between bg-white px-2 py-2 transition-colors dark:bg-gray-800"
               :style="getLevelBorderStyle(group.level)"
               @click="emit('toggle-group', url, group.title, urlData.totalMarks)"
             >
