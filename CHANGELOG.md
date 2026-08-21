@@ -1,5 +1,9 @@
 # Unreleased
 
+### [2026-08-21] feat(sidepanel): 章节大纲级吸顶（四级堆叠完整） (#78)
+feat(sidepanel): 章节大纲级吸顶（四级堆叠完整）
+
+
 ### [2026-08-21] fix(sidepanel): 吸顶两级优化——header 零跳变 + 网页级吸顶 (#77)
 fix(sidepanel): 吸顶两级优化——header 零跳变 + 网页级吸顶
 
