@@ -98,7 +98,7 @@ function isGroupCollapsed(groupTitle: string): boolean {
     class="bg-white border-gray-100 dark:bg-gray-800 dark:border-gray-700 rounded-lg border p-[12px]"
   >
     <header
-      class="border-gray-200 dark:border-gray-700 group/page sticky z-20 top-[calc(var(--sidepanel-header-h,120px)+var(--folder-row-h,40px))] -mx-[12px] flex cursor-pointer items-center justify-between border-b bg-white px-[12px] pb-[8px] mb-[8px] dark:bg-gray-800"
+      class="border-gray-200 dark:border-gray-700 group/page sticky z-20 top-[calc(var(--sidepanel-header-h,120px)+var(--folder-row-h,40px))] flex cursor-pointer items-center justify-between border-b bg-gray-50 pb-[8px] mb-[8px] dark:bg-gray-900"
       @click="emit('toggle-url-collapse', url)"
     >
       <div class="min-w-0 flex-1 flex items-center gap-2">

@@ -126,8 +126,7 @@ onMounted(() => {
   const headerEl = headerCompRef.value?.$el
   if (headerEl instanceof HTMLElement) {
     const updateHeaderHeight = () => {
-      // +16：header 吸顶于 top-4（16px），文件夹行需吸顶在 header 底部
-      document.documentElement.style.setProperty('--sidepanel-header-h', `${headerEl.offsetHeight + 16}px`)
+      document.documentElement.style.setProperty('--sidepanel-header-h', `${headerEl.offsetHeight}px`)
     }
     updateHeaderHeight()
     headerResizeObserver = new ResizeObserver(updateHeaderHeight)
@@ -203,7 +202,7 @@ async function handleDeleteTag(tagId: string) {
 
 <template>
   <main
-    class="min-h-screen bg-gray-100 dark:bg-gray-900 p-4 font-sans relative text-gray-800 dark:text-gray-200 flex flex-col gap-4"
+    class="min-h-screen bg-gray-100 dark:bg-gray-900 px-4 font-sans relative text-gray-800 dark:text-gray-200 flex flex-col gap-4"
     :class="isStorageExpanded ? 'pb-48' : 'pb-16'"
   >
     <SidepanelHeader
