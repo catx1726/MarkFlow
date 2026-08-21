@@ -77,3 +77,4 @@
 | 2026-08-21T11:45:00+08:00 | STYLE | SidepanelHeader/PageSection/TagFolder/Sidepanel | 侧边栏卡片层级统一：常驻卡片层全部 bg-white+gray-200 边线零阴影（搜索卡去 shadow-sm、空态卡去 shadow-md、页面卡边框 100→200、文件夹行 dark 背景 700→800）；阴影只保留给浮层（菜单/弹窗） | pending | git checkout HEAD -- src/sidepanel/ |
 | 2026-08-21T13:00:00+08:00 | DOCS | docs/RELEASE_v0.8.0.md | 发布说明补录 PR #74-#77：网页级计数、三级吸顶、卡片层级统一、长标题截断修复 | pending | git checkout HEAD -- docs/RELEASE_v0.8.0.md |
 | 2026-08-21T13:30:00+08:00 | FEAT | PageSection.vue | 章节组（大纲）级吸顶：group-header sticky z-10，top=主header+标签夹+网页三级高度（--page-header-h 由 PageSection 测量写入）；长大纲滚动时始终知道当前章节 | pending | git checkout HEAD -- src/sidepanel/components/PageSection.vue |
+| 2026-08-21T14:00:00+08:00 | DOCS | docs/RELEASE_v0.8.0.md | 发布说明补录 PR #78：三级吸顶→四级吸顶（含章节大纲级） | pending | git checkout HEAD -- docs/RELEASE_v0.8.0.md |
