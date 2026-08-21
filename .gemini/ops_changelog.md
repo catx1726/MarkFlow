@@ -129,3 +129,4 @@
 | 2026-08-21 10:40:00 | Fix fold-inner horizontal overflow | src/sidepanel/components/{PageSection,TagFolder}.vue | Grid children default min-width:auto → long unbreakable titles overflow; added min-width:0 | HEAD | git revert HEAD |
 | 2026-08-21 11:00:00 | Page-level mark count badge | src/sidepanel/components/PageSection.vue | Adds (n) count next to page title, matching chapter-level style; uses existing urlData.totalMarks | HEAD | git revert HEAD |
 | 2026-08-21 11:20:00 | Fix long titles pushing count badges off-screen | src/sidepanel/components/{PageSection,TagFolder}.vue | h2 min-w-0 for flex truncate; group count span moved out of truncating h3; tag name span truncate+min-w-0 | HEAD | git revert HEAD |
+| 2026-08-21 11:45:00 | Unify sidepanel card elevation | src/sidepanel/** | All persistent cards: white bg + gray-200 border, zero shadow; shadows reserved for floating layers (menus/modals) only | HEAD | git revert HEAD |
