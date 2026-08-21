@@ -118,6 +118,7 @@ function isGroupCollapsed(groupTitle: string): boolean {
         <h2 class="dark:text-gray-300 truncate text-sm font-semibold text-gray-700" :title="url">
           {{ urlData.pageTitle }}
         </h2>
+        <span class="text-gray-400 text-xs font-normal flex-shrink-0">({{ urlData.totalMarks }})</span>
       </div>
       <div class="relative flex-shrink-0" @click.stop>
         <button
