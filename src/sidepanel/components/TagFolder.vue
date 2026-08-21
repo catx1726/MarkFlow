@@ -78,7 +78,7 @@ onMounted(() => {
   const summaryEl = detailsRef.value?.querySelector('summary')
   if (summaryEl) {
     const updateVar = () => {
-      document.documentElement.style.setProperty('--folder-row-h', `${summaryEl.offsetHeight}px`)
+      document.documentElement.style.setProperty('--folder-row-h', `${summaryEl.offsetHeight + 8}px`)
     }
     updateVar()
     rowHeightObserver = new ResizeObserver(updateVar)
