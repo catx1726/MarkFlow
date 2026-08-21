@@ -78,3 +78,4 @@
 | 2026-08-21T13:00:00+08:00 | DOCS | docs/RELEASE_v0.8.0.md | 发布说明补录 PR #74-#77：网页级计数、三级吸顶、卡片层级统一、长标题截断修复 | pending | git checkout HEAD -- docs/RELEASE_v0.8.0.md |
 | 2026-08-21T13:30:00+08:00 | FEAT | PageSection.vue | 章节组（大纲）级吸顶：group-header sticky z-10，top=主header+标签夹+网页三级高度（--page-header-h 由 PageSection 测量写入）；长大纲滚动时始终知道当前章节 | pending | git checkout HEAD -- src/sidepanel/components/PageSection.vue |
 | 2026-08-21T14:00:00+08:00 | DOCS | docs/RELEASE_v0.8.0.md | 发布说明补录 PR #78：三级吸顶→四级吸顶（含章节大纲级） | pending | git checkout HEAD -- docs/RELEASE_v0.8.0.md |
+| 2026-08-21T12:20:00+08:00 | RELEASE | docs/index.html + docs/lang/en/index.html + Release 资产 | v0.8.0 收尾：两个宣传页 zip 下载链接 v0.7.2→v0.8.0；重新构建 chromium/firefox 双平台 zip 并 --clobber 覆盖 Release 资产（原资产为旧构建） | pending | git checkout HEAD -- docs/ |
