@@ -70,3 +70,4 @@
 | 2026-08-21T10:10:00+08:00 | FIX | TagFolder.vue | 菜单截断第二层根因：fold-inner 的 overflow:hidden 常驻（文件夹动画所需）会裁剪向下弹出的菜单；改为仅 fold-anim 动画期生效，动画结束（160ms）即移除 | pending | git checkout HEAD -- src/sidepanel/components/TagFolder.vue |
 | 2026-08-21T10:40:00+08:00 | FIX | PageSection.vue + TagFolder.vue | fold-inner 横向溢出：Grid 子项 min-width:auto 不收缩，长标题（英文落地页标题）撑破容器出现横向滚动条；补 min-width:0（Grid/Flex 收缩标准修法） | pending | git checkout HEAD -- src/sidepanel/components/ |
 | 2026-08-21T11:00:00+08:00 | FEAT | PageSection.vue | 网页级标题补标记计数 (n)，与章节层同款浅灰小字样式；urlData.totalMarks 现成字段，零逻辑改动 | pending | git checkout HEAD -- src/sidepanel/components/PageSection.vue |
+| 2026-08-21T11:20:00+08:00 | FIX | PageSection.vue + TagFolder.vue | 长标题挤出计数修复：h2 补 min-w-0（truncate 在 flex 子项生效的前提）；章节组计数 span 移出 truncating h3 为兄弟节点；标签名 span 补 truncate+min-w-0+title | pending | git checkout HEAD -- src/sidepanel/components/ |
