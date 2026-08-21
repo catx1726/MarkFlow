@@ -71,6 +71,10 @@ let closeTimer: number | undefined
 onMounted(() => {
   // 初始状态同步（如 inbox 默认展开），不播动画
   foldOpen.value = props.isOpen
+  // 测量文件夹行高并写入 CSS 变量，供网页级 header 吸顶定位（所有文件夹行高一致，测一次即可）
+  const summaryEl = detailsRef.value?.querySelector('summary')
+  if (summaryEl)
+    document.documentElement.style.setProperty('--folder-row-h', `${summaryEl.offsetHeight}px`)
 })
 
 function onSummaryClick(e: MouseEvent) {
@@ -114,7 +118,7 @@ function onSummaryClick(e: MouseEvent) {
   >
     <!-- sticky 吸顶：z-30 介于主 header（z-40）与内容之间；top 由 --sidepanel-header-h 驱动（Sidepanel.vue ResizeObserver 测量），调整任一侧时注意联动 -->
     <summary
-      class="flex items-center gap-2 p-2 bg-white dark:bg-gray-700 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors border border-gray-200 dark:border-gray-700 list-none sticky z-30 top-[var(--sidepanel-header-h,104px)]"
+      class="flex items-center gap-2 p-2 bg-white dark:bg-gray-700 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors border border-gray-200 dark:border-gray-700 list-none sticky z-30 top-[var(--sidepanel-header-h,120px)]"
       :class="{ 'opacity-50 grayscale': folder.totalMarks === 0 }"
       @click="onSummaryClick"
     >

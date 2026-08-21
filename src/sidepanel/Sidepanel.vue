@@ -126,7 +126,8 @@ onMounted(() => {
   const headerEl = headerCompRef.value?.$el
   if (headerEl instanceof HTMLElement) {
     const updateHeaderHeight = () => {
-      document.documentElement.style.setProperty('--sidepanel-header-h', `${headerEl.offsetHeight}px`)
+      // +16：header 吸顶于 top-4（16px），文件夹行需吸顶在 header 底部
+      document.documentElement.style.setProperty('--sidepanel-header-h', `${headerEl.offsetHeight + 16}px`)
     }
     updateHeaderHeight()
     headerResizeObserver = new ResizeObserver(updateHeaderHeight)
