@@ -1,5 +1,9 @@
 # Unreleased
 
+### [2026-08-21] fix(sidepanel): 长标题不再挤出数量统计 (#75)
+fix(sidepanel): 长标题不再挤出数量统计
+
+
 ### [2026-08-21] fix(sidepanel): 菜单翻向未生效 — UnoCSS 不扫描 .ts 字符串字面量 (#73)
 fix(sidepanel): 菜单翻向未生效 — UnoCSS 不扫描 .ts 字符串字面量
 
