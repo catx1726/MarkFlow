@@ -71,3 +71,4 @@
 | 2026-08-21T10:40:00+08:00 | FIX | PageSection.vue + TagFolder.vue | fold-inner 横向溢出：Grid 子项 min-width:auto 不收缩，长标题（英文落地页标题）撑破容器出现横向滚动条；补 min-width:0（Grid/Flex 收缩标准修法） | pending | git checkout HEAD -- src/sidepanel/components/ |
 | 2026-08-21T11:00:00+08:00 | FEAT | PageSection.vue | 网页级标题补标记计数 (n)，与章节层同款浅灰小字样式；urlData.totalMarks 现成字段，零逻辑改动 | pending | git checkout HEAD -- src/sidepanel/components/PageSection.vue |
 | 2026-08-21T11:20:00+08:00 | FIX | PageSection.vue + TagFolder.vue | 长标题挤出计数修复：h2 补 min-w-0（truncate 在 flex 子项生效的前提）；章节组计数 span 移出 truncating h3 为兄弟节点；标签名 span 补 truncate+min-w-0+title | pending | git checkout HEAD -- src/sidepanel/components/ |
+| 2026-08-21T11:45:00+08:00 | STYLE | SidepanelHeader/PageSection/TagFolder/Sidepanel | 侧边栏卡片层级统一：常驻卡片层全部 bg-white+gray-200 边线零阴影（搜索卡去 shadow-sm、空态卡去 shadow-md、页面卡边框 100→200、文件夹行 dark 背景 700→800）；阴影只保留给浮层（菜单/弹窗） | pending | git checkout HEAD -- src/sidepanel/ |
