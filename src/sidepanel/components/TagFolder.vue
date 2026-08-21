@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onMounted, onUnmounted, ref } from 'vue'
 import { MENU_HEIGHTS, shouldMenuOpenUp } from '../composables/menuPosition'
 import PageSection from './PageSection.vue'
 import type { Mark } from '~/logic/storage'
@@ -61,6 +61,10 @@ function onFolderMenuClick(e: MouseEvent) {
   emit('toggleFolderMenu', props.tagId)
 }
 
+// --- 文件夹行高测量（供网页级 header 吸顶定位） ---
+// ResizeObserver 持续跟踪（字体加载/窗口变化会改变行高），与 Sidepanel 测 header 同一模式
+let rowHeightObserver: ResizeObserver | null = null
+
 // --- 文件夹展开/收起高度动画（Grid 0fr↔1fr） ---
 // 拦截 summary 原生瞬切：收起时先播动画再真正关闭 details
 const detailsRef = ref<HTMLDetailsElement | null>(null)
@@ -71,10 +75,19 @@ let closeTimer: number | undefined
 onMounted(() => {
   // 初始状态同步（如 inbox 默认展开），不播动画
   foldOpen.value = props.isOpen
-  // 测量文件夹行高并写入 CSS 变量，供网页级 header 吸顶定位（所有文件夹行高一致，测一次即可）
   const summaryEl = detailsRef.value?.querySelector('summary')
-  if (summaryEl)
-    document.documentElement.style.setProperty('--folder-row-h', `${summaryEl.offsetHeight}px`)
+  if (summaryEl) {
+    const updateVar = () => {
+      document.documentElement.style.setProperty('--folder-row-h', `${summaryEl.offsetHeight}px`)
+    }
+    updateVar()
+    rowHeightObserver = new ResizeObserver(updateVar)
+    rowHeightObserver.observe(summaryEl)
+  }
+})
+
+onUnmounted(() => {
+  rowHeightObserver?.disconnect()
 })
 
 function onSummaryClick(e: MouseEvent) {
