@@ -282,6 +282,8 @@ function onSummaryClick(e: MouseEvent) {
   grid-template-rows: 0fr;
 }
 .fold-inner {
+  /* Grid 子项默认 min-width:auto 不收缩，长标题会撑破容器；补 min-width:0 允许收缩截断 */
+  min-width: 0;
   min-height: 0;
 }
 .folder-grid.fold-anim {

@@ -312,6 +312,8 @@ function isGroupCollapsed(groupTitle: string): boolean {
 }
 .fold-inner {
   min-height: 0;
+  /* Grid 子项默认 min-width:auto 不收缩，长标题会撑破容器；补 min-width:0 允许收缩截断 */
+  min-width: 0;
 }
 .fold-collapsed {
   grid-template-rows: 0fr;

@@ -68,3 +68,4 @@
 | 2026-08-21T09:25:00+08:00 | DOCS | docs/NIT_ROADMAP.md | 全面状态刷新：视觉精修/Tooltip定位/动画转正为已完成；新增审计日志双写统一、git add 遗漏防护两条流程负债；§6 补录菜单翻向+setupFiles 修复（PR #72） | pending | git checkout HEAD -- docs/NIT_ROADMAP.md |
 | 2026-08-21T09:50:00+08:00 | FIX | MarkItem/PageSection/TagFolder + menuPosition | 修复菜单翻向未生效：UnoCSS 默认不扫描 .ts 文件字符串字面量，menuPlacementClass 返回的 bottom-full/mb-2 从未进入编译 CSS；改为模板内联三元（.vue 可被扫描），删除 menuPlacementClass 及对应测试 | pending | git checkout HEAD -- src/sidepanel/ |
 | 2026-08-21T10:10:00+08:00 | FIX | TagFolder.vue | 菜单截断第二层根因：fold-inner 的 overflow:hidden 常驻（文件夹动画所需）会裁剪向下弹出的菜单；改为仅 fold-anim 动画期生效，动画结束（160ms）即移除 | pending | git checkout HEAD -- src/sidepanel/components/TagFolder.vue |
+| 2026-08-21T10:40:00+08:00 | FIX | PageSection.vue + TagFolder.vue | fold-inner 横向溢出：Grid 子项 min-width:auto 不收缩，长标题（英文落地页标题）撑破容器出现横向滚动条；补 min-width:0（Grid/Flex 收缩标准修法） | pending | git checkout HEAD -- src/sidepanel/components/ |
