@@ -1,5 +1,9 @@
 # Unreleased
 
+### [2026-08-21] fix(sidepanel): 菜单翻向未生效 — UnoCSS 不扫描 .ts 字符串字面量 (#73)
+fix(sidepanel): 菜单翻向未生效 — UnoCSS 不扫描 .ts 字符串字面量
+
+
 ### [2026-08-21] feat(sidepanel): 网页级标题补标记计数 (#74)
 feat(sidepanel): 网页级标题补标记计数
 
