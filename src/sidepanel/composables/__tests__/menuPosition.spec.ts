@@ -1,5 +1,5 @@
 import { beforeAll, describe, expect, it } from 'vitest'
-import { menuPlacementClass, shouldMenuOpenUp } from '~/sidepanel/composables/menuPosition'
+import { shouldMenuOpenUp } from '~/sidepanel/composables/menuPosition'
 
 beforeAll(() => {
   // 显式固定视口高度，防 jsdom 默认值漂移导致测试脆弱
@@ -23,11 +23,5 @@ describe('menuPosition', () => {
 
   it('边界值：恰好等于预估高度时向下', () => {
     expect(shouldMenuOpenUp(mockEvent(260), 260)).toBe(false)
-  })
-
-  it('menuPlacementClass 生成正确位置类', () => {
-    expect(menuPlacementClass(false)).toBe('mt-2')
-    expect(menuPlacementClass(true)).toBe('bottom-full mb-2')
-    expect(menuPlacementClass(false, 'mt-1')).toBe('mt-1')
   })
 })

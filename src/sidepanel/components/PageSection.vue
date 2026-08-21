@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { MENU_HEIGHTS, menuPlacementClass, shouldMenuOpenUp } from '../composables/menuPosition'
+import { MENU_HEIGHTS, shouldMenuOpenUp } from '../composables/menuPosition'
 import MarkItem from './MarkItem.vue'
 import type { Mark } from '~/logic/storage'
 import { t } from '~/logic/i18n'
@@ -135,7 +135,7 @@ function isGroupCollapsed(groupTitle: string): boolean {
           <div
             v-if="activeUrlMenu === url"
             class="bg-white border-gray-200 dark:bg-gray-700 dark:border-gray-600 absolute right-0 z-20 w-32 rounded-md border shadow-lg"
-            :class="menuPlacementClass(urlMenuUp)"
+            :class="urlMenuUp ? 'bottom-full mb-2' : 'mt-2'"
           >
             <ul class="py-1">
               <li>
@@ -221,7 +221,7 @@ function isGroupCollapsed(groupTitle: string): boolean {
                   <div
                     v-if="activeGroupMenu === `${url}|${group.title}`"
                     class="bg-white border-gray-200 dark:bg-gray-700 dark:border-gray-600 absolute right-0 z-20 w-36 rounded-md border shadow-lg"
-                    :class="menuPlacementClass(groupMenuUp, 'mt-1')"
+                    :class="groupMenuUp ? 'bottom-full mb-2' : 'mt-1'"
                   >
                     <ul class="py-1">
                       <li>
@@ -313,6 +313,8 @@ function isGroupCollapsed(groupTitle: string): boolean {
 }
 .fold-inner {
   min-height: 0;
+  /* Grid 子项默认 min-width:auto 不收缩，长标题会撑破容器；补 min-width:0 允许收缩截断 */
+  min-width: 0;
 }
 .fold-collapsed {
   grid-template-rows: 0fr;
