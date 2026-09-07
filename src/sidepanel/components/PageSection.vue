@@ -52,14 +52,14 @@ const emit = defineEmits<{
 
 function getLevelClass(level: number) {
   const levelStyles: Record<number, string> = {
-    1: 'text-sm font-bold text-gray-900 dark:text-gray-100',
-    2: 'text-sm font-semibold text-gray-800 dark:text-gray-200',
-    3: 'text-xs font-semibold text-gray-700 dark:text-gray-300',
-    4: 'text-xs font-medium text-gray-600 dark:text-gray-400',
-    5: 'text-xs font-medium text-gray-600 dark:text-gray-400',
-    6: 'text-xs font-medium text-gray-600 dark:text-gray-400',
+    1: 'text-sm font-bold text-neutral-900 dark:text-neutral-100',
+    2: 'text-sm font-semibold text-neutral-800 dark:text-neutral-200',
+    3: 'text-xs font-semibold text-neutral-700 dark:text-neutral-300',
+    4: 'text-xs font-medium text-neutral-600 dark:text-neutral-400',
+    5: 'text-xs font-medium text-neutral-600 dark:text-neutral-400',
+    6: 'text-xs font-medium text-neutral-600 dark:text-neutral-400',
   }
-  return levelStyles[level] || 'text-xs font-medium text-gray-500 dark:text-gray-500'
+  return levelStyles[level] || 'text-xs font-medium text-neutral-500 dark:text-neutral-500'
 }
 
 function getLevelStripeStyle(level: number) {
@@ -109,21 +109,21 @@ function isGroupCollapsed(groupTitle: string): boolean {
 
 <template>
   <section
-    class="bg-white border-gray-200 dark:bg-gray-800 dark:border-gray-700 rounded-lg border p-[12px]"
+    class="bg-white border-neutral-200 dark:bg-neutral-800 dark:border-neutral-700 rounded-md border p-[12px]"
   >
     <!-- 网页级吸顶：top = 主 header 高 + 文件夹行高；两个 CSS 变量分别由
          Sidepanel.vue / TagFolder.vue 用 ResizeObserver 运行时测量写入，fallback 值（120/40）为估计值，
          调整任一侧高度时无需改此处（变量会覆盖）。层级 token 见 src/logic/layers.ts：
          stickyHeader > stickyFolder > stickyPage；菜单打开时临时提升至 menuElevated（Issue #79） -->
     <header
-      class="bg-white dark:border-gray-700 group/page fold-sticky sticky top-[calc(var(--sidepanel-header-h,120px)+var(--folder-row-h,40px))] flex cursor-pointer items-center justify-between border-b pb-[8px] mb-[8px] dark:bg-gray-800"
+      class="bg-white dark:border-neutral-700 group/page fold-sticky sticky top-[calc(var(--sidepanel-header-h,120px)+var(--folder-row-h,40px))] flex cursor-pointer items-center justify-between border-b pb-[8px] mb-[8px] dark:bg-neutral-800"
       :style="{ zIndex: activeUrlMenu === url ? Z_LAYERS.menuElevated : Z_LAYERS.stickyPage }"
       @click="emit('toggle-url-collapse', url)"
     >
       <div class="min-w-0 flex-1 flex items-center gap-2">
         <svg
           xmlns="http://www.w3.org/2000/svg"
-          class="h-[14px] w-[14px] flex-shrink-0 text-gray-400 transition-transform duration-200 group-hover/page:text-gray-600"
+          class="h-[14px] w-[14px] flex-shrink-0 text-neutral-400 transition-transform duration-200 group-hover/page:text-neutral-600"
           :class="{ 'rotate-[-90deg]': isCollapsed }"
           viewBox="0 0 20 20"
           fill="currentColor"
@@ -134,14 +134,14 @@ function isGroupCollapsed(groupTitle: string): boolean {
             clip-rule="evenodd"
           />
         </svg>
-        <h2 class="dark:text-gray-300 min-w-0 flex-1 truncate text-sm font-semibold text-gray-700" :title="url">
+        <h2 class="dark:text-neutral-300 min-w-0 flex-1 truncate text-sm font-semibold text-neutral-700" :title="url">
           {{ urlData.pageTitle }}
         </h2>
-        <span class="text-gray-400 text-xs font-normal flex-shrink-0">({{ urlData.totalMarks }})</span>
+        <span class="text-neutral-400 text-xs font-normal flex-shrink-0">({{ urlData.totalMarks }})</span>
       </div>
       <div class="relative flex-shrink-0" @click.stop>
         <button
-          class="text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 rounded-full p-1"
+          class="text-neutral-500 hover:text-neutral-800 dark:text-neutral-400 dark:hover:text-neutral-200 rounded-full p-1"
           @click="onUrlMenuClick"
         >
           <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
@@ -153,13 +153,13 @@ function isGroupCollapsed(groupTitle: string): boolean {
         <transition name="fade-scale">
           <div
             v-if="activeUrlMenu === url"
-            class="bg-white border-gray-200 dark:bg-gray-700 dark:border-gray-600 absolute right-0 w-32 rounded-md border shadow-lg"
+            class="bg-white border-neutral-200 dark:bg-neutral-700 dark:border-neutral-600 absolute right-0 w-32 rounded-md border"
             :class="urlMenuUp ? 'bottom-full mb-2' : 'mt-2'"
           >
             <ul class="py-1">
               <li>
                 <button
-                  class="text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 flex w-full items-center gap-2 px-4 py-2 text-left text-sm"
+                  class="text-neutral-700 dark:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-600 flex w-full items-center gap-2 px-4 py-2 text-left text-sm"
                   @click="emit('export-markdown', urlData)"
                 >
                   <svg
@@ -181,7 +181,7 @@ function isGroupCollapsed(groupTitle: string): boolean {
               </li>
               <li>
                 <button
-                  class="text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 flex w-full items-center gap-2 px-4 py-2 text-left text-sm"
+                  class="text-neutral-700 dark:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-600 flex w-full items-center gap-2 px-4 py-2 text-left text-sm"
                   @click="emit('open-tag-picker', url)"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
@@ -210,17 +210,17 @@ function isGroupCollapsed(groupTitle: string): boolean {
       <div>
         <div v-for="group in urlData.groups" :key="group.title" class="group-container">
           <header
-            class="group group-header mt-1 fold-sticky sticky top-[calc(var(--sidepanel-header-h,120px)+var(--folder-row-h,40px)+var(--page-header-h,38px))] -mx-2 flex cursor-pointer items-center justify-between bg-white px-2 py-2 transition-colors dark:bg-gray-800"
+            class="group group-header mt-1 fold-sticky sticky top-[calc(var(--sidepanel-header-h,120px)+var(--folder-row-h,40px)+var(--page-header-h,38px))] -mx-2 flex cursor-pointer items-center justify-between bg-white px-2 py-2 transition-colors dark:bg-neutral-800"
             :style="[getLevelStripeStyle(group.level), { zIndex: activeGroupMenu === `${url}|${group.title}` ? Z_LAYERS.menuElevated : Z_LAYERS.stickyChapter }]"
             @click="emit('toggle-group', url, group.title, urlData.totalMarks)"
           >
             <h3 class="min-w-0 flex-1 truncate" :class="getLevelClass(group.level)">
               {{ group.title }}
             </h3>
-            <span class="text-gray-400 text-xs font-normal flex-shrink-0">({{ group.count }})</span>
+            <span class="text-neutral-400 text-xs font-normal flex-shrink-0">({{ group.count }})</span>
             <div class="relative ml-2 flex-shrink-0" @click.stop>
               <button
-                class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-full p-1 opacity-0 transition-opacity group-hover:opacity-100"
+                class="text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 rounded-full p-1 opacity-0 transition-opacity group-hover:opacity-100"
                 :title="t('sidepanel.groupActions')"
                 @click="e => onGroupMenuClick(e, group.title)"
               >
@@ -233,13 +233,13 @@ function isGroupCollapsed(groupTitle: string): boolean {
               <transition name="fade-scale">
                 <div
                   v-if="activeGroupMenu === `${url}|${group.title}`"
-                  class="bg-white border-gray-200 dark:bg-gray-700 dark:border-gray-600 absolute right-0 w-36 rounded-md border shadow-lg"
+                  class="bg-white border-neutral-200 dark:bg-neutral-700 dark:border-neutral-600 absolute right-0 w-36 rounded-md border"
                   :class="groupMenuUp ? 'bottom-full mb-2' : 'mt-1'"
                 >
                   <ul class="py-1">
                     <li>
                       <button
-                        class="text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm"
+                        class="text-neutral-700 dark:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-600 flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm"
                         @click="emit('export-group', url, group)"
                       >
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -250,7 +250,7 @@ function isGroupCollapsed(groupTitle: string): boolean {
                     </li>
                     <li>
                       <button
-                        class="text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm"
+                        class="text-neutral-700 dark:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-600 flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm"
                         @click="emit('open-group-tag-picker', url, group.title)"
                       >
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">

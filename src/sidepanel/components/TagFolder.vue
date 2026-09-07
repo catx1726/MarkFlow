@@ -174,14 +174,14 @@ function onSummaryClick(e: MouseEvent) {
          top 由 --sidepanel-header-h 驱动（Sidepanel.vue ResizeObserver 测量），调整任一侧时注意联动。
          菜单打开时临时提升至 menuElevated，脱离其他吸顶层的遮挡（Issue #79） -->
     <summary
-      class="flex items-center gap-2 p-2 bg-white dark:bg-gray-800 rounded-lg cursor-pointer transition-colors border border-gray-200 dark:border-gray-700 list-none sticky top-[var(--sidepanel-header-h,120px)]"
+      class="flex items-center gap-2 p-2 bg-white dark:bg-neutral-800 rounded-md cursor-pointer transition-colors border border-neutral-200 dark:border-neutral-700 list-none sticky top-[var(--sidepanel-header-h,120px)]"
       :class="{ 'opacity-50 grayscale': folder.totalMarks === 0 }"
       :style="{ zIndex: activeFolderMenu === tagId ? Z_LAYERS.menuElevated : Z_LAYERS.stickyFolder }"
       @click="onSummaryClick"
     >
       <svg
         xmlns="http://www.w3.org/2000/svg"
-        class="h-5 w-5 text-gray-500 transition-transform duration-200 group-open/folder:rotate-0 rotate-[-90deg]"
+        class="h-5 w-5 text-neutral-500 transition-transform duration-200 group-open/folder:rotate-0 rotate-[-90deg]"
         viewBox="0 0 20 20"
         fill="currentColor"
       >
@@ -191,15 +191,15 @@ function onSummaryClick(e: MouseEvent) {
           clip-rule="evenodd"
         />
       </svg>
-      <span class="font-bold text-gray-700 dark:text-gray-200 flex-1 min-w-0 truncate" :title="folder.tagName">{{ folder.tagName }}</span>
+      <span class="font-bold text-neutral-700 dark:text-neutral-200 flex-1 min-w-0 truncate" :title="folder.tagName">{{ folder.tagName }}</span>
       <span
-        class="px-2 py-0.5 text-xs font-semibold bg-gray-100 dark:bg-gray-600 text-gray-500 dark:text-gray-300 rounded-full mr-2"
+        class="px-2 py-0.5 text-xs font-semibold bg-neutral-100 dark:bg-neutral-600 text-neutral-500 dark:text-neutral-300 rounded-full mr-2"
       >
         {{ folder.totalMarks }}
       </span>
       <div class="relative flex-shrink-0" @click.stop>
         <button
-          class="p-1 text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 rounded-full"
+          class="p-1 text-neutral-500 hover:text-neutral-800 dark:text-neutral-400 dark:hover:text-neutral-200 rounded-full"
           @click.stop="onFolderMenuClick"
         >
           <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
@@ -211,13 +211,13 @@ function onSummaryClick(e: MouseEvent) {
         <transition name="fade-scale">
           <div
             v-if="activeFolderMenu === tagId"
-            class="absolute right-0 w-40 bg-white dark:bg-gray-700 rounded-md shadow-lg border border-gray-200 dark:border-gray-600"
+            class="absolute right-0 w-40 bg-white dark:bg-neutral-700 rounded-md border border-neutral-200 dark:border-neutral-600"
             :class="folderMenuUp ? 'bottom-full mb-2' : 'mt-2'"
           >
             <ul class="py-1">
               <li>
                 <button
-                  class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 flex items-center gap-2"
+                  class="w-full text-left px-4 py-2 text-sm text-neutral-700 dark:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-600 flex items-center gap-2"
                   @click="emit('export-tag-folder', folder)"
                 >
                   <svg
@@ -239,7 +239,7 @@ function onSummaryClick(e: MouseEvent) {
               </li>
               <li>
                 <button
-                  class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 flex items-center gap-2"
+                  class="w-full text-left px-4 py-2 text-sm text-neutral-700 dark:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-600 flex items-center gap-2"
                   @click="emit('open-rename-dialog', tagId)"
                 >
                   <svg
@@ -284,11 +284,11 @@ function onSummaryClick(e: MouseEvent) {
          原生 details 的 name 互斥手风琴保留；其他文件夹被浏览器自动关闭时无动画（已知限制，接受）。 -->
     <div class="folder-grid">
       <div
-        class="folder-content space-y-4 py-2 ml-3 pl-3 border-l-2 border-gray-200 dark:border-gray-600"
+        class="folder-content space-y-4 py-2 ml-3 pl-3 border-l-2 border-neutral-200 dark:border-neutral-600"
       >
         <div
           v-if="Object.keys(folder.pages).length === 0"
-          class="text-center py-8 text-gray-400 dark:text-gray-500 text-sm"
+          class="text-center py-8 text-neutral-400 dark:text-neutral-500 text-sm"
         >
           {{ t('sidepanel.emptyFolder') }}
         </div>

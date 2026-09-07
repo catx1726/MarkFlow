@@ -35,15 +35,15 @@ const barColorClass = computed(() => {
 
 <template>
   <div
-    class="fixed bottom-0 left-0 right-0 bg-white/80 dark:bg-gray-800/80 border-t border-gray-200 dark:border-gray-700 backdrop-blur-sm transition-all duration-200 ease-in-out"
+    class="fixed bottom-0 left-0 right-0 bg-white/80 dark:bg-neutral-800/80 border-t border-neutral-200 dark:border-neutral-700 backdrop-blur-sm transition-all duration-200 ease-in-out"
     :style="{ zIndex: Z_LAYERS.fixedBar }"
-    :class="isExpanded ? 'p-4 shadow-lg' : 'px-3 py-2'"
+    :class="isExpanded ? 'p-4' : 'px-3 py-2'"
   >
     <!-- 始终可见的头部行 -->
     <div class="flex items-center gap-3">
       <svg
         xmlns="http://www.w3.org/2000/svg"
-        class="h-4 w-4 text-gray-500 dark:text-gray-400 flex-shrink-0"
+        class="h-4 w-4 text-neutral-500 dark:text-neutral-400 flex-shrink-0"
         viewBox="0 0 24 24"
         fill="none"
         stroke="currentColor"
@@ -59,24 +59,24 @@ const barColorClass = computed(() => {
       <!-- 中间区域始终占满，防止按钮位置跳动 -->
       <div class="flex-1 min-w-0">
         <div v-if="!isExpanded" class="flex items-center gap-2">
-          <div class="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden h-1.5">
+          <div class="flex-1 bg-neutral-200 dark:bg-neutral-700 rounded-full overflow-hidden h-1.5">
             <div
               class="h-full rounded-full transition-all duration-300"
               :class="barColorClass"
               :style="{ width: `${storageUsagePercent}%` }"
             />
           </div>
-          <span class="text-xs text-gray-500 dark:text-gray-400 font-medium flex-shrink-0">
+          <span class="text-xs text-neutral-500 dark:text-neutral-400 font-medium flex-shrink-0">
             {{ storageUsagePercent.toFixed(0) }}%
           </span>
         </div>
-        <div v-else class="text-sm font-medium text-gray-700 dark:text-gray-200 truncate">
+        <div v-else class="text-sm font-medium text-neutral-700 dark:text-neutral-200 truncate">
           {{ t('sidepanel.storageSpace') }}
         </div>
       </div>
 
       <button
-        class="p-1 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors flex-shrink-0"
+        class="p-1 text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200 transition-colors flex-shrink-0"
         :title="isExpanded ? t('sidepanel.collapse') : t('sidepanel.expandStorage')"
         @click="toggleExpanded"
       >
@@ -115,13 +115,13 @@ const barColorClass = computed(() => {
       :class="isExpanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'"
     >
       <div class="overflow-hidden">
-        <div class="mt-2 text-gray-600 dark:text-gray-400 text-sm">
+        <div class="mt-2 text-neutral-600 dark:text-neutral-400 text-sm">
           <p>
             {{ t('sidepanel.usedSpace') }}{{ (storageUsage / 1024).toFixed(2) }} KB /
             <span v-if="storageQuota">{{ (storageQuota / 1024 / 1024).toFixed(2) }} MB</span>
             <span v-else>{{ t('sidepanel.noKnownLimit') }}</span>
           </p>
-          <div class="bg-gray-200 dark:bg-gray-700 mt-1 h-2 w-full rounded-full overflow-hidden">
+          <div class="bg-neutral-200 dark:bg-neutral-700 mt-1 h-2 w-full rounded-full overflow-hidden">
             <div
               class="h-full rounded-full transition-all duration-300"
               :class="barColorClass"
