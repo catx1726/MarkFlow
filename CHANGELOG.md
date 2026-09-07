@@ -1,5 +1,9 @@
 # Unreleased
 
+### [2026-09-07] refactor+fix: 自有 UI 质感对齐宣传页（neutral/去阴影）+ 侧边栏标题交互修复 (#82)
+refactor+fix: 自有 UI 质感对齐宣传页（neutral/去阴影）+ 侧边栏标题交互修复
+
+
 ### [2026-08-21] feat(sidepanel): 章节大纲级吸顶（四级堆叠完整） (#78)
 feat(sidepanel): 章节大纲级吸顶（四级堆叠完整）
 
