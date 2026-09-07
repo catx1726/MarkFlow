@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { CLEANUP_DAYS_THRESHOLD } from '~/logic/config'
+import { Z_LAYERS } from '~/logic/layers'
 import { t } from '~/logic/i18n'
 
 const props = defineProps<{
@@ -34,7 +35,8 @@ const barColorClass = computed(() => {
 
 <template>
   <div
-    class="fixed bottom-0 left-0 right-0 z-10 bg-white/80 dark:bg-gray-800/80 border-t border-gray-200 dark:border-gray-700 backdrop-blur-sm transition-all duration-200 ease-in-out"
+    class="fixed bottom-0 left-0 right-0 bg-white/80 dark:bg-gray-800/80 border-t border-gray-200 dark:border-gray-700 backdrop-blur-sm transition-all duration-200 ease-in-out"
+    :style="{ zIndex: Z_LAYERS.fixedBar }"
     :class="isExpanded ? 'p-4 shadow-lg' : 'px-3 py-2'"
   >
     <!-- 始终可见的头部行 -->

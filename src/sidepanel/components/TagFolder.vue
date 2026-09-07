@@ -1,10 +1,12 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { MENU_HEIGHTS, shouldMenuOpenUp } from '../composables/menuPosition'
+import { FOLD, isLargeList } from '../composables/foldAnimation'
 import PageSection from './PageSection.vue'
 import type { Mark } from '~/logic/storage'
 import { t } from '~/logic/i18n'
 import type { TagTree } from '~/logic/tagTree'
+import { Z_LAYERS } from '~/logic/layers'
 
 const props = defineProps<{
   tagId: string
@@ -65,16 +67,25 @@ function onFolderMenuClick(e: MouseEvent) {
 // ResizeObserver 持续跟踪（字体加载/窗口变化会改变行高），与 Sidepanel 测 header 同一模式
 let rowHeightObserver: ResizeObserver | null = null
 
-// --- 文件夹展开/收起高度动画（Grid 0fr↔1fr） ---
-// 拦截 summary 原生瞬切：收起时先播动画再真正关闭 details
+// --- 文件夹展开/收起动画（Issue #80 修正案） ---
+// 拦截 summary 原生瞬切，改用 JS 测量高度动画（与 FoldPanel 同一方案）：
+// 内容一次性完整挂载（子树只布局一次），动画作用于容器固定 px 高度，
+// 子树不参与每帧重排；grid 0fr↔1fr 方案会每帧子树重排，已弃用。
 const detailsRef = ref<HTMLDetailsElement | null>(null)
-const foldOpen = ref(false)
-const foldAnim = ref(false)
 let closeTimer: number | undefined
 
+/** 大列表（Issue #80）：距离更长，使用更长的动画时长保证丝滑 */
+const largeList = computed(() => isLargeList(props.folder.totalMarks))
+
+function cleanupGrid(grid: HTMLElement) {
+  grid.classList.remove('fold-animating')
+  grid.style.transition = ''
+  grid.style.height = ''
+  grid.style.overflow = ''
+  grid.style.opacity = ''
+}
+
 onMounted(() => {
-  // 初始状态同步（如 inbox 默认展开），不播动画
-  foldOpen.value = props.isOpen
   const summaryEl = detailsRef.value?.querySelector('summary')
   if (summaryEl) {
     const updateVar = () => {
@@ -93,30 +104,39 @@ onUnmounted(() => {
 function onSummaryClick(e: MouseEvent) {
   e.preventDefault()
   const details = detailsRef.value
-  if (!details)
+  const grid = details?.querySelector<HTMLElement>('.folder-grid')
+  if (!details || !grid)
     return
   clearTimeout(closeTimer)
-  foldAnim.value = true
+  const d = largeList.value ? FOLD.largeListDuration : FOLD.heightDuration
+  grid.classList.add('fold-animating') // 动画期间禁用内部 sticky，避免吸顶头重新吸附
   if (details.open) {
-    // 收起：先播动画，结束后再真正关闭
-    foldOpen.value = false
+    // 收起：固定当前 px 高度 → 过渡到 0 → 结束后再真正关闭 details
+    grid.style.overflow = 'hidden'
+    grid.style.height = `${grid.scrollHeight}px`
+    grid.style.transition = `height ${d}ms ease-in, opacity ${d}ms ease-in`
+    void grid.offsetHeight // 强制 reflow，确保过渡从当前高度起始
+    grid.style.height = '0px'
+    grid.style.opacity = '0'
     closeTimer = window.setTimeout(() => {
       details.open = false
-      foldAnim.value = false // 动画结束后移除裁剪窗口，避免遮挡内部菜单
-    }, 150)
+      cleanupGrid(grid) // 动画结束移除裁剪窗口，避免遮挡内部菜单
+    }, d)
   }
   else {
-    // 展开：先打开（内容被 0fr 裁剪不可见），下一帧再播展开动画
+    // 展开：先打开（容器高度 0 不可见），测量内容高度后过渡到目标值
     details.open = true
-    foldOpen.value = false
+    grid.style.overflow = 'hidden'
+    grid.style.height = '0px'
+    grid.style.opacity = '0'
     requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        foldOpen.value = true
-        // 动画结束后移除裁剪窗口，避免遮挡内部菜单
-        window.setTimeout(() => {
-          foldAnim.value = false
-        }, 160)
-      })
+      const target = grid.scrollHeight
+      grid.style.transition = `height ${d}ms ease-out, opacity ${d}ms ease-out`
+      grid.style.height = `${target}px`
+      grid.style.opacity = '1'
+      closeTimer = window.setTimeout(() => {
+        cleanupGrid(grid) // 还原为 auto 高度与可见溢出，不裁剪 ⋯ 菜单
+      }, d)
     })
   }
 }
@@ -129,10 +149,13 @@ function onSummaryClick(e: MouseEvent) {
     :open="isOpen"
     class="mb-6 group/folder"
   >
-    <!-- sticky 吸顶：z-30 介于主 header（z-40）与内容之间；top 由 --sidepanel-header-h 驱动（Sidepanel.vue ResizeObserver 测量），调整任一侧时注意联动 -->
+    <!-- sticky 吸顶：层级 token 见 src/logic/layers.ts（stickyFolder 介于主 header 与内容之间）；
+         top 由 --sidepanel-header-h 驱动（Sidepanel.vue ResizeObserver 测量），调整任一侧时注意联动。
+         菜单打开时临时提升至 menuElevated，脱离其他吸顶层的遮挡（Issue #79） -->
     <summary
-      class="flex items-center gap-2 p-2 bg-white dark:bg-gray-800 rounded-lg cursor-pointer transition-colors border border-gray-200 dark:border-gray-700 list-none sticky z-30 top-[var(--sidepanel-header-h,120px)]"
+      class="flex items-center gap-2 p-2 bg-white dark:bg-gray-800 rounded-lg cursor-pointer transition-colors border border-gray-200 dark:border-gray-700 list-none sticky top-[var(--sidepanel-header-h,120px)]"
       :class="{ 'opacity-50 grayscale': folder.totalMarks === 0 }"
+      :style="{ zIndex: activeFolderMenu === tagId ? Z_LAYERS.menuElevated : Z_LAYERS.stickyFolder }"
       @click="onSummaryClick"
     >
       <svg
@@ -167,7 +190,7 @@ function onSummaryClick(e: MouseEvent) {
         <transition name="fade-scale">
           <div
             v-if="activeFolderMenu === tagId"
-            class="absolute right-0 w-40 bg-white dark:bg-gray-700 rounded-md shadow-lg z-20 border border-gray-200 dark:border-gray-600"
+            class="absolute right-0 w-40 bg-white dark:bg-gray-700 rounded-md shadow-lg border border-gray-200 dark:border-gray-600"
             :class="folderMenuUp ? 'bottom-full mb-2' : 'mt-2'"
           >
             <ul class="py-1">
@@ -236,81 +259,53 @@ function onSummaryClick(e: MouseEvent) {
       </div>
     </summary>
 
-    <!-- 高度动画结构：folder-grid(0fr↔1fr) > fold-inner(裁剪) > folder-content，
-         与 PageSection 的 fold-* 同一 Grid 技巧；时长保持 150ms 同步 -->
-    <div class="folder-grid" :class="{ 'fold-anim': foldAnim, 'fold-open': foldOpen }">
-      <div class="fold-inner">
+    <!-- 展开/收起动画由 onSummaryClick 以 JS 测量高度驱动（与 FoldPanel 同一方案），
+         原生 details 的 name 互斥手风琴保留；其他文件夹被浏览器自动关闭时无动画（已知限制，接受）。 -->
+    <div class="folder-grid">
+      <div
+        class="folder-content space-y-4 py-2 ml-3 pl-3 border-l-2 border-gray-200 dark:border-gray-600"
+      >
         <div
-          class="folder-content space-y-4 py-2 ml-3 pl-3 border-l-2 border-gray-200 dark:border-gray-600"
+          v-if="Object.keys(folder.pages).length === 0"
+          class="text-center py-8 text-gray-400 dark:text-gray-500 text-sm"
         >
-          <div
-            v-if="Object.keys(folder.pages).length === 0"
-            class="text-center py-8 text-gray-400 dark:text-gray-500 text-sm"
-          >
-            {{ t('sidepanel.emptyFolder') }}
-          </div>
-          <PageSection
-            v-for="[url, urlData] in Object.entries(folder.pages)"
-            :key="url"
-            :url="url"
-            :url-data="urlData as any"
-            :is-collapsed="isUrlCollapsed(url)"
-            :collapsed-states="collapsedStates[url] || {}"
-            :expanded-texts="expandedTexts"
-            :expanded-notes="expandedNotes"
-            :editing-mark-id="editingMarkId"
-            :active-mark-menu="activeMarkMenu"
-            :active-group-menu="activeGroupMenu"
-            :active-url-menu="activeUrlMenu"
-            @toggle-url-collapse="u => emit('toggle-url-collapse', u)"
-            @toggle-url-menu="u => emit('toggle-url-menu', u)"
-            @export-markdown="data => emit('export-markdown', data)"
-            @open-tag-picker="u => emit('open-tag-picker', u)"
-            @remove-all-marks="u => emit('remove-all-marks', u)"
-            @toggle-group="(u, title, total) => emit('toggle-group', u, title, total)"
-            @toggle-group-menu="(u, title) => emit('toggle-group-menu', u, title)"
-            @export-group="(u, group) => emit('export-group', u, group)"
-            @open-group-tag-picker="(u, title) => emit('open-group-tag-picker', u, title)"
-            @remove-group-marks="(u, group) => emit('remove-group-marks', u, group)"
-            @goto-mark="mark => emit('goto-mark', mark)"
-            @edit-mark="mark => emit('edit-mark', mark)"
-            @save-note="(mark, note) => emit('save-note', mark, note)"
-            @cancel-edit="() => emit('cancel-edit')"
-            @remove-mark="mark => emit('remove-mark', mark)"
-            @copy-mark="mark => emit('copy-mark', mark)"
-            @toggle-text-expansion="id => emit('toggle-text-expansion', id)"
-            @toggle-note-expansion="id => emit('toggle-note-expansion', id)"
-            @toggle-mark-menu="id => emit('toggle-mark-menu', id)"
-            @open-mark-tag-picker="(u, id) => emit('open-mark-tag-picker', u, id)"
-          />
+          {{ t('sidepanel.emptyFolder') }}
         </div>
+        <PageSection
+          v-for="[url, urlData] in Object.entries(folder.pages)"
+          :key="url"
+          :url="url"
+          :url-data="urlData as any"
+          :is-collapsed="isUrlCollapsed(url)"
+          :collapsed-states="collapsedStates[url] || {}"
+          :expanded-texts="expandedTexts"
+          :expanded-notes="expandedNotes"
+          :editing-mark-id="editingMarkId"
+          :active-mark-menu="activeMarkMenu"
+          :active-group-menu="activeGroupMenu"
+          :active-url-menu="activeUrlMenu"
+          @toggle-url-collapse="u => emit('toggle-url-collapse', u)"
+          @toggle-url-menu="u => emit('toggle-url-menu', u)"
+          @export-markdown="data => emit('export-markdown', data)"
+          @open-tag-picker="u => emit('open-tag-picker', u)"
+          @remove-all-marks="u => emit('remove-all-marks', u)"
+          @toggle-group="(u, title, total) => emit('toggle-group', u, title, total)"
+          @toggle-group-menu="(u, title) => emit('toggle-group-menu', u, title)"
+          @export-group="(u, group) => emit('export-group', u, group)"
+          @open-group-tag-picker="(u, title) => emit('open-group-tag-picker', u, title)"
+          @remove-group-marks="(u, group) => emit('remove-group-marks', u, group)"
+          @goto-mark="mark => emit('goto-mark', mark)"
+          @edit-mark="mark => emit('edit-mark', mark)"
+          @save-note="(mark, note) => emit('save-note', mark, note)"
+          @cancel-edit="() => emit('cancel-edit')"
+          @remove-mark="mark => emit('remove-mark', mark)"
+          @copy-mark="mark => emit('copy-mark', mark)"
+          @toggle-text-expansion="id => emit('toggle-text-expansion', id)"
+          @toggle-note-expansion="id => emit('toggle-note-expansion', id)"
+          @toggle-mark-menu="id => emit('toggle-mark-menu', id)"
+          @open-mark-tag-picker="(u, id) => emit('open-mark-tag-picker', u, id)"
+        />
       </div>
     </div>
   </details>
 </template>
-
-<style scoped>
-/* 文件夹展开/收起动画：Grid 0fr↔1fr（与 PageSection fold-* 同一技巧，150ms 保持同步）。
-   原生 details 的 name 互斥手风琴保留；其他文件夹被浏览器自动关闭时无动画（已知限制，接受）。
-   注意：overflow 裁剪仅在 fold-anim 动画期生效——常驻会裁剪内部标记/分组的⋯下拉菜单。
-   收起状态下由 details 原生隐藏内容，无需 overflow。 */
-.folder-grid {
-  display: grid;
-  grid-template-rows: 0fr;
-}
-.fold-inner {
-  /* Grid 子项默认 min-width:auto 不收缩，长标题会撑破容器；补 min-width:0 允许收缩截断 */
-  min-width: 0;
-  min-height: 0;
-}
-.folder-grid.fold-anim {
-  transition: grid-template-rows 150ms ease-out;
-}
-.folder-grid.fold-anim .fold-inner {
-  overflow: hidden;
-  contain: layout paint;
-}
-.folder-grid.fold-open {
-  grid-template-rows: 1fr;
-}
-</style>

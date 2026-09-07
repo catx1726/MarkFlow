@@ -14,7 +14,9 @@ import { useStorageMonitor } from './composables/useStorageMonitor'
 import SidepanelHeader from './components/SidepanelHeader.vue'
 import TagFolder from './components/TagFolder.vue'
 import StorageManager from './components/StorageManager.vue'
+import { FOLD } from './composables/foldAnimation'
 import { marksByUrl, tagsMetadata } from '~/logic/storage'
+import { Z_LAYERS } from '~/logic/layers'
 import { t } from '~/logic/i18n'
 
 // --- Setup ---
@@ -147,7 +149,7 @@ function toggleGroup(url: string, groupTitle: string, totalMarks: number) {
 
 function isGroupCollapsed(url: string, groupTitle: string, totalMarks: number): boolean {
   const state = collapsedStates.value[url]?.[groupTitle]
-  return state !== undefined ? state : totalMarks > 15
+  return state !== undefined ? state : totalMarks > FOLD.defaultCollapseMarkThreshold
 }
 
 function handleOpenOptions() {
@@ -316,7 +318,8 @@ async function handleDeleteTag(tagId: string) {
     <!-- Tag Picker Dialog -->
     <div
       v-if="tagPickerVisible"
-      class="fixed inset-0 bg-black/40 flex items-center justify-center z-50"
+      class="fixed inset-0 bg-black/40 flex items-center justify-center"
+      :style="{ zIndex: Z_LAYERS.modal }"
       @click.self="closeTagPicker"
     >
       <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-5 w-80 max-w-full mx-4">
@@ -362,7 +365,8 @@ async function handleDeleteTag(tagId: string) {
     <!-- Rename Tag Dialog -->
     <div
       v-if="renameDialogVisible"
-      class="fixed inset-0 bg-black/40 flex items-center justify-center z-50"
+      class="fixed inset-0 bg-black/40 flex items-center justify-center"
+      :style="{ zIndex: Z_LAYERS.modal }"
       @click.self="cancelRename"
     >
       <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-5 w-72 max-w-full mx-4">

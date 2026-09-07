@@ -3,6 +3,7 @@ import { computed, nextTick, ref, watch } from 'vue'
 import { MENU_HEIGHTS, shouldMenuOpenUp } from '../composables/menuPosition'
 import type { Mark } from '~/logic/storage'
 import { t } from '~/logic/i18n'
+import { Z_LAYERS } from '~/logic/layers'
 
 const props = defineProps<{
   mark: Mark
@@ -172,7 +173,8 @@ function handleSave() {
       <transition name="fade-scale">
         <div
           v-if="activeMenu === mark.id"
-          class="bg-white border-gray-200 dark:bg-gray-700 dark:border-gray-600 absolute right-0 z-30 w-48 rounded-md border shadow-lg"
+          class="bg-white border-gray-200 dark:bg-gray-700 dark:border-gray-600 absolute right-0 w-48 rounded-md border shadow-lg"
+          :style="{ zIndex: Z_LAYERS.menuElevated }"
           :class="menuOpensUp ? 'bottom-full mb-2' : 'mt-2'"
           @click.stop
         >
