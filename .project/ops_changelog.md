@@ -80,3 +80,4 @@
 | 2026-08-21T14:00:00+08:00 | DOCS | docs/RELEASE_v0.8.0.md | 发布说明补录 PR #78：三级吸顶→四级吸顶（含章节大纲级） | pending | git checkout HEAD -- docs/RELEASE_v0.8.0.md |
 | 2026-08-21T12:20:00+08:00 | RELEASE | docs/index.html + docs/lang/en/index.html + Release 资产 | v0.8.0 收尾：两个宣传页 zip 下载链接 v0.7.2→v0.8.0；重新构建 chromium/firefox 双平台 zip 并 --clobber 覆盖 Release 资产（原资产为旧构建） | pending | git checkout HEAD -- docs/ |
 | 2026-09-07T10:36:00+08:00 | DOCS | docs/index.html + docs/lang/en/index.html | 宣传页极简重构（布列松式：零装饰/干燥文案/mono 章节编号/发丝线）；唯一动作为琥珀底线扫过核心承诺「页面跳回原文位置」（形态与产品高亮同源，prefers-reduced-motion 安全）；演示 GIF 改本地相对路径修复裂图；英文页同构重写 | pending | git checkout HEAD -- docs/index.html docs/lang/en/index.html |
+| 2026-09-07T10:37:00+08:00 | FIX | src/logic/config.ts + src/contentScripts/restorer.ts | 回跳定位闪烁色由调色板绿色 highlightColors[1] 改为品牌琥珀 FLASH_COLOR(#fbbf24)，与宣传页高亮笔触同源；闪烁与调色板解耦，新增常量注释注明设计意图；restorer.spec 8 测试通过 | pending | git checkout HEAD -- src/logic/config.ts src/contentScripts/restorer.ts |

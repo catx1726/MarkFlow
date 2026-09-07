@@ -26,6 +26,10 @@ export function highlightDefaultStyle(color: string | Ref<string> = defaultSetti
   return `box-shadow: inset 0 -${height}px 0 0 ${color}; padding-bottom: ${height}px; cursor: pointer;`
 }
 
+// --- Brand ---
+/** 回跳定位的闪烁提示色（品牌琥珀色），与宣传页高亮笔触同源 */
+export const FLASH_COLOR = '#fbbf24'
+
 // --- Shortcuts ---
 export const shortcuts = {
   openSidePanel: 'Alt+S',

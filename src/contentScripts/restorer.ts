@@ -2,7 +2,7 @@ import { sendMessage } from 'webext-bridge/content-script'
 import rangy from 'rangy/lib/rangy-core'
 import type { HighlightStateManager } from './state'
 import type { Mark } from '~/logic/storage'
-import { highlightDefaultStyle } from '~/logic/config'
+import { FLASH_COLOR, highlightDefaultStyle } from '~/logic/config'
 import { settings } from '~/logic/settings'
 import {
   DOMScanner,
@@ -361,7 +361,7 @@ export class HighlightRestorer {
         if (!(el instanceof HTMLElement))
           return
         el.style.transition = 'box-shadow 0.5s ease-in-out'
-        el.style.boxShadow = `inset 0 -${settings.value.highlightHeight}px 0 0 ${settings.value.highlightColors[1]}`
+        el.style.boxShadow = `inset 0 -${settings.value.highlightHeight}px 0 0 ${FLASH_COLOR}`
         el.style.paddingBottom = `${settings.value.highlightHeight}px`
         setTimeout(() => {
           el.style.boxShadow = `inset 0 -${settings.value.highlightHeight}px 0 0 ${mark.color}`
