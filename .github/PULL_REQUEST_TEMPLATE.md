@@ -32,7 +32,7 @@
 
 ## 🔒 安全与审计 (Security & Audit)
 
-- [ ] 已补全审计日志 (`.gemini/ops_changelog.md`)
+- [ ] 已补全审计日志 (`.project/ops_changelog.md`)
 - [ ] 无敏感信息泄露
 - [ ] 依赖安全检查通过
 

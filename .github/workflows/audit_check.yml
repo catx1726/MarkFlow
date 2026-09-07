@@ -13,14 +13,14 @@ jobs:
       - name: Verify Audit Log Update
         run: |
           # 提取除文档和配置外的所有代码变更文件
-          CHANGES=$(git diff --name-only origin/main...HEAD | grep -vE '^(\.github/|openspec/|README\.md|ARCHITECTURE\.md|GETTING_STARTED\.md|docs/)' || true)
+          CHANGES=$(git diff --name-only origin/main...HEAD | grep -vE '^(\.github/|openspec/|README\.md|ARCHITECTURE\.md|GETTING_STARTED\.md|docs/|\.gemini/|\.project/)' || true)
 
           if [ -n "$CHANGES" ]; then
             # 如果有代码变更，强制检查 ops_changelog.md 是否在本次提交中
-            LOG_CHANGED=$(git diff --name-only origin/main...HEAD | grep '\.gemini/ops_changelog\.md')
+            LOG_CHANGED=$(git diff --name-only origin/main...HEAD | grep '\.project/ops_changelog\.md')
 
             if [ -z "$LOG_CHANGED" ]; then
-              echo "❌ **物理熔断**: 检测到代码变更，但未在 .gemini/ops_changelog.md 中提交审计日志！"
+              echo "❌ **物理熔断**: 检测到代码变更，但未在 .project/ops_changelog.md 中提交审计日志！"
               echo "请记录变更意图与 Undo_CMD。"
               exit 1
             fi

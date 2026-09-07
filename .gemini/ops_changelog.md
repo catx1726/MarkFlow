@@ -1,5 +1,7 @@
 # Operations Changelog
 
+> ⚠️ **已废弃 (Deprecated since 2026-09-07)**：审计日志 SSOT 已迁至 `.project/ops_changelog.md`，本文件仅保留历史记录，请勿追加。CI `audit_check.yml` 已同步切换检查路径。
+
 | Time | Action | Target | Reason | Commit_ID | Undo_CMD |
 | :--- | :----- | :----- | :----- | :-------- | :------- |
 | 2026-04-09 08:48:56 | Implement highlight disambiguation | src/contentScripts/index.ts, src/logic/dom.ts, src/logic/search.ts, src/logic/storage.ts | Enhance highlight restoration robustness with tiered matching and UI integration | f61de6a | - |

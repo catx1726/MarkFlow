@@ -18,7 +18,7 @@ jobs:
           PR_BODY: ${{ github.event.pull_request.body }}
         run: |
           # 获取所有代码变更
-          CODE_CHANGES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -vE '^(docs/|\.github/|\.gemini/)' || true)
+          CODE_CHANGES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -vE '^(docs/|\.github/|\.gemini/|\.project/)' || true)
 
           if [ -n "$CODE_CHANGES" ]; then
             echo "检测到代码变更，检查 Spec/Plan 文档同步..."
