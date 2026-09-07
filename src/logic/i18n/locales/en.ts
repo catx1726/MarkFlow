@@ -104,11 +104,11 @@ export const en: Messages = {
     blacklist: 'Site blacklist',
     errorLogs: 'Error logs',
     githubSync: 'GitHub sync',
-    welcomeTitle: '👋 Welcome to MarkFlow',
-    quickStartTitle: '🚀 Quick start',
+    welcomeTitle: 'Welcome to MarkFlow',
+    quickStartTitle: 'Quick start',
     quickStartPrefix: 'On any page, hold ',
     quickStartSuffix: ' and drag to select text to bring up the highlight toolbar.',
-    coreFeaturesTitle: '✨ Core features',
+    coreFeaturesTitle: 'Core features',
     featureMarkName: 'Mark',
     featureMarkDesc: ': colorful highlights to capture ideas',
     featureReviewName: 'Review',
@@ -117,7 +117,7 @@ export const en: Messages = {
     featureJumpDesc: ': click to jump back to the original context',
     featureOrganizeName: 'Organize',
     featureOrganizeDesc: ': keep knowledge fragments organized',
-    thanksTitle: '❤️ Thanks & support',
+    thanksTitle: 'Thanks & support',
     thanksDesc: 'Thanks for using MarkFlow! If you find it helpful, please rate it in the store or share it with friends.',
     defaultColorDesc: 'Choose the color used by default for new highlights.',
     highlightHeightDesc: 'Control the underline thickness and bottom spacing of highlights (1–20px).',
@@ -138,7 +138,7 @@ export const en: Messages = {
     tokenScopePrefix: 'Make sure the token has the ',
     tokenScopeSuffix: ' scope (no repo scope needed).',
     generateToken: 'Generate a token',
-    tokenWarning: '⚠️ Note: the token is stored locally and privately in your browser. Use minimal scopes.',
+    tokenWarning: 'Note: the token is stored locally and privately in your browser. Use minimal scopes.',
     reconnect: 'Reconnect',
     connectAndSync: 'Connect & sync',
     syncFailed: 'Sync failed',
@@ -175,28 +175,28 @@ export const en: Messages = {
     helpContent: `
       <div class="space-y-4">
         <section>
-          <h4 class="font-bold text-amber-700 dark:text-amber-400 mb-1">🔑 Your token is your identity</h4>
+          <h4 class="font-bold text-amber-700 dark:text-amber-400 mb-1">Your token is your identity</h4>
           <p>Sync relies entirely on the GitHub Personal Access Token you generate. The extension <b>never</b> uploads your token to any server; it is stored encrypted locally in this browser.</p>
         </section>
 
         <section>
-          <h4 class="font-bold text-amber-700 dark:text-amber-400 mb-1">💾 Back up your token</h4>
+          <h4 class="font-bold text-amber-700 dark:text-amber-400 mb-1">Back up your token</h4>
           <p class="text-amber-700 dark:text-amber-400"><b>Strongly recommended:</b> copy the token and store it in your password manager (e.g. 1Password, Bitwarden) or a local document.</p>
           <p>If you switch computers or reinstall the browser, you will need the <b>same token</b> to recover your previously synced data.</p>
         </section>
 
         <section>
-          <h4 class="font-bold text-amber-700 dark:text-amber-400 mb-1">🌐 How multi-device sync works</h4>
+          <h4 class="font-bold text-amber-700 dark:text-amber-400 mb-1">How multi-device sync works</h4>
           <p>When you install MarkFlow in a second browser, just enter the same token. The extension uses it to find your cloud Gist and merge the data.</p>
         </section>
 
         <section>
-          <h4 class="font-bold text-amber-700 dark:text-amber-400 mb-1">🔒 Data privacy</h4>
+          <h4 class="font-bold text-amber-700 dark:text-amber-400 mb-1">Data privacy</h4>
           <p>Your data lives in a <b>Secret Gist</b> under your own account, accessible only to holders of that token.</p>
         </section>
 
         <section>
-          <h4 class="font-bold text-amber-700 dark:text-amber-400 mb-1">📊 Storage limits & health</h4>
+          <h4 class="font-bold text-amber-700 dark:text-amber-400 mb-1">Storage limits & health</h4>
           <p>Each sync is capped at about <b>10MB</b> by the GitHub API — enough for tens of thousands of records.</p>
           <p class="text-[12px] text-gray-500 mt-1">If sync fails, try deleting unneeded page groups in the sidebar to free up space, then retry.</p>
         </section>

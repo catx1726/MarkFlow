@@ -104,11 +104,11 @@ export const zhCN = {
     blacklist: '网站黑名单',
     errorLogs: '错误日志',
     githubSync: 'GitHub 同步',
-    welcomeTitle: '👋 欢迎使用 MarkFlow',
-    quickStartTitle: '🚀 快速开始',
+    welcomeTitle: '欢迎使用 MarkFlow',
+    quickStartTitle: '快速开始',
     quickStartPrefix: '在任意网页，按住 ',
     quickStartSuffix: ' 键并拖动鼠标选中文字，即可唤起高亮工具栏。',
-    coreFeaturesTitle: '✨ 核心功能',
+    coreFeaturesTitle: '核心功能',
     featureMarkName: '标记 (Mark)',
     featureMarkDesc: '：多彩高亮，捕捉灵感',
     featureReviewName: '回顾 (Review)',
@@ -117,7 +117,7 @@ export const zhCN = {
     featureJumpDesc: '：点击快速定位上下文',
     featureOrganizeName: '整理 (Organize)',
     featureOrganizeDesc: '：高效管理知识碎片',
-    thanksTitle: '❤️ 致谢与支持',
+    thanksTitle: '致谢与支持',
     thanksDesc: '感谢您的使用！如果您觉得这个工具对您有帮助，欢迎在商店评分或分享给朋友。',
     defaultColorDesc: '选择在创建新高亮时默认使用的颜色。',
     highlightHeightDesc: '控制高亮标记的下划线粗细和底部间距，取值范围 1–20px。',
@@ -138,7 +138,7 @@ export const zhCN = {
     tokenScopePrefix: '请确保 Token 已勾选 ',
     tokenScopeSuffix: ' 权限（无需 repo 权限）。',
     generateToken: '点此快速生成 Token',
-    tokenWarning: '⚠️ 注意：Token 将以加密/私有形式存储在浏览器本地，建议使用最小权限。',
+    tokenWarning: '注意：Token 将以加密/私有形式存储在浏览器本地，建议使用最小权限。',
     reconnect: '重新连接',
     connectAndSync: '连接并开启同步',
     syncFailed: '同步失败',
@@ -175,28 +175,28 @@ export const zhCN = {
     helpContent: `
       <div class="space-y-4">
         <section>
-          <h4 class="font-bold text-amber-700 dark:text-amber-400 mb-1">🔑 Token 即身份</h4>
+          <h4 class="font-bold text-amber-700 dark:text-amber-400 mb-1">Token 即身份</h4>
           <p>同步功能完全依赖您生成的 GitHub Personal Access Token。插件<b>不会</b>上传您的 Token 到任何服务器，仅加密存储在当前浏览器本地。</p>
         </section>
 
         <section>
-          <h4 class="font-bold text-amber-700 dark:text-amber-400 mb-1">💾 请妥善备份 Token</h4>
+          <h4 class="font-bold text-amber-700 dark:text-amber-400 mb-1">请妥善备份 Token</h4>
           <p class="text-amber-700 dark:text-amber-400"><b>强烈建议：</b>请将生成的 Token 复制并保存在您的密码管理器（如 1Password, Bitwarden）或本地文档中。</p>
           <p>一旦更换电脑或重装浏览器，您需要填入<b>相同的 Token</b> 才能找回之前同步的数据。</p>
         </section>
 
         <section>
-          <h4 class="font-bold text-amber-700 dark:text-amber-400 mb-1">🌐 多端同步原理</h4>
+          <h4 class="font-bold text-amber-700 dark:text-amber-400 mb-1">多端同步原理</h4>
           <p>当您在第二个浏览器安装 MarkFlow 时，只需填入相同的 Token，插件会自动通过 Token 找到云端的 Gist 数据并进行合并。</p>
         </section>
 
         <section>
-          <h4 class="font-bold text-amber-700 dark:text-amber-400 mb-1">🔒 数据隐私</h4>
+          <h4 class="font-bold text-amber-700 dark:text-amber-400 mb-1">数据隐私</h4>
           <p>您的数据存储在您账号下的 <b>Secret Gist</b>（私有代码片段）中，只有持有该 Token 的人可以访问。</p>
         </section>
 
         <section>
-          <h4 class="font-bold text-amber-700 dark:text-amber-400 mb-1">📊 存储上限与健康</h4>
+          <h4 class="font-bold text-amber-700 dark:text-amber-400 mb-1">存储上限与健康</h4>
           <p>单次同步受 GitHub API 限制上限约为 <b>10MB</b>。这足以容纳数万条记录。</p>
           <p class="text-[12px] text-gray-500 mt-1">若遇到同步失败，请尝试在侧边栏删除部分不再需要的网页分组，物理清理空间后再试。</p>
         </section>
