@@ -218,7 +218,7 @@ async function triggerPull({ force = false, timeoutMs = 8000, token = '', gistId
 type OptionsKey = `options.${keyof Messages['options']}`
 
 // 通用设置区下拉框共享样式
-const formSelectClass = 'px-[12px] py-[8px] text-[14px] rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-amber-500'
+const formSelectClass = 'px-[12px] py-[8px] text-[14px] rounded-md border border-neutral-300 dark:border-neutral-600 dark:bg-neutral-700 dark:text-neutral-200 focus:outline-none focus:ring-2 focus:ring-amber-500'
 
 const navItems: { id: string, label: OptionsKey }[] = [
   { id: 'welcome', label: 'options.navWelcome' },
@@ -305,13 +305,13 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <main class="w-full max-w-[1100px] mx-auto px-[16px] py-[40px] text-gray-700 dark:text-gray-200 min-h-screen">
+  <main class="w-full max-w-[1100px] mx-auto px-[16px] py-[40px] text-neutral-700 dark:text-neutral-200 min-h-screen">
     <div class="grid grid-cols-1 md:grid-cols-[220px_1fr] gap-[32px]">
       <!-- 左侧导航 -->
       <aside class="hidden md:block">
         <div class="sticky top-[40px] self-start">
-          <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-[16px]">
-            <h1 class="text-[20px] font-bold mb-[16px] text-gray-900 dark:text-gray-100">
+          <div class="bg-white dark:bg-neutral-800 rounded-md border border-neutral-200 dark:border-neutral-700 p-[16px]">
+            <h1 class="text-[20px] font-bold mb-[16px] text-neutral-900 dark:text-neutral-100">
               {{ t('options.settingsTitle') }}
             </h1>
             <nav class="space-y-1">
@@ -321,7 +321,7 @@ onUnmounted(() => {
                 class="w-full text-left px-[12px] py-[8px] rounded-md text-[14px] transition-colors relative"
                 :class="activeSection === item.id
                   ? 'text-amber-600 dark:text-amber-400 font-medium bg-amber-50 dark:bg-amber-900/20'
-                  : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50'"
+                  : 'text-neutral-500 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-700/50'"
                 @click="scrollToSection(item.id)"
               >
                 <span
@@ -331,12 +331,12 @@ onUnmounted(() => {
                 {{ t(item.label) }}
               </button>
             </nav>
-            <div class="mt-[16px] pt-[16px] border-t border-gray-100 dark:border-gray-700">
+            <div class="mt-[16px] pt-[16px] border-t border-neutral-100 dark:border-neutral-700">
               <button
                 class="w-full px-[16px] py-[8px] text-[14px] font-medium rounded-md transition-colors"
                 :class="isJustSaved
                   ? 'bg-green-600 text-white cursor-default'
-                  : 'bg-amber-500 text-gray-900 hover:bg-amber-600'"
+                  : 'bg-amber-500 text-neutral-900 hover:bg-amber-600'"
                 :disabled="isJustSaved"
                 @click="saveSettings"
               >
@@ -356,13 +356,13 @@ onUnmounted(() => {
           </h2>
           <div class="space-y-4 text-[14px]">
             <!-- Quick Start -->
-            <div class="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-md">
-              <h3 class="font-bold text-gray-900 dark:text-gray-100 mb-1">
+            <div class="p-3 bg-neutral-50 dark:bg-neutral-700/50 rounded-md">
+              <h3 class="font-bold text-neutral-900 dark:text-neutral-100 mb-1">
                 {{ t('options.quickStartTitle') }}
               </h3>
-              <p class="text-gray-600 dark:text-gray-300">
+              <p class="text-neutral-600 dark:text-neutral-300">
                 {{ t('options.quickStartPrefix') }}
-                <kbd class="px-1.5 py-0.5 rounded bg-gray-200 dark:bg-gray-600 font-mono text-xs border border-gray-300 dark:border-gray-500">Alt</kbd>
+                <kbd class="px-1.5 py-0.5 rounded bg-neutral-200 dark:bg-neutral-600 font-mono text-xs border border-neutral-300 dark:border-neutral-500">Alt</kbd>
                 {{ t('options.quickStartSuffix') }}
               </p>
             </div>
@@ -370,10 +370,10 @@ onUnmounted(() => {
             <!-- Core Features -->
             <div class="grid grid-cols-2 gap-4">
               <div>
-                <h3 class="font-bold text-gray-900 dark:text-gray-100 mb-1">
+                <h3 class="font-bold text-neutral-900 dark:text-neutral-100 mb-1">
                   {{ t('options.coreFeaturesTitle') }}
                 </h3>
-                <ul class="list-disc list-inside text-gray-600 dark:text-gray-400 space-y-1">
+                <ul class="list-disc list-inside text-neutral-600 dark:text-neutral-400 space-y-1">
                   <li>
                     <strong>{{ t('options.featureMarkName') }}</strong>
                     {{ t('options.featureMarkDesc') }}
@@ -385,10 +385,10 @@ onUnmounted(() => {
                 </ul>
               </div>
               <div>
-                <h3 class="font-bold text-gray-900 dark:text-gray-100 mb-1">
+                <h3 class="font-bold text-neutral-900 dark:text-neutral-100 mb-1">
 &nbsp;
                 </h3>
-                <ul class="list-disc list-inside text-gray-600 dark:text-gray-400 space-y-1">
+                <ul class="list-disc list-inside text-neutral-600 dark:text-neutral-400 space-y-1">
                   <li>
                     <strong>{{ t('options.featureJumpName') }}</strong>
                     {{ t('options.featureJumpDesc') }}
@@ -402,11 +402,11 @@ onUnmounted(() => {
             </div>
 
             <!-- Acknowledgments -->
-            <div class="pt-2 border-t border-gray-100 dark:border-gray-700">
-              <h3 class="font-bold text-gray-900 dark:text-gray-100 mb-1">
+            <div class="pt-2 border-t border-neutral-100 dark:border-neutral-700">
+              <h3 class="font-bold text-neutral-900 dark:text-neutral-100 mb-1">
                 {{ t('options.thanksTitle') }}
               </h3>
-              <p class="text-gray-600 dark:text-gray-400 mb-2">
+              <p class="text-neutral-600 dark:text-neutral-400 mb-2">
                 {{ t('options.thanksDesc') }}
               </p>
               <div class="flex gap-4">
@@ -435,10 +435,10 @@ onUnmounted(() => {
           <h2 class="text-[18px] font-semibold mb-[12px]">
             {{ t('options.navGeneral') }}
           </h2>
-          <p class="text-[14px] text-gray-500 mb-[4px]">
+          <p class="text-[14px] text-neutral-500 mb-[4px]">
             {{ t('options.languageLabel') }}
           </p>
-          <p class="text-[13px] text-gray-400 mb-[12px]">
+          <p class="text-[13px] text-neutral-400 mb-[12px]">
             {{ t('options.languageDesc') }}
           </p>
           <select
@@ -456,10 +456,10 @@ onUnmounted(() => {
             </option>
           </select>
 
-          <p class="text-[14px] text-gray-500 mt-[20px] mb-[4px]">
+          <p class="text-[14px] text-neutral-500 mt-[20px] mb-[4px]">
             {{ t('options.themeLabel') }}
           </p>
-          <p class="text-[13px] text-gray-400 mb-[12px]">
+          <p class="text-[13px] text-neutral-400 mb-[12px]">
             {{ t('options.themeDesc') }}
           </p>
           <select
@@ -483,7 +483,7 @@ onUnmounted(() => {
           <h2 class="text-[18px] font-semibold mb-[12px]">
             {{ t('options.defaultColor') }}
           </h2>
-          <p class="text-[14px] text-gray-500 mb-[16px]">
+          <p class="text-[14px] text-neutral-500 mb-[16px]">
             {{ t('options.defaultColorDesc') }}
           </p>
           <div class="flex flex-wrap gap-[12px]">
@@ -499,7 +499,7 @@ onUnmounted(() => {
                 name="default-color"
                 class="h-[20px] w-[20px]"
               >
-              <span class="h-[24px] w-[24px] rounded-full border border-gray-300" :style="{ backgroundColor: color }" />
+              <span class="h-[24px] w-[24px] rounded-full border border-neutral-300" :style="{ backgroundColor: color }" />
             </label>
           </div>
         </div>
@@ -509,7 +509,7 @@ onUnmounted(() => {
           <h2 class="text-[18px] font-semibold mb-[12px]">
             {{ t('options.highlightHeight') }}
           </h2>
-          <p class="text-[14px] text-gray-500 mb-[16px]">
+          <p class="text-[14px] text-neutral-500 mb-[16px]">
             {{ t('options.highlightHeightDesc') }}
           </p>
           <div class="flex items-center gap-[16px]">
@@ -523,7 +523,7 @@ onUnmounted(() => {
             <span class="w-[48px] text-center font-mono text-[14px]">{{ localSettings.highlightHeight }}px</span>
           </div>
           <div class="mt-[16px]">
-            <span class="text-[14px] text-gray-500">{{ t('options.previewLabel') }}</span>
+            <span class="text-[14px] text-neutral-500">{{ t('options.previewLabel') }}</span>
             <span
               class="text-[14px]"
               :style="{ boxShadow: `inset 0 -${localSettings.highlightHeight}px 0 0 ${localSettings.defaultHighlightColor}`, paddingBottom: `${localSettings.highlightHeight}px` }"
@@ -538,7 +538,7 @@ onUnmounted(() => {
           <h2 class="text-[18px] font-semibold mb-[12px]">
             {{ t('options.colorPalette') }}
           </h2>
-          <p class="text-[14px] text-gray-500 mb-[16px]">
+          <p class="text-[14px] text-neutral-500 mb-[16px]">
             {{ t('options.colorPaletteDesc') }}
           </p>
           <div class="space-y-3">
@@ -555,9 +555,9 @@ onUnmounted(() => {
               <input
                 v-model="localSettings.highlightColors[index]"
                 type="text"
-                class="flex-1 px-[8px] py-[4px] border rounded-md bg-gray-50 dark:bg-gray-800"
+                class="flex-1 px-[8px] py-[4px] border rounded-md bg-neutral-50 dark:bg-neutral-800"
               >
-              <button class="p-[8px] text-gray-500 hover:text-red-500" :title="t('options.removeColor')" @click="removeColor(index)">
+              <button class="p-[8px] text-neutral-500 hover:text-red-500" :title="t('options.removeColor')" @click="removeColor(index)">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-[20px] w-[20px]" viewBox="0 0 20 20" fill="currentColor">
                   <path
                     fill-rule="evenodd"
@@ -569,7 +569,7 @@ onUnmounted(() => {
             </div>
           </div>
           <button
-            class="mt-[16px] px-[16px] py-2 text-[14px] font-medium text-gray-900 bg-amber-500 rounded-md hover:bg-amber-600"
+            class="mt-[16px] px-[16px] py-2 text-[14px] font-medium text-neutral-900 bg-amber-500 rounded-md hover:bg-amber-600"
             @click="addColor"
           >
             {{ t('options.addColor') }}
@@ -581,7 +581,7 @@ onUnmounted(() => {
           <h2 class="text-[18px] font-semibold mb-[12px]">
             {{ t('options.shortcuts') }}
           </h2>
-          <p class="text-[14px] text-gray-500 mb-[16px]">
+          <p class="text-[14px] text-neutral-500 mb-[16px]">
             {{ t('options.shortcutsDesc') }}
           </p>
           <div class="space-y-4">
@@ -591,7 +591,7 @@ onUnmounted(() => {
                 id="shortcut-save"
                 v-model="localSettings.shortcutSave"
                 type="text"
-                class="flex-1 px-[8px] py-[4px] border rounded-md bg-gray-50 dark:bg-gray-800"
+                class="flex-1 px-[8px] py-[4px] border rounded-md bg-neutral-50 dark:bg-neutral-800"
               >
             </div>
             <div class="flex items-center gap-[16px]">
@@ -600,7 +600,7 @@ onUnmounted(() => {
                 id="shortcut-delete"
                 v-model="localSettings.shortcutDelete"
                 type="text"
-                class="flex-1 px-[8px] py-[4px] border rounded-md bg-gray-50 dark:bg-gray-800"
+                class="flex-1 px-[8px] py-[4px] border rounded-md bg-neutral-50 dark:bg-neutral-800"
               >
             </div>
           </div>
@@ -611,13 +611,13 @@ onUnmounted(() => {
           <h2 class="text-[18px] font-semibold mb-[12px]">
             {{ t('options.blacklist') }}
           </h2>
-          <p class="text-[14px] text-gray-500 mb-[16px]">
+          <p class="text-[14px] text-neutral-500 mb-[16px]">
             {{ t('options.blacklistDesc') }}
           </p>
           <textarea
             v-model="blacklistText"
             rows="5"
-            class="w-full p-[8px] border rounded-md bg-gray-50 dark:bg-gray-800 focus:ring-2 focus:ring-amber-500"
+            class="w-full p-[8px] border rounded-md bg-neutral-50 dark:bg-neutral-800 focus:ring-2 focus:ring-amber-500"
             placeholder="google.com&#10;github.com"
           />
         </div>
@@ -636,7 +636,7 @@ onUnmounted(() => {
               {{ t('options.syncGuide') }}
             </button>
           </div>
-          <p class="text-[14px] text-gray-500 mb-[16px]">
+          <p class="text-[14px] text-neutral-500 mb-[16px]">
             {{ t('options.syncDesc') }}
           </p>
           <div class="space-y-4">
@@ -645,10 +645,10 @@ onUnmounted(() => {
               <input
                 v-model="syncConfig.token"
                 type="password"
-                class="w-full px-[8px] py-[4px] border rounded-md bg-gray-50 dark:bg-gray-800 focus:ring-2 focus:ring-amber-500"
+                class="w-full px-[8px] py-[4px] border rounded-md bg-neutral-50 dark:bg-neutral-800 focus:ring-2 focus:ring-amber-500"
                 placeholder="ghp_xxxxxxxxxxxxxxxxxxxxxxxx"
               >
-              <p class="text-[12px] text-gray-400">
+              <p class="text-[12px] text-neutral-400">
                 {{ t('options.tokenScopePrefix') }}<strong>'gist'</strong>{{ t('options.tokenScopeSuffix') }}
                 <a
                   href="https://github.com/settings/tokens/new?scopes=gist&description=MarkFlow-Sync"
@@ -665,7 +665,7 @@ onUnmounted(() => {
 
             <div class="flex items-center gap-4">
               <button
-                class="px-[16px] py-2 text-[14px] font-medium text-gray-900 bg-amber-500 rounded-md hover:bg-amber-600 disabled:opacity-50"
+                class="px-[16px] py-2 text-[14px] font-medium text-neutral-900 bg-amber-500 rounded-md hover:bg-amber-600 disabled:opacity-50"
                 :disabled="!syncConfig.token || syncConnectStatus !== ''"
                 @click="connectSync"
               >
@@ -675,7 +675,7 @@ onUnmounted(() => {
                 <span class="text-[12px] font-medium" :class="syncStatus.lastSyncStatus === 'error' ? 'text-red-500' : 'text-green-600'">
                   ● {{ syncStatus.lastSyncStatus === 'error' ? t('options.syncFailed') : t('options.syncConnected') }}
                 </span>
-                <span class="text-[11px] text-gray-400">{{ t('options.lastSync') }}{{ syncStatus.lastSyncTime ? new Date(syncStatus.lastSyncTime).toLocaleString() : 'never' }}</span>
+                <span class="text-[11px] text-neutral-400">{{ t('options.lastSync') }}{{ syncStatus.lastSyncTime ? new Date(syncStatus.lastSyncTime).toLocaleString() : 'never' }}</span>
                 <p v-if="syncStatus.errorMessage" class="text-[11px] text-red-400 mt-1">
                   {{ syncStatus.errorMessage }}
                 </p>
@@ -685,7 +685,7 @@ onUnmounted(() => {
               {{ syncConnectStatus }}
             </p>
 
-            <div v-if="syncConfig.gistId" class="pt-2 border-t border-gray-100 dark:border-gray-700">
+            <div v-if="syncConfig.gistId" class="pt-2 border-t border-neutral-100 dark:border-neutral-700">
               <label class="flex items-center gap-2 cursor-pointer">
                 <input v-model="syncConfig.enabled" type="checkbox" class="h-4 w-4">
                 <span class="text-[14px]">{{ t('options.enableAutoSync') }}</span>
@@ -699,11 +699,11 @@ onUnmounted(() => {
           <h2 class="text-[18px] font-semibold mb-[12px]">
             {{ t('options.errorLogs') }}
           </h2>
-          <p class="text-[14px] text-gray-500 mb-[16px]">
+          <p class="text-[14px] text-neutral-500 mb-[16px]">
             {{ t('options.errorLogsDesc') }}
           </p>
           <button
-            class="px-[16px] py-2 text-[14px] font-medium text-gray-900 bg-amber-500 rounded-md hover:bg-amber-600"
+            class="px-[16px] py-2 text-[14px] font-medium text-neutral-900 bg-amber-500 rounded-md hover:bg-amber-600"
             @click="exportLogs"
           >
             {{ t('options.exportLogs') }}
@@ -712,11 +712,11 @@ onUnmounted(() => {
 
         <!-- Save Button and Status -->
         <div
-          class="pt-[24px] border-t border-gray-200 dark:border-gray-700 flex items-center justify-end gap-[16px]"
+          class="pt-[24px] border-t border-neutral-200 dark:border-neutral-700 flex items-center justify-end gap-[16px]"
         >
           <span v-if="saveStatus" class="text-green-600 text-[14px] transition-opacity duration-300">{{ saveStatus }}</span>
           <button
-            class="px-[16px] py-[8px] text-[14px] font-medium text-gray-900 bg-amber-500 rounded-md hover:bg-amber-600"
+            class="px-[16px] py-[8px] text-[14px] font-medium text-neutral-900 bg-amber-500 rounded-md hover:bg-amber-600"
             @click="saveSettings"
           >
             {{ t('options.saveSettings') }}
@@ -732,7 +732,7 @@ onUnmounted(() => {
       @click.self="hideAlert"
     >
       <div
-        class="bg-white dark:bg-gray-900 rounded-lg shadow-xl p-[24px] w-full max-w-md text-gray-800 dark:text-gray-200"
+        class="bg-white dark:bg-neutral-900 rounded-md p-[24px] w-full max-w-md text-neutral-800 dark:text-neutral-200"
       >
         <h3 class="text-[18px] font-semibold mb-[16px]">
           {{ alertInfo.title }}
@@ -743,7 +743,7 @@ onUnmounted(() => {
         </p>
         <div class="flex justify-end">
           <button
-            class="px-[16px] py-2 text-[14px] font-medium text-gray-900 bg-amber-500 rounded-md hover:bg-amber-600"
+            class="px-[16px] py-2 text-[14px] font-medium text-neutral-900 bg-amber-500 rounded-md hover:bg-amber-600"
             @click="hideAlert"
           >
             {{ t('common.confirm') }}
@@ -756,7 +756,7 @@ onUnmounted(() => {
 
 <style scoped>
 .setting-card {
-  @apply bg-white dark:bg-gray-800 p-[24px] rounded-lg shadow-md;
+  @apply bg-white dark:bg-neutral-800 p-[24px] rounded-md border border-neutral-200 dark:border-neutral-700;
 }
 
 /* 确保平滑滚动生效 */

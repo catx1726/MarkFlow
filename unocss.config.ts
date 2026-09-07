@@ -28,16 +28,4 @@ export default defineConfig({
       }
     })
   },
-
-  theme: {
-    colors: {
-      'brand': {
-        'blue': '#4285f4',
-        'blue-dark': '#357ae8',
-        'red': '#ea4335',
-        'red-dark': '#e03324',
-      },
-      'border-color': '#dadce0',
-    },
-  },
 })

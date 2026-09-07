@@ -9,31 +9,31 @@ body,
 
 /* ── Scrollbar color tokens (centralized) ── */
 :root {
-  --scrollbar-thumb: rgba(156, 163, 175, 0.5);
-  --scrollbar-thumb-hover: rgba(107, 114, 128, 0.7);
+  --scrollbar-thumb: rgba(163, 163, 163, 0.5);
+  --scrollbar-thumb-hover: rgba(115, 115, 115, 0.7);
   --scrollbar-track: transparent;
-  --scrollbar-page-bg: #f3f4f6;
+  --scrollbar-page-bg: #f5f5f5;
 
   /* Code blocks in rich text */
-  --code-inline-bg: #f3f4f6;
-  --code-inline-text: #111827;
-  --code-block-bg: #f3f4f6;
+  --code-inline-bg: #f5f5f5;
+  --code-inline-text: #171717;
+  --code-block-bg: #f5f5f5;
 
   /* Component-level scrollbars (modal, tooltip, etc.) */
-  --component-scrollbar-thumb: #cbd5e1;
-  --component-scrollbar-thumb-hover: #94a3b8;
+  --component-scrollbar-thumb: #d4d4d4;
+  --component-scrollbar-thumb-hover: #a3a3a3;
 }
 .dark {
-  --scrollbar-thumb: rgba(75, 85, 99, 0.5);
-  --scrollbar-thumb-hover: rgba(55, 65, 81, 0.7);
-  --scrollbar-page-bg: #111827;
+  --scrollbar-thumb: rgba(82, 82, 82, 0.5);
+  --scrollbar-thumb-hover: rgba(64, 64, 64, 0.7);
+  --scrollbar-page-bg: #171717;
 
-  --code-inline-bg: #374151;
-  --code-inline-text: #f9fafb;
-  --code-block-bg: #1f2937;
+  --code-inline-bg: #404040;
+  --code-inline-text: #fafafa;
+  --code-block-bg: #262626;
 
-  --component-scrollbar-thumb: #475569;
-  --component-scrollbar-thumb-hover: #64748b;
+  --component-scrollbar-thumb: #525252;
+  --component-scrollbar-thumb-hover: #737373;
 }
 
 /*
@@ -50,7 +50,7 @@ body,
 }
 
 .btn-secondary {
-  @apply px-[16px] py-2 rounded-md bg-gray-200 text-gray-800 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600;
+  @apply px-[16px] py-2 rounded-md bg-neutral-200 text-neutral-800 hover:bg-neutral-300 dark:bg-neutral-700 dark:text-neutral-200 dark:hover:bg-neutral-600;
 }
 
 /* Custom scrollbar - thin and translucent to minimize layout shift */
