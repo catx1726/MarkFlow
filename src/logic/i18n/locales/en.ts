@@ -198,7 +198,7 @@ export const en: Messages = {
         <section>
           <h4 class="font-bold text-amber-700 dark:text-amber-400 mb-1">Storage limits & health</h4>
           <p>Each sync is capped at about <b>10MB</b> by the GitHub API — enough for tens of thousands of records.</p>
-          <p class="text-[12px] text-gray-500 mt-1">If sync fails, try deleting unneeded page groups in the sidebar to free up space, then retry.</p>
+          <p class="text-[12px] text-neutral-500 mt-1">If sync fails, try deleting unneeded page groups in the sidebar to free up space, then retry.</p>
         </section>
       </div>
     `,

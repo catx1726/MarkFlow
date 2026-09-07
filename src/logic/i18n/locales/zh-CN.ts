@@ -198,7 +198,7 @@ export const zhCN = {
         <section>
           <h4 class="font-bold text-amber-700 dark:text-amber-400 mb-1">存储上限与健康</h4>
           <p>单次同步受 GitHub API 限制上限约为 <b>10MB</b>。这足以容纳数万条记录。</p>
-          <p class="text-[12px] text-gray-500 mt-1">若遇到同步失败，请尝试在侧边栏删除部分不再需要的网页分组，物理清理空间后再试。</p>
+          <p class="text-[12px] text-neutral-500 mt-1">若遇到同步失败，请尝试在侧边栏删除部分不再需要的网页分组，物理清理空间后再试。</p>
         </section>
       </div>
     `,
