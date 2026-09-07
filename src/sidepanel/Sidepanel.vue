@@ -404,6 +404,11 @@ async function handleDeleteTag(tagId: string) {
 /* Sidepanel-only: always reserve scrollbar space with invisible track */
 html {
   overflow-y: scroll;
+  /* 禁用浏览器 scroll anchoring：折叠动画（FoldPanel/TagFolder 测量 px 高度过渡）期间，
+     Chrome 会每帧反向调整 scrollTop 补偿内容高度变化，把吸顶的 group-header
+     往反方向推（收起向下/展开向上抖动，近底部最明显）。
+     关闭后滚动位置只由用户与折叠动画本身驱动（实测展开侧抖动 152px → 0px）。 */
+  overflow-anchor: none;
   background-color: var(--scrollbar-page-bg);
   scrollbar-width: thin;
   /* Firefox: thumb color + track color (must be opaque, not transparent) */

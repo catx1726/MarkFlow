@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { MENU_HEIGHTS, shouldMenuOpenUp } from '../composables/menuPosition'
-import { FOLD, isLargeList } from '../composables/foldAnimation'
+import { FOLD, isLargeList, pinAnchorDuringFold } from '../composables/foldAnimation'
 import PageSection from './PageSection.vue'
 import type { Mark } from '~/logic/storage'
 import { t } from '~/logic/i18n'
@@ -73,6 +73,21 @@ let rowHeightObserver: ResizeObserver | null = null
 // 子树不参与每帧重排；grid 0fr↔1fr 方案会每帧子树重排，已弃用。
 const detailsRef = ref<HTMLDetailsElement | null>(null)
 let closeTimer: number | undefined
+let stopFolderPin: (() => void) | null = null
+
+/**
+ * 动画结束后停止钉扎：留 pinGraceMs 观察期吸收 details 关闭当帧的残余位移。
+ * 校验身份防止快速连点时误杀下一场动画的新钉扎。
+ */
+function stopFolderPinSoon() {
+  const pin = stopFolderPin
+  setTimeout(() => {
+    if (stopFolderPin === pin) {
+      pin?.()
+      stopFolderPin = null
+    }
+  }, FOLD.pinGraceMs)
+}
 
 /** 大列表（Issue #80）：距离更长，使用更长的动画时长保证丝滑 */
 const largeList = computed(() => isLargeList(props.folder.totalMarks))
@@ -108,11 +123,15 @@ function onSummaryClick(e: MouseEvent) {
   if (!details || !grid)
     return
   clearTimeout(closeTimer)
+  stopFolderPin?.() // 快速连点：立即结束上一次钉扎，避免两个反馈环互相拉扯
+  stopFolderPin = pinAnchorDuringFold(grid) // 钉扎 summary 行，防容器塌缩拖动
   const d = largeList.value ? FOLD.largeListDuration : FOLD.heightDuration
-  grid.classList.add('fold-animating') // 动画期间禁用内部 sticky，避免吸顶头重新吸附
+  // overflow 用 clip 而非 hidden：clip 不创建滚动容器，内部吸顶头保持相对
+  // 视口吸附、平滑滑入上方吸顶层背后（hidden 会使 sticky 失效产生瞬跳）
+  grid.classList.add('fold-animating')
   if (details.open) {
     // 收起：固定当前 px 高度 → 过渡到 0 → 结束后再真正关闭 details
-    grid.style.overflow = 'hidden'
+    grid.style.overflow = 'clip'
     grid.style.height = `${grid.scrollHeight}px`
     grid.style.transition = `height ${d}ms ease-in, opacity ${d}ms ease-in`
     void grid.offsetHeight // 强制 reflow，确保过渡从当前高度起始
@@ -121,12 +140,13 @@ function onSummaryClick(e: MouseEvent) {
     closeTimer = window.setTimeout(() => {
       details.open = false
       cleanupGrid(grid) // 动画结束移除裁剪窗口，避免遮挡内部菜单
+      stopFolderPinSoon()
     }, d)
   }
   else {
     // 展开：先打开（容器高度 0 不可见），测量内容高度后过渡到目标值
     details.open = true
-    grid.style.overflow = 'hidden'
+    grid.style.overflow = 'clip'
     grid.style.height = '0px'
     grid.style.opacity = '0'
     requestAnimationFrame(() => {
@@ -136,6 +156,7 @@ function onSummaryClick(e: MouseEvent) {
       grid.style.opacity = '1'
       closeTimer = window.setTimeout(() => {
         cleanupGrid(grid) // 还原为 auto 高度与可见溢出，不裁剪 ⋯ 菜单
+        stopFolderPinSoon()
       }, d)
     })
   }

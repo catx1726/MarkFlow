@@ -62,16 +62,18 @@ function getLevelClass(level: number) {
   return levelStyles[level] || 'text-xs font-medium text-gray-500 dark:text-gray-500'
 }
 
-function getLevelBorderStyle(level: number) {
+function getLevelStripeStyle(level: number) {
+  // 层级指示条用 inset box-shadow 而非 border-left：不参与盒模型，
+  // 杜绝任何潜在的边框宽度参与布局计算（用户反馈排查项）
   const styles: Record<number, Record<string, string>> = {
-    1: { borderLeft: '4px solid #F59E0B' },
-    2: { borderLeft: '3px solid #FBBF24' },
-    3: { borderLeft: '2px solid #FCD34D' },
-    4: { borderLeft: '1px solid #FDE68A' },
-    5: { borderLeft: '1px solid #FDE68A' },
-    6: { borderLeft: '1px solid #FDE68A' },
+    1: { boxShadow: 'inset 4px 0 0 #F59E0B' },
+    2: { boxShadow: 'inset 3px 0 0 #FBBF24' },
+    3: { boxShadow: 'inset 2px 0 0 #FCD34D' },
+    4: { boxShadow: 'inset 1px 0 0 #FDE68A' },
+    5: { boxShadow: 'inset 1px 0 0 #FDE68A' },
+    6: { boxShadow: 'inset 1px 0 0 #FDE68A' },
   }
-  return styles[level] || { borderLeft: '1px solid #FDE68A' }
+  return styles[level] || { boxShadow: 'inset 1px 0 0 #FDE68A' }
 }
 
 // --- 菜单翻向：底部空间不足时向上弹出（同 MarkItem） ---
@@ -206,10 +208,10 @@ function isGroupCollapsed(groupTitle: string): boolean {
     </header>
     <FoldPanel :show="!isCollapsed" :mark-count="urlData.totalMarks">
       <div>
-        <div v-for="group in urlData.groups" :key="group.title" class="group-container mt-1">
+        <div v-for="group in urlData.groups" :key="group.title" class="group-container">
           <header
-            class="group group-header fold-sticky sticky top-[calc(var(--sidepanel-header-h,120px)+var(--folder-row-h,40px)+var(--page-header-h,38px))] -mx-2 flex cursor-pointer items-center justify-between bg-white px-2 py-2 transition-colors dark:bg-gray-800"
-            :style="[getLevelBorderStyle(group.level), { zIndex: activeGroupMenu === `${url}|${group.title}` ? Z_LAYERS.menuElevated : Z_LAYERS.stickyChapter }]"
+            class="group group-header mt-1 fold-sticky sticky top-[calc(var(--sidepanel-header-h,120px)+var(--folder-row-h,40px)+var(--page-header-h,38px))] -mx-2 flex cursor-pointer items-center justify-between bg-white px-2 py-2 transition-colors dark:bg-gray-800"
+            :style="[getLevelStripeStyle(group.level), { zIndex: activeGroupMenu === `${url}|${group.title}` ? Z_LAYERS.menuElevated : Z_LAYERS.stickyChapter }]"
             @click="emit('toggle-group', url, group.title, urlData.totalMarks)"
           >
             <h3 class="min-w-0 flex-1 truncate" :class="getLevelClass(group.level)">
@@ -302,3 +304,15 @@ function isGroupCollapsed(groupTitle: string): boolean {
     </FoldPanel>
   </section>
 </template>
+
+<style scoped>
+/* 吸顶约束范围：group-container 若为普通块级盒，收起后容器高度只剩 header 本身，
+   sticky 底部约束立即失效——吸顶中的 header 会弹回自然位置（深吸顶时直接飞出视口
+   顶部），展开时面板长高又中途吸回，即收起/展开的上下抖动。
+   display:contents 使 header 的 sticky 约束父级成为整个分组列表容器：
+   收起/展开全程稳定吸顶；后续 header 滚到吸顶线后按 DOM 序覆盖前一个（堆叠吸顶）。
+   间距 mt-1 相应从容器移到 header 上（容器已无盒子，margin 不生效）。 */
+.group-container {
+  display: contents;
+}
+</style>

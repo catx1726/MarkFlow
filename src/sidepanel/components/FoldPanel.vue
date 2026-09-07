@@ -10,14 +10,14 @@
  * 的固定 px 高度（overflow hidden 裁剪）——每帧仅容器自身与后续兄弟
  * 元素重排，子树不参与，过渡丝滑。超过阈值时缩短时长（同向降级）。
  */
-import { FOLD, isLargeList } from '../composables/foldAnimation'
+import { FOLD, isLargeList, pinAnchorDuringFold } from '../composables/foldAnimation'
 
 const props = defineProps<{
   show: boolean
   markCount: number
 }>()
 
-type FoldEl = HTMLElement & { _foldTimer?: number }
+type FoldEl = HTMLElement & { _foldTimer?: number, _foldPinStop?: () => void }
 
 function durationOf(count: number): number {
   // 大列表距离更长，给更长时间保证丝滑（measured-px 动画对子树零成本）
@@ -33,10 +33,28 @@ function cleanup(el: FoldEl) {
   el.style.opacity = ''
 }
 
+/**
+ * 动画结束后停止钉扎：留 pinGraceMs 观察期吸收 v-if 移除当帧的残余位移。
+ * 校验身份防止快速连点时误杀下一场动画的新钉扎。
+ */
+function stopPinSoon(el: FoldEl) {
+  const pin = el._foldPinStop
+  setTimeout(() => {
+    if (el._foldPinStop === pin) {
+      pin?.()
+      el._foldPinStop = undefined
+    }
+  }, FOLD.pinGraceMs)
+}
+
 function beforeEnter(el: Element) {
   const target = el as FoldEl
-  target.classList.add('fold-animating') // 动画期间禁用内部 sticky，避免吸顶头跟随缩小的容器重新吸附（位置错乱）
-  target.style.overflow = 'hidden'
+  target._foldPinStop = pinAnchorDuringFold(target) // 钉扎面板上方的吸顶头，防容器塌缩拖动
+  // overflow 用 clip 而非 hidden：clip 不创建滚动容器，内部吸顶头保持
+  // 相对视口吸附，收缩时平滑滑入上方吸顶层的背后（hidden 会使 sticky 相对
+  // 裁剪盒失效，吸顶头瞬跳回自然位置——即「层级行先消失再抖动」的根因）
+  target.classList.add('fold-animating')
+  target.style.overflow = 'clip'
   target.style.height = '0px'
   target.style.opacity = '0'
 }
@@ -52,6 +70,7 @@ function enter(el: Element, done: () => void) {
   target._foldTimer = window.setTimeout(() => {
     cleanup(target) // 动画结束还原为 auto 高度与可见溢出，不裁剪 ⋯ 菜单
     done()
+    stopPinSoon(target)
   }, d)
 }
 
@@ -60,13 +79,17 @@ function afterEnter(el: Element) {
 }
 
 function enterCancelled(el: Element) {
-  cleanup(el as FoldEl)
+  const target = el as FoldEl
+  cleanup(target)
+  target._foldPinStop?.() // 中断时立即停止钉扎，避免与新动画的钉扎互相拉扯
+  target._foldPinStop = undefined
 }
 
 function beforeLeave(el: Element) {
   const target = el as FoldEl
+  target._foldPinStop = pinAnchorDuringFold(target)
   target.classList.add('fold-animating')
-  target.style.overflow = 'hidden'
+  target.style.overflow = 'clip'
   target.style.height = `${target.scrollHeight}px` // 从 auto 固定为 px 才能过渡
 }
 
@@ -80,11 +103,15 @@ function leave(el: Element, done: () => void) {
   target._foldTimer = window.setTimeout(() => {
     cleanup(target)
     done()
+    stopPinSoon(target)
   }, d)
 }
 
 function leaveCancelled(el: Element) {
-  cleanup(el as FoldEl)
+  const target = el as FoldEl
+  cleanup(target)
+  target._foldPinStop?.()
+  target._foldPinStop = undefined
 }
 </script>
 
@@ -104,11 +131,3 @@ function leaveCancelled(el: Element) {
     </div>
   </Transition>
 </template>
-
-<style>
-/* 全局（非 scoped，需穿透到子组件）：折叠动画期间禁用容器内的吸顶定位。
-   sticky 元素会跟随正在缩小的容器重新吸附，导致标题跳动/位置错乱 */
-.fold-animating .fold-sticky {
-  position: static;
-}
-</style>
