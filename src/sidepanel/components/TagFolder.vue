@@ -174,7 +174,7 @@ function onSummaryClick(e: MouseEvent) {
          top 由 --sidepanel-header-h 驱动（Sidepanel.vue ResizeObserver 测量），调整任一侧时注意联动。
          菜单打开时临时提升至 menuElevated，脱离其他吸顶层的遮挡（Issue #79） -->
     <summary
-      class="flex items-center gap-2 p-2 bg-white dark:bg-neutral-800 rounded-md cursor-pointer transition-colors border border-neutral-200 dark:border-neutral-700 list-none sticky top-[var(--sidepanel-header-h,120px)]"
+      class="flex items-center gap-2 p-2 bg-white dark:bg-neutral-800 rounded-md cursor-pointer transition-colors border border-neutral-200 dark:border-neutral-700 list-none select-none sticky top-[var(--sidepanel-header-h,120px)]"
       :class="{ 'opacity-50 grayscale': folder.totalMarks === 0 }"
       :style="{ zIndex: activeFolderMenu === tagId ? Z_LAYERS.menuElevated : Z_LAYERS.stickyFolder }"
       @click="onSummaryClick"

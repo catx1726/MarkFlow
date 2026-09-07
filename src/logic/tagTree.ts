@@ -44,7 +44,7 @@ export function buildTagTree(
     .sort((a, b) => b.lastActive - a.lastActive)
 
   for (const { url, marks } of sortedUrls) {
-    const pageTitle = marks[0]?.title || new URL(url).hostname
+    const pageTitle = marks.find(m => m.title)?.title || new URL(url).hostname
 
     for (const mark of marks) {
       const targetTags = mark.tags && mark.tags.length > 0 ? mark.tags : ['inbox']

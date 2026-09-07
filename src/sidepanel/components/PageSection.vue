@@ -116,7 +116,7 @@ function isGroupCollapsed(groupTitle: string): boolean {
          调整任一侧高度时无需改此处（变量会覆盖）。层级 token 见 src/logic/layers.ts：
          stickyHeader > stickyFolder > stickyPage；菜单打开时临时提升至 menuElevated（Issue #79） -->
     <header
-      class="bg-white dark:border-neutral-700 group/page fold-sticky sticky top-[calc(var(--sidepanel-header-h,120px)+var(--folder-row-h,40px))] flex cursor-pointer items-center justify-between border-b pb-[8px] mb-[8px] dark:bg-neutral-800"
+      class="bg-white dark:border-neutral-700 group/page fold-sticky sticky top-[calc(var(--sidepanel-header-h,120px)+var(--folder-row-h,40px))] flex cursor-pointer select-none items-center justify-between border-b pb-[8px] mb-[8px] dark:bg-neutral-800"
       :style="{ zIndex: activeUrlMenu === url ? Z_LAYERS.menuElevated : Z_LAYERS.stickyPage }"
       @click="emit('toggle-url-collapse', url)"
     >
@@ -210,7 +210,7 @@ function isGroupCollapsed(groupTitle: string): boolean {
       <div>
         <div v-for="group in urlData.groups" :key="group.title" class="group-container">
           <header
-            class="group group-header mt-1 fold-sticky sticky top-[calc(var(--sidepanel-header-h,120px)+var(--folder-row-h,40px)+var(--page-header-h,38px))] -mx-2 flex cursor-pointer items-center justify-between bg-white px-2 py-2 transition-colors dark:bg-neutral-800"
+            class="group group-header mt-1 fold-sticky sticky top-[calc(var(--sidepanel-header-h,120px)+var(--folder-row-h,40px)+var(--page-header-h,38px))] -mx-2 flex cursor-pointer select-none items-center justify-between bg-white px-2 py-2 transition-colors dark:bg-neutral-800"
             :style="[getLevelStripeStyle(group.level), { zIndex: activeGroupMenu === `${url}|${group.title}` ? Z_LAYERS.menuElevated : Z_LAYERS.stickyChapter }]"
             @click="emit('toggle-group', url, group.title, urlData.totalMarks)"
           >

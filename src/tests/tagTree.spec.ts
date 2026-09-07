@@ -91,4 +91,31 @@ describe('buildTagTree', () => {
 
     expect(tree.inbox.totalMarks).toBe(0)
   })
+
+  it('pageTitle 应取同页首个有 title 的标记', () => {
+    const marksByUrl: Record<string, Mark[]> = {
+      'https://example.com/a': [
+        { id: 'm1', url: 'https://example.com/a', text: 'text 1', createdAt: 100, note: '', color: 'blue', rangySerialized: '' },
+        { id: 'm2', url: 'https://example.com/a', text: 'text 2', createdAt: 200, note: '', color: 'blue', rangySerialized: '', title: '真实页面标题' },
+      ],
+    }
+    const tagsMetadata: Record<string, Tag> = {}
+
+    const tree = buildTagTree(marksByUrl, tagsMetadata)
+
+    expect(tree.inbox.pages['https://example.com/a'].pageTitle).toBe('真实页面标题')
+  })
+
+  it('整页标记均无 title 时应降级为 hostname', () => {
+    const marksByUrl: Record<string, Mark[]> = {
+      'https://example.com/a': [
+        { id: 'm1', url: 'https://example.com/a', text: 'text 1', createdAt: 100, note: '', color: 'blue', rangySerialized: '' },
+      ],
+    }
+    const tagsMetadata: Record<string, Tag> = {}
+
+    const tree = buildTagTree(marksByUrl, tagsMetadata)
+
+    expect(tree.inbox.pages['https://example.com/a'].pageTitle).toBe('example.com')
+  })
 })

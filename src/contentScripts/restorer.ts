@@ -47,6 +47,13 @@ export class HighlightRestorer {
   private restorationCompletedAt = 0
 
   /**
+   * 已完成 title 回填的 URL(每会话每 URL 仅尝试一次)。
+   * 旧数据自愈:历史标记可能缺 title(Revert 窗口期 / 可选字段),
+   * 页面重访时用当前 document.title 补写,侧边栏网页标题随之恢复。
+   */
+  private titleBackfilledUrls = new Set<string>()
+
+  /**
    * 恢复完成后的重验间隔。超过此间隔放行一次完整 pass，以捕获虚拟列表回收导致的
    * 已恢复标记丢失（与现有 3s 失败冷却同量级）。
    */
@@ -77,6 +84,8 @@ export class HighlightRestorer {
         this.markRestorationComplete(canonicalUrl)
         return this.state.ambiguousMarksQueue.value
       }
+
+      this.backfillMissingTitles(canonicalUrl, marks)
 
       const now = Date.now()
       const marksToRestore = marks.filter((mark) => {
@@ -120,6 +129,24 @@ export class HighlightRestorer {
   private markRestorationComplete(url: string): void {
     this.restorationCompleteUrl = url
     this.restorationCompletedAt = Date.now()
+  }
+
+  /**
+   * 缺 title 的未删除标记补写当前网页标题。幂等:不覆盖已有标题;
+   * document.title 为空时跳过;fire-and-forget,失败不影响恢复主流程。
+   */
+  private backfillMissingTitles(url: string, marks: Mark[]): void {
+    if (this.titleBackfilledUrls.has(url))
+      return
+    this.titleBackfilledUrls.add(url)
+    const currentTitle = document.title
+    if (!currentTitle)
+      return
+    for (const mark of marks) {
+      if (!mark.title && !mark.deletedAt) {
+        sendMessage('update-mark-details', { id: mark.id, url, title: currentTitle }, 'background').catch(() => {})
+      }
+    }
   }
 
   private async applyMarksTwoPhases(marks: Mark[]) {

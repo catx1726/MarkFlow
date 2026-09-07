@@ -59,7 +59,7 @@ function handleSave() {
       :style="{ backgroundColor: mark.color }"
     />
     <div class="min-w-0 flex-1">
-      <div class="cursor-pointer" @click="emit('goto', mark)">
+      <div class="cursor-pointer select-none" @click="emit('goto', mark)">
         <div
           class="rich-text-content text-neutral-800 dark:text-neutral-200 ease-in-out max-w-none overflow-hidden text-sm font-medium transition-all duration-300"
           :class="isExpanded ? 'max-h-96' : 'max-h-5'"
@@ -145,7 +145,7 @@ function handleSave() {
       <p
         v-else
         :title="mark.note"
-        class="text-neutral-500 dark:text-neutral-400 dark:hover:text-amber-400 ease-in-out mt-1 cursor-pointer overflow-hidden text-xs transition-all duration-300 hover:text-amber-600"
+        class="text-neutral-500 dark:text-neutral-400 dark:hover:text-amber-400 ease-in-out mt-1 cursor-pointer select-none overflow-hidden text-xs transition-all duration-300 hover:text-amber-600"
         :class="isNoteExpanded ? 'max-h-96' : 'max-h-5'"
         @click.stop="emit('edit', mark)"
       >

@@ -1,4 +1,4 @@
-import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ref } from 'vue'
 import rangy from 'rangy/lib/rangy-core'
 import 'rangy/lib/rangy-classapplier'
@@ -90,6 +90,68 @@ describe('highlightRestorer', () => {
       id: 'missing-id',
       url: 'https://example.com/page',
       restoreFailedAt: expect.any(Number),
+    })
+  })
+
+  describe('title backfill (legacy marks self-healing)', () => {
+    const legacyMark = {
+      id: 'legacy-1',
+      url: 'https://example.com/page',
+      text: 'text that does not exist in the dom',
+      note: '',
+      color: '#FFFF00',
+      rangySerialized: 'invalid-serialized-range',
+      createdAt: Date.now(),
+    }
+
+    beforeEach(async () => {
+      const { sendMessage } = await import('webext-bridge/content-script')
+      vi.mocked(sendMessage).mockClear()
+    })
+
+    afterEach(() => {
+      document.title = ''
+    })
+
+    it('缺 title 的标记应在恢复时回填当前网页标题', async () => {
+      const { sendMessage } = await import('webext-bridge/content-script')
+      document.title = 'Example Page Title'
+      vi.mocked(sendMessage).mockImplementation(async (messageType: string) => {
+        if (messageType === 'get-marks-for-url')
+          return [{ ...legacyMark }]
+        if (messageType === 'update-mark-details')
+          return { success: true }
+        return undefined
+      })
+
+      await restorer.restoreHighlights()
+
+      const titleCalls = vi.mocked(sendMessage).mock.calls
+        .filter(([type, payload]: [string, any]) => type === 'update-mark-details' && payload?.title)
+      expect(titleCalls.length).toBe(1)
+      expect(titleCalls[0][1]).toMatchObject({
+        id: 'legacy-1',
+        url: expect.any(String), // 当前页 canonical URL(jsdom 环境为 localhost)
+        title: 'Example Page Title',
+      })
+    })
+
+    it('已有 title 的标记不回填', async () => {
+      const { sendMessage } = await import('webext-bridge/content-script')
+      document.title = 'Example Page Title'
+      vi.mocked(sendMessage).mockImplementation(async (messageType: string) => {
+        if (messageType === 'get-marks-for-url')
+          return [{ ...legacyMark, id: 'has-title-1', title: 'Original Title' }]
+        if (messageType === 'update-mark-details')
+          return { success: true }
+        return undefined
+      })
+
+      await restorer.restoreHighlights()
+
+      const titleCalls = vi.mocked(sendMessage).mock.calls
+        .filter(([type, payload]: [string, any]) => type === 'update-mark-details' && payload?.title)
+      expect(titleCalls.length).toBe(0)
     })
   })
 
