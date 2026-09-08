@@ -6,6 +6,8 @@
  *   快捷键    src/logic/settings.ts:13-14 + src/contentScripts/views/Tooltip.vue:141-150
  *             （Alt+S 默认色快捷保存 / Alt+D 快捷删除已有标记，event.code 判定）
  *   层级管理  src/sidepanel PageSection 折叠模式简版（页面文件夹，组内按物理位置排序）
+ *   备注      src/contentScripts/views/Tooltip.vue:377-379（气泡内输入）+ ui.ts:288（随标记保存）
+ *             + MarkItem.vue:152（侧栏展示）
  *   存储      结构镜像 src/logic/storage.ts 'marks-by-url-storage'
  * 模块：store → anchor → render → tooltip → sidebar → jump → modal → hint
  */
@@ -57,6 +59,18 @@
     const all = loadAll()
     all[page] = (all[page] || []).filter(m => m.id !== id)
     saveAll(all)
+  }
+
+  /* 对齐 background/main.ts:200-216 update-mark-note */
+  function updateMarkNote(mark, note) {
+    const all = loadAll()
+    const m = (all[mark.page] || []).find(x => x.id === mark.id)
+    if (m) {
+      m.note = note
+      saveAll(all)
+    }
+    closeTooltip()
+    renderSidebar()
   }
 
   /* ——— anchor：段落索引 + 文本偏移 ——— */
@@ -201,6 +215,20 @@
     messageTimer = setTimeout(closeTooltip, 1500)
   }
 
+  /* 备注输入框：hairline 语言与气泡一致；placeholder 复用扩展文案（Tooltip.vue:379 notePlaceholder） */
+  function noteArea(value) {
+    const ta = el('textarea', 'mt-2 w-full bg-transparent border hairline rounded-md px-2 py-1.5 text-xs text-neutral-700 dark:text-neutral-300 outline-none resize-none')
+    ta.rows = 2
+    ta.placeholder = '在这里记录你的笔记或思考...'
+    ta.value = value || ''
+    return ta
+  }
+
+  function currentNote() {
+    const ta = tooltip.querySelector('textarea')
+    return ta ? ta.value : ''
+  }
+
   function openCreate(range, para) {
     pendingRange = range
     pendingPara = para
@@ -215,6 +243,7 @@
       colorRow.appendChild(dot)
     }
     tooltip.appendChild(colorRow)
+    tooltip.appendChild(noteArea('')) // 对齐 Tooltip.vue:377：创建气泡内直接写备注
     tooltip.appendChild(el('p', 'mt-1.5 text-neutral-400', 'Alt+S 默认色快捷标记'))
 
     placeTooltip(range.getBoundingClientRect())
@@ -231,6 +260,11 @@
     del.addEventListener('click', () => removeMark(mark))
     row.appendChild(del)
     tooltip.appendChild(row)
+    const ta = noteArea(mark.note) // 对齐 index.ts:285：带出已有备注
+    tooltip.appendChild(ta)
+    const saveNoteBtn = el('button', 'link-line mt-1.5', '保存备注')
+    saveNoteBtn.addEventListener('click', () => updateMarkNote(mark, ta.value)) // 对齐 ui.ts:288 回存链路
+    tooltip.appendChild(saveNoteBtn)
     tooltip.appendChild(el('p', 'mt-1.5 text-neutral-400', 'Alt+D 快捷删除'))
     const span = spansOf(mark.id)[0]
     if (span)
@@ -247,6 +281,7 @@
       title: PAGE_TITLE, // 对齐 ui.ts:415 title: document.title
       text: pendingRange.toString(),
       color,
+      note: currentNote(), // 对齐 Tooltip.vue:169 emit('save', noteValue.value, ...)，Alt+S 同路径
       createdAt: Date.now(),
       paraIdx: Number(pendingPara.dataset.para),
       start,
@@ -320,10 +355,11 @@
   }
 
   function markItem(m) {
-    const item = el('div', 'group flex items-baseline gap-2 py-1.5 w-full')
+    const item = el('div', 'group py-1.5 w-full')
+    const row = el('div', 'flex items-baseline gap-2')
     const dot = el('span', 'shrink-0 self-center')
     dot.style.cssText = `width:8px;height:8px;border-radius:9999px;background:${m.color};display:inline-block`
-    item.appendChild(dot)
+    row.appendChild(dot)
 
     const btn = el(
       'button',
@@ -337,7 +373,7 @@
     else {
       btn.addEventListener('click', () => jumpTo(m))
     }
-    item.appendChild(btn)
+    row.appendChild(btn)
 
     const del = el(
       'button',
@@ -346,7 +382,15 @@
     )
     del.setAttribute('aria-label', '删除标记')
     del.addEventListener('click', () => removeMark(m))
-    item.appendChild(del)
+    row.appendChild(del)
+    item.appendChild(row)
+
+    /* 备注只读展示（对齐 MarkItem.vue:152；行内编辑不做，编辑走管理气泡——Driver 定） */
+    if (m.note) {
+      const noteLine = el('p', 'mt-0.5 pl-4 text-xs text-neutral-400 truncate', m.note)
+      noteLine.title = m.note
+      item.appendChild(noteLine)
+    }
     return item
   }
 
@@ -458,11 +502,9 @@
       closeModal()
       return
     }
-    // Alt+S 快捷标记 / Alt+D 快捷删除（对齐 Tooltip.vue:141-150：event.code 判定，仅气泡打开时生效）
+    // Alt+S 快捷标记 / Alt+D 快捷删除（对齐 Tooltip.vue:141-150：event.code 判定，仅气泡打开时生效；
+    // 扩展无输入框守卫——备注输入框聚焦时 Alt+S 同样保存，preventDefault 阻止字符落入文本框）
     if (tooltip.classList.contains('hidden'))
-      return
-    const target = e.target
-    if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')
       return
     if (!e.altKey || e.shiftKey || e.ctrlKey || e.metaKey)
       return
