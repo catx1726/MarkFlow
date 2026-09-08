@@ -44,30 +44,11 @@
   }
 }
 
-/* 色点 */
-.color-dot {
-  width: 18px;
-  height: 18px;
-  border-radius: 9999px;
-  border: 1px solid rgb(0 0 0 / 0.25);
-  cursor: pointer;
-  padding: 0;
-}
-.color-dot:hover {
-  transform: scale(1.15);
-}
-.dark .color-dot {
-  border-color: rgb(255 255 255 / 0.25);
-}
-
 @media (prefers-reduced-motion: reduce) {
   #tooltip {
     animation: none;
   }
   .mark {
     transition: none;
-  }
-  .color-dot:hover {
-    transform: none;
   }
 }

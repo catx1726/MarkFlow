@@ -6,6 +6,8 @@
  *   快捷键    src/logic/settings.ts:13-14 + src/contentScripts/views/Tooltip.vue:141-150
  *             （Alt+S 默认色快捷保存 / Alt+D 快捷删除已有标记，event.code 判定）
  *   层级管理  src/sidepanel PageSection 折叠模式简版（页面文件夹，组内按物理位置排序）
+ *   备注      src/contentScripts/views/Tooltip.vue:377-379（气泡内输入）+ ui.ts:288（随标记保存）
+ *             + MarkItem.vue:152（侧栏展示）
  *   存储      结构镜像 src/logic/storage.ts 'marks-by-url-storage'
  * 模块：store → anchor → render → tooltip → sidebar → jump → modal → hint
  */
@@ -151,16 +153,25 @@
     for (const span of spansOf(id)) span.replaceWith(...span.childNodes)
   }
 
-  /* ——— tooltip ——— */
+  /* ——— tooltip：布局对齐 Tooltip.vue:303-428 ———
+     卡片 w-320 / rounded-lg / shadow-xl / p-3（注入式浮层保留卡片+阴影，仓库既定约定）
+     → header（色板 + MarkFlow 字标）→ textarea（min-h-80）→ actions（复制 | 删除+保存）
+     色板点击仅选中（琥珀描边），保存由按钮或 Alt+S 触发（selectedColor 语义对齐 Tooltip.vue） */
   const tooltip = document.createElement('div')
   tooltip.id = 'tooltip'
   tooltip.className
-    = 'hidden fixed z-50 bg-white dark:bg-neutral-900 border hairline rounded-md px-3 py-2.5 font-mono text-xs text-neutral-700 dark:text-neutral-300'
-  tooltip.addEventListener('mousedown', e => e.preventDefault()) // 保住选区
+    = 'hidden fixed z-50 w-[320px] rounded-lg border border-neutral-200 bg-white p-3 font-sans text-sm text-neutral-800 shadow-xl dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200'
+  /* 保住选区视觉高亮；但必须放行输入控件——mousedown 的默认行为才是聚焦，
+     一刀切 preventDefault 会让备注框永远无法点击输入（#86 走查发现） */
+  tooltip.addEventListener('mousedown', (e) => {
+    if (!(e.target instanceof HTMLTextAreaElement) && !(e.target instanceof HTMLInputElement))
+      e.preventDefault()
+  })
 
   let pendingRange = null
   let pendingPara = null
   let managingMark = null // 管理气泡当前标记（Alt+D 快捷删除目标）
+  let selectedColor = DEFAULT_COLOR // 气泡内当前选色（对齐 Tooltip.vue selectedColor）
   let messageTimer = null
 
   function placeTooltip(rect) {
@@ -201,37 +212,111 @@
     messageTimer = setTimeout(closeTooltip, 1500)
   }
 
+  /* 色板行：点击仅选中（琥珀描边），对齐 Tooltip.vue:319-328 */
+  function colorsRow() {
+    const row = el('div', 'flex items-center gap-1')
+    for (const color of HIGHLIGHT_COLORS) {
+      const sw = el('button', 'h-[18px] w-[18px] rounded-full border-2 p-0 transition-transform hover:scale-110')
+      sw.style.background = color
+      sw.style.borderColor = selectedColor === color ? '#f59e0b' : 'transparent'
+      sw.setAttribute('aria-label', `选择颜色 ${color}`)
+      sw.addEventListener('click', () => {
+        selectedColor = color
+        row.replaceWith(colorsRow()) // 重绘选中描边
+      })
+      row.appendChild(sw)
+    }
+    return row
+  }
+
+  function headerRow() {
+    const header = el('div', 'flex select-none items-center justify-between')
+    header.appendChild(colorsRow())
+    header.appendChild(el('span', 'text-xs text-neutral-400', 'MarkFlow'))
+    return header
+  }
+
+  /* 备注输入框：对齐 Tooltip.vue:375-382（min-h-80 / resize-y / focus 琥珀）；placeholder 复用 notePlaceholder */
+  function noteArea(value) {
+    const ta = el('textarea', 'min-h-[80px] w-full resize-y rounded-md border border-neutral-300 bg-transparent p-2 text-sm leading-relaxed outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 dark:border-neutral-600 dark:placeholder-neutral-400')
+    ta.placeholder = '在这里记录你的笔记或思考...'
+    ta.value = value || ''
+    return ta
+  }
+
+  function currentNote() {
+    const ta = tooltip.querySelector('textarea')
+    return ta ? ta.value : ''
+  }
+
+  /* 复制按钮（对齐 Tooltip.vue:386-408 copyText），成功短暂变绿勾 */
+  const COPY_ICON = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="h-5 w-5"><path d="M7 9a2 2 0 012-2h6a2 2 0 012 2v6a2 2 0 01-2 2H9a2 2 0 01-2-2V9z" /><path d="M5 3a2 2 0 00-2 2v6a2 2 0 002 2V5h6a2 2 0 002-2H5z" /></svg>'
+  const CHECK_ICON = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="h-5 w-5"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>'
+
+  function copyBtn(text) {
+    const b = el('button', 'rounded-md p-1.5 text-neutral-400 transition-colors hover:bg-amber-50 hover:text-amber-700 dark:hover:bg-amber-900/30')
+    b.title = '复制文本'
+    b.innerHTML = COPY_ICON
+    b.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(text)
+        b.innerHTML = CHECK_ICON
+        b.classList.add('text-green-500')
+        setTimeout(() => {
+          b.innerHTML = COPY_ICON
+          b.classList.remove('text-green-500')
+        }, 1000)
+      }
+      catch { /* 剪贴板不可用时静默 */ }
+    })
+    return b
+  }
+
+  function saveBtn(text, onClick) {
+    const b = el('button', 'rounded-md bg-amber-500 px-4 py-1.5 text-xs font-medium text-neutral-900 shadow-sm transition-colors hover:bg-amber-600', text)
+    b.addEventListener('click', onClick)
+    return b
+  }
+
+  function actionsRow(copyText, rightNodes) {
+    const row = el('div', 'flex items-center justify-between')
+    row.appendChild(copyBtn(copyText))
+    const right = el('div', 'flex gap-2')
+    for (const n of rightNodes) right.appendChild(n)
+    row.appendChild(right)
+    return row
+  }
+
   function openCreate(range, para) {
     pendingRange = range
     pendingPara = para
+    selectedColor = DEFAULT_COLOR
     tooltip.replaceChildren()
-
-    const colorRow = el('div', 'flex items-center gap-2')
-    for (const color of HIGHLIGHT_COLORS) {
-      const dot = el('button', 'color-dot')
-      dot.style.background = color
-      dot.setAttribute('aria-label', `标记为 ${color}`)
-      dot.addEventListener('click', () => createMark(color))
-      colorRow.appendChild(dot)
-    }
-    tooltip.appendChild(colorRow)
-    tooltip.appendChild(el('p', 'mt-1.5 text-neutral-400', 'Alt+S 默认色快捷标记'))
-
+    const content = el('div', 'flex flex-col gap-3')
+    content.appendChild(headerRow())
+    content.appendChild(noteArea('')) // 对齐 Tooltip.vue:375：创建气泡内直接写备注
+    content.appendChild(actionsRow(range.toString(), [
+      saveBtn('确认高亮', () => createMark(selectedColor)), // tooltip.confirmHighlight
+    ]))
+    tooltip.appendChild(content)
     placeTooltip(range.getBoundingClientRect())
   }
 
   function openManage(mark) {
     managingMark = mark
+    selectedColor = mark.color
     tooltip.replaceChildren()
-    const row = el('div', 'flex items-center gap-3')
-    const dot = el('span', 'color-dot')
-    dot.style.background = mark.color
-    row.appendChild(dot)
-    const del = el('button', 'link-line', '删除此标记')
-    del.addEventListener('click', () => removeMark(mark))
-    row.appendChild(del)
-    tooltip.appendChild(row)
-    tooltip.appendChild(el('p', 'mt-1.5 text-neutral-400', 'Alt+D 快捷删除'))
+    const content = el('div', 'flex flex-col gap-3')
+    content.appendChild(headerRow())
+    const ta = noteArea(mark.note) // 对齐 index.ts:285：带出已有备注
+    content.appendChild(ta)
+    const delBtn = el('button', 'rounded-md px-3 py-1.5 text-xs font-medium text-red-600 transition-colors hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/30', '删除')
+    delBtn.addEventListener('click', () => removeMark(mark))
+    content.appendChild(actionsRow(mark.text, [
+      delBtn,
+      saveBtn('保存修改', () => updateMarkDetails(mark, ta.value, selectedColor)), // tooltip.saveChanges
+    ]))
+    tooltip.appendChild(content)
     const span = spansOf(mark.id)[0]
     if (span)
       placeTooltip(span.getBoundingClientRect())
@@ -247,6 +332,7 @@
       title: PAGE_TITLE, // 对齐 ui.ts:415 title: document.title
       text: pendingRange.toString(),
       color,
+      note: currentNote(), // 对齐 Tooltip.vue:169 emit('save', noteValue.value, ...)，Alt+S 同路径
       createdAt: Date.now(),
       paraIdx: Number(pendingPara.dataset.para),
       start,
@@ -255,6 +341,21 @@
     wrapRange(pendingPara, start, end, color, mark.id)
     persistMark(mark)
     window.getSelection().removeAllRanges()
+    closeTooltip()
+    renderSidebar()
+  }
+
+  /* 对齐 ui.ts:288-293 handleSave 更新链路（备注 + 颜色回写，已渲染 span 即时换色） */
+  function updateMarkDetails(mark, note, color) {
+    const all = loadAll()
+    const m = (all[mark.page] || []).find(x => x.id === mark.id)
+    if (m) {
+      m.note = note
+      m.color = color
+      saveAll(all)
+    }
+    if (mark.page === PAGE_ID)
+      setColorInstant(spansOf(mark.id), color)
     closeTooltip()
     renderSidebar()
   }
@@ -320,10 +421,11 @@
   }
 
   function markItem(m) {
-    const item = el('div', 'group flex items-baseline gap-2 py-1.5 w-full')
+    const item = el('div', 'group py-1.5 w-full')
+    const row = el('div', 'flex items-baseline gap-2')
     const dot = el('span', 'shrink-0 self-center')
     dot.style.cssText = `width:8px;height:8px;border-radius:9999px;background:${m.color};display:inline-block`
-    item.appendChild(dot)
+    row.appendChild(dot)
 
     const btn = el(
       'button',
@@ -337,7 +439,7 @@
     else {
       btn.addEventListener('click', () => jumpTo(m))
     }
-    item.appendChild(btn)
+    row.appendChild(btn)
 
     const del = el(
       'button',
@@ -346,7 +448,15 @@
     )
     del.setAttribute('aria-label', '删除标记')
     del.addEventListener('click', () => removeMark(m))
-    item.appendChild(del)
+    row.appendChild(del)
+    item.appendChild(row)
+
+    /* 备注只读展示（对齐 MarkItem.vue:152；行内编辑不做，编辑走管理气泡——Driver 定） */
+    if (m.note) {
+      const noteLine = el('p', 'mt-0.5 pl-4 text-xs text-neutral-400 truncate', m.note)
+      noteLine.title = m.note
+      item.appendChild(noteLine)
+    }
     return item
   }
 
@@ -458,17 +568,19 @@
       closeModal()
       return
     }
-    // Alt+S 快捷标记 / Alt+D 快捷删除（对齐 Tooltip.vue:141-150：event.code 判定，仅气泡打开时生效）
+    // Alt+S 保存（等同点击「确认高亮/保存修改」）/ Alt+D 快捷删除
+    // （对齐 Tooltip.vue:141-150：event.code 判定，仅气泡打开时生效；
+    //   扩展无输入框守卫——备注框聚焦时 Alt+S 同样保存，preventDefault 阻止字符落入文本框）
     if (tooltip.classList.contains('hidden'))
-      return
-    const target = e.target
-    if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')
       return
     if (!e.altKey || e.shiftKey || e.ctrlKey || e.metaKey)
       return
-    if (e.code === 'KeyS' && pendingRange) {
+    if (e.code === 'KeyS') {
       e.preventDefault()
-      createMark(DEFAULT_COLOR)
+      if (pendingRange)
+        createMark(selectedColor)
+      else if (managingMark)
+        updateMarkDetails(managingMark, currentNote(), selectedColor)
     }
     else if (e.code === 'KeyD' && managingMark) {
       e.preventDefault()
