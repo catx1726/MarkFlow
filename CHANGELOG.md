@@ -1,5 +1,9 @@
 # Unreleased
 
+### [2026-09-08] feat: 免安装体验页组 docs/try/ + Options Welcome 快捷键说明 (#83) (#84)
+feat: 免安装体验页组 docs/try/ + Options Welcome 快捷键说明 (#83)
+
+
 ### [2026-09-07] refactor+fix: 自有 UI 质感对齐宣传页（neutral/去阴影）+ 侧边栏标题交互修复 (#82)
 refactor+fix: 自有 UI 质感对齐宣传页（neutral/去阴影）+ 侧边栏标题交互修复
 
