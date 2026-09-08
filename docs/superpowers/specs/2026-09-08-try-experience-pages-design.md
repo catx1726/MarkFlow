@@ -14,6 +14,8 @@
 > **修订 4**: 2026-09-08 Driver 快速调整——章节切换位置不变（文章结尾与出处同行），样式由描边药丸盒改为纯文本 `link-line` 页签（对齐落地页 hero `docs/index.html:114-118`：`flex gap` + 下划线链接 + hover 琥珀；当前页琥珀加粗，无盒子、无描边）。
 >
 > **修订 5**: 2026-09-08 Driver 决策——「体验 / 预览」对比度不足（都是"看"，缺动手/旁观对立），落地页文案双向拉开：zh hero 与章节标签「预览」改回「演示」（撤销修订 2 ③的该部分），EN 侧「Experience → Try it」（祈使动词补动作感）、「Preview → Demo」。锚点 id 不变，体验页内标签不动。
+>
+> **修订 6**: 2026-09-08 PR #84 CR 修复——①Blocking：`unwrap` 移除 `parent.normalize()`（锚点为 textContent 偏移，拆分/合并文本节点均不改变 textContent，normalize 本不影响锚点；防御性移除 + 新增同段落双标记删除回归测试守护）；②Nit：`.color-dot` 亮色边框透明度 0.15→0.25；③Nit：说明弹窗加 `role="dialog" aria-modal="true" aria-label` + 焦点管理（打开聚焦关闭按钮、关闭归还触发按钮）；④Nit 仅回复不改码：`shortcutSave` 存储即完整组合键（`Tooltip.vue:108-121` formatShortcut 按 `+` 拆分解析），kbd 展示与触发同源一致。
 
 ## Goal
 

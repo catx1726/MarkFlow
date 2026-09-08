@@ -144,12 +144,11 @@
     return Array.from(document.querySelectorAll(`[data-mid="${id}"]`))
   }
 
+  /* 拆除仅将 span 替换回其子文本节点。锚点是 textContent 偏移（offsetsInPara/pointAtOffset），
+     拆分/合并文本节点均不改变 textContent，故无需 normalize；
+     移除它可避免对同段落其他标记无关的 DOM 合并（CR #84） */
   function unwrap(id) {
-    for (const span of spansOf(id)) {
-      const parent = span.parentNode
-      span.replaceWith(...span.childNodes)
-      parent.normalize()
-    }
+    for (const span of spansOf(id)) span.replaceWith(...span.childNodes)
   }
 
   /* ——— tooltip ——— */
@@ -397,20 +396,24 @@
     }
   }
 
-  /* ——— modal：核心功能说明 ——— */
+  /* ——— modal：核心功能说明（role=dialog，焦点管理：打开聚焦关闭按钮，关闭归还触发按钮） ——— */
   const modal = document.getElementById('about-modal')
+  const aboutOpen = document.getElementById('about-open')
+  const aboutClose = document.getElementById('about-close')
   function openModal() {
-    if (modal)
-      modal.classList.remove('hidden')
+    if (!modal)
+      return
+    modal.classList.remove('hidden')
+    aboutClose?.focus()
   }
   function closeModal() {
-    if (modal)
-      modal.classList.add('hidden')
+    if (!modal)
+      return
+    modal.classList.add('hidden')
+    aboutOpen?.focus()
   }
-  const aboutOpen = document.getElementById('about-open')
   if (aboutOpen)
     aboutOpen.addEventListener('click', openModal)
-  const aboutClose = document.getElementById('about-close')
   if (aboutClose)
     aboutClose.addEventListener('click', closeModal)
   const aboutBackdrop = document.getElementById('about-backdrop')
