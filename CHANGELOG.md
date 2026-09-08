@@ -1,5 +1,9 @@
 # Unreleased
 
+### [2026-09-08] feat(docs): 体验页与落地页补标记备注 (#85) (#86)
+feat(docs): 体验页与落地页补标记备注 (#85)
+
+
 ### [2026-09-08] feat: 免安装体验页组 docs/try/ + Options Welcome 快捷键说明 (#83) (#84)
 feat: 免安装体验页组 docs/try/ + Options Welcome 快捷键说明 (#83)
 
