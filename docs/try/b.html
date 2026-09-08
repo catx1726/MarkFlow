@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>体验 · 以手、物件和眼神为主题的电影 — MarkFlow</title>
+    <meta name="description" content="免安装体验 MarkFlow：按住 Alt 划词标记，点击侧边栏笔记跳回原文。内容为真实读书笔记《电影的节奏是心跳》。" />
+    <link rel="icon" href="../icon.png" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = { darkMode: 'class' }
+      if (
+        localStorage.theme === 'dark' ||
+        (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)
+      ) {
+        document.documentElement.classList.add('dark')
+      } else {
+        document.documentElement.classList.remove('dark')
+      }
+    </script>
+    <link rel="stylesheet" href="./try.css" />
+  </head>
+  <body class="bg-white text-neutral-900 dark:bg-neutral-950 dark:text-neutral-200 font-sans leading-relaxed antialiased" data-page="b" data-title="以手、物件和眼神为主题的电影">
+    <div class="lg:pr-[300px]">
+      <!-- 导航 -->
+      <nav class="max-w-2xl mx-auto px-6 pt-8 flex justify-between items-center text-sm">
+        <div class="flex items-center gap-6 text-neutral-500 dark:text-neutral-400">
+          <a href="../" class="link-line">← MarkFlow</a>
+        </div>
+        <div class="flex items-center gap-4">
+          <button id="about-open" class="font-mono text-xs text-neutral-400 hover:text-amber-700 dark:hover:text-amber-400">说明</button>
+          <button id="theme-toggle" aria-label="切换明暗" class="text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-100">
+            <span id="theme-toggle-light-icon" class="hidden"><svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z"/></svg></span>
+            <span id="theme-toggle-dark-icon" class="hidden"><svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z"/></svg></span>
+          </button>
+        </div>
+      </nav>
+
+      <!-- 首访引导（可关闭，localStorage 记忆） -->
+      <div id="hint" class="hidden max-w-2xl mx-auto px-6 mt-6">
+        <p class="font-mono text-xs text-neutral-400 border hairline rounded-md px-4 py-3 flex justify-between items-baseline gap-4">
+          <span>按住 Alt 选中文字，即可标记。点击右侧笔记，跳回原文位置。</span>
+          <button id="hint-close" class="link-line shrink-0">知道了</button>
+        </p>
+      </div>
+
+      <!-- 章节头 -->
+      <header class="max-w-2xl mx-auto px-6 pt-16 md:pt-24">
+        <p class="font-mono text-xs tracking-widest text-neutral-400">体验 / 笔记 B</p>
+        <h1 class="mt-4 text-2xl md:text-3xl font-bold tracking-tight">以手、物件和眼神为主题的电影</h1>
+        <div class="border-t hairline mt-8"></div>
+      </header>
+
+      <!-- 窄屏提示（Alt 依赖桌面） -->
+      <p class="lg:hidden max-w-2xl mx-auto px-6 mt-6 font-mono text-xs text-neutral-400">完整体验需在桌面浏览器中进行（按住 Alt 划词标记）。</p>
+
+      <!-- 正文：每段 data-para 为锚点索引，禁止省略 -->
+      <main class="max-w-2xl mx-auto px-6 py-10 md:py-14">
+        <article class="space-y-6 text-neutral-700 dark:text-neutral-300">
+          <p data-para="0">我希望拍一部以手、物件和眼神为主题的电影，我拒绝一切与戏剧有关的东西。戏剧杀死了电影，而电影也杀死了戏剧。电影里需要的是人。</p>
+          <p data-para="1">演员，即便是——尤其是——最有才华的演员，都会给我们带来关于人的过于简单因而显得虚假的形象。表演者们向我展现了什么并不重要，重要的是他们向我隐藏什么。</p>
+          <p data-para="2">在现实生活中，我们四分之三的行为甚至话语都是无意识的。我试图通过这种“无意识行为”（l'automatisme）来抵达“真实”。我并不要求表演者虚造真实。我要求他们做某些动作，说某些话，他们所做所说的并非真实，却是为了真实而做而说的。</p>
+          <p data-para="3">节奏源于精确：一个东西是这样，一个东西不是；一个东西在属于它的位子上，一个东西不在；一个东西有合适的尺寸，一个东西没有。</p>
+          <p data-para="4">我总是在整体观照下关注某个细节。</p>
+        </article>
+        <div class="mt-12 flex flex-wrap items-baseline gap-x-6 gap-y-3">
+          <p class="font-mono text-xs text-neutral-400">摘自《快报》访谈 · 《电影的节奏是心跳》</p>
+          <!-- 章节切换：文章结尾与出处同行；纯文本 link-line 页签（对齐落地页 hero），空间不足时整体换行并靠右 -->
+          <nav aria-label="章节切换" class="ml-auto shrink-0 flex gap-4 font-mono text-xs tracking-widest text-neutral-400">
+            <a href="./index.html" class="link-line">A</a>
+            <span class="text-amber-700 dark:text-amber-400 font-bold">B</span>
+            <a href="./c.html" class="link-line">C</a>
+            <a href="./d.html" class="link-line">D</a>
+          </nav>
+        </div>
+      </main>
+    </div>
+
+    <!-- 侧边栏：复刻扩展 Sidepanel（标签 → 页面 两级分组） -->
+    <aside id="sidebar" class="hidden lg:flex fixed right-0 top-0 h-full w-[300px] flex-col border-l hairline bg-white dark:bg-neutral-950">
+      <div class="px-5 pt-6 pb-4 border-b hairline">
+        <p class="font-mono text-xs tracking-widest text-neutral-400">体验笔记</p>
+      </div>
+      <div id="mark-groups" class="flex-1 overflow-y-auto px-5 py-4"></div>
+      <div class="px-5 py-4 border-t hairline">
+        <button id="reset-try" class="font-mono text-xs text-neutral-400 hover:text-amber-700 dark:hover:text-amber-400">重置体验</button>
+      </div>
+    </aside>
+
+    <!-- 核心功能说明弹窗 -->
+    <div id="about-modal" class="hidden fixed inset-0 z-40 flex items-center justify-center px-6">
+      <div id="about-backdrop" class="absolute inset-0 bg-black/20 dark:bg-black/40"></div>
+      <div class="relative bg-white dark:bg-neutral-900 border hairline rounded-md max-w-sm w-full px-6 py-6">
+        <p class="font-mono text-xs tracking-widest text-neutral-400">核心功能</p>
+        <ul class="mt-4 space-y-4 text-sm text-neutral-700 dark:text-neutral-300">
+          <li>
+            <p class="font-mono text-xs text-neutral-400">标记</p>
+            <p class="mt-1">按住 Alt 选中文字，点击色点完成标记。</p>
+          </li>
+          <li>
+            <p class="font-mono text-xs text-neutral-400">跳转</p>
+            <p class="mt-1">点击侧边栏笔记，页面跳回原文位置，并以琥珀色标出。</p>
+          </li>
+          <li>
+            <p class="font-mono text-xs text-neutral-400">快捷标记</p>
+            <p class="mt-1">气泡打开时按 <span class="font-mono text-xs border hairline rounded px-1">Alt+S</span>，以默认色（黄）直接保存。</p>
+          </li>
+          <li>
+            <p class="font-mono text-xs text-neutral-400">快捷删除</p>
+            <p class="mt-1">点击已有标记打开气泡，按 <span class="font-mono text-xs border hairline rounded px-1">Alt+D</span> 删除。</p>
+          </li>
+        </ul>
+        <button id="about-close" class="mt-6 font-mono text-xs link-line text-neutral-400">关闭</button>
+      </div>
+    </div>
+
+    <script src="./try.js" defer></script>
+    <script>
+      const themeToggleBtn = document.getElementById('theme-toggle')
+      const darkIcon = document.getElementById('theme-toggle-dark-icon')
+      const lightIcon = document.getElementById('theme-toggle-light-icon')
+
+      function updateIcons() {
+        if (document.documentElement.classList.contains('dark')) {
+          darkIcon.classList.add('hidden')
+          lightIcon.classList.remove('hidden')
+        } else {
+          darkIcon.classList.remove('hidden')
+          lightIcon.classList.add('hidden')
+        }
+      }
+      updateIcons()
+
+      themeToggleBtn.addEventListener('click', () => {
+        document.documentElement.classList.toggle('dark')
+        localStorage.theme = document.documentElement.classList.contains('dark') ? 'dark' : 'light'
+        updateIcons()
+      })
+    </script>
+  </body>
+</html>
