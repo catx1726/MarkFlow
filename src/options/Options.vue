@@ -401,6 +401,28 @@ onUnmounted(() => {
               </div>
             </div>
 
+            <!-- Shortcuts -->
+            <div>
+              <h3 class="font-bold text-neutral-900 dark:text-neutral-100 mb-1">
+                {{ t('options.welcomeShortcutsTitle') }}
+              </h3>
+              <ul class="list-disc list-inside text-neutral-600 dark:text-neutral-400 space-y-1">
+                <li>
+                  {{ t('options.welcomeShortcutSavePrefix') }}
+                  <kbd class="px-1.5 py-0.5 rounded bg-neutral-200 dark:bg-neutral-600 font-mono text-xs border border-neutral-300 dark:border-neutral-500">{{ localSettings.shortcutSave }}</kbd>
+                  {{ t('options.welcomeShortcutSaveSuffix') }}
+                </li>
+                <li>
+                  {{ t('options.welcomeShortcutDeletePrefix') }}
+                  <kbd class="px-1.5 py-0.5 rounded bg-neutral-200 dark:bg-neutral-600 font-mono text-xs border border-neutral-300 dark:border-neutral-500">{{ localSettings.shortcutDelete }}</kbd>
+                  {{ t('options.welcomeShortcutDeleteSuffix') }}
+                </li>
+              </ul>
+              <p class="mt-1 text-xs text-neutral-400 dark:text-neutral-500">
+                {{ t('options.welcomeShortcutsCustom') }}
+              </p>
+            </div>
+
             <!-- Acknowledgments -->
             <div class="pt-2 border-t border-neutral-100 dark:border-neutral-700">
               <h3 class="font-bold text-neutral-900 dark:text-neutral-100 mb-1">
