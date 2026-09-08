@@ -3,6 +3,8 @@
 **状态**: 已批准（2026-09-08 Driver 确认范围：侧栏只读展示、落地页只加步骤 1 + 图注）
 **Issue**: #85（#83 / PR #84 的后续补充）
 
+> **修订 1**: 2026-09-08 Driver 走查反馈——①tooltip 的 textarea 无法点击输入（`mousedown preventDefault` 一刀切阻止了聚焦默认行为，修复：放行输入控件）；②tooltip 布局偏离扩展实际代码（修复：对齐 Tooltip.vue 卡片式布局——w320 卡片 + 色板行「点击仅选中」+ MarkFlow 字标 + min-h-80 textarea + 复制/删除/保存按钮行，替代原 hairline 极简风格；`color-dot` CSS 随之废弃移除；Alt+S 语义从「默认色直接保存」改为「等同点击确认高亮」，与扩展 `selectedColor` 语义对齐；说明弹窗文案同步更新）。
+
 ## 1. 背景
 
 PR #84 录屏走查发现遗漏：体验页组 `docs/try/` 与落地页都没有覆盖扩展的**标记备注**能力。扩展真实行为（SSOT）：

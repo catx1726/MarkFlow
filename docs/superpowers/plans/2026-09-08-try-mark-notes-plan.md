@@ -16,5 +16,6 @@
 | :-: | :--- | :--- | :--- |
 | 001 | 引擎与页面 | try.js note 字段 + 创建/管理气泡 textarea + Alt+S 带备注 + 侧栏只读行；4 页弹窗加「备注」条目 | 新增备注回归（创建带备注/空备注不渲染/管理改写/Alt+S/刷新）全绿 |
 | 002 | 落地页文案 + 收尾 | zh+en 步骤 1 与图注；复跑既有套件 + eslint；留档 | 文案断言通过；21+10+10 全绿 |
+| 003 | tooltip 布局对齐 | Driver 走查反馈：textarea 无法聚焦（mousedown preventDefault 一刀切）→ 放行输入控件；tooltip 布局偏离扩展 → 对齐 Tooltip.vue 卡片式（w320/shadow-xl/色板选中态/按钮行/复制按钮）；`color-dot` CSS 废弃；Alt+S 语义对齐扩展 | 9 项真实鼠标路径测试全绿 + 全量回归无退化 |
 
 > 单点改动、范围小，两 task 一次提交流程走完（PR 关联 Closes #85）。
