@@ -1,0 +1,272 @@
+/* ——— 录制舞台：与品牌同一语言——hairline / neutral / 零阴影 / 唯一琥珀强调 ——— */
+/* 质感 SSOT：docs/index.html；此文件只服务录制页（scripts/promo-video/pages/） */
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --paper: #f5f5f4;      /* neutral-100 */
+  --ink: #1c1917;        /* neutral-900 */
+  --ink-2: #44403c;      /* neutral-700 */
+  --ink-3: #78716c;      /* neutral-500 */
+  --ink-4: #a8a29e;      /* neutral-400 */
+  --hairline: rgb(0 0 0 / 0.15);
+  --amber: #b45309;      /* amber-700，唯一强调色 */
+  --mono: ui-monospace, "SF Mono", Menlo, monospace;
+}
+
+html { background: var(--paper); } /* 纸底铺满画布 */
+/* body 内全是 fixed 元素、盒高≈0，html 背景铺不满画布；
+   用 fixed 伪元素做常驻纸底，focus 缩放推移窗口卡时不会露出默认灰底 */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background: var(--paper);
+}
+body { overflow: hidden; }
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: ui-sans-serif, system-ui, "PingFang SC", sans-serif;
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ——— 缩放层：全视口，transform 由 rec.js 驱动 ——— */
+#rec-wrap {
+  position: fixed;
+  inset: 0;
+  transform-origin: 0 0;
+  transition: transform 0.65s cubic-bezier(0.32, 0.72, 0, 1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* 所有 fit/focus 变换下本层都覆盖全视口；自带纸底后，
+     根层永不被暴露 —— 避免 screencast 在新暴露区抓到未栅格化的灰底（checkerboarding） */
+  background: var(--paper);
+}
+#rec-wrap.instant { transition: none; }
+
+/* ——— 窗口卡：hairline、零阴影、灰点栏 ——— */
+.window {
+  width: 1520px;
+  height: 900px;
+  background: #fff;
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: opacity 0.8s ease;
+}
+.window-bar {
+  height: 40px;
+  flex: none;
+  border-bottom: 1px solid var(--hairline);
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 16px;
+}
+.window-bar i {
+  width: 10px; height: 10px; border-radius: 50%;
+  background: #e7e5e4; /* neutral-200，灰点 */
+  border: 1px solid rgb(0 0 0 / 0.06);
+}
+.window-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  /* 不做淡入：新 tab 落地时 0.4s 的透明度动画会被 screencast 抓成重影帧 */
+}
+
+/* ——— 文章 ——— */
+main {
+  flex: 1;
+  min-width: 0;
+  /* overflow auto + 隐藏滚动条：scrollIntoView 被吸收在本容器内，
+     根滚动条不再位移（避免露出画布外灰/黑底） */
+  overflow: auto;
+  scrollbar-width: none;
+  padding: 72px 88px 56px;
+  position: relative;
+}
+main::-webkit-scrollbar { display: none; }
+.kicker {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--ink-4);
+  letter-spacing: 0.08em;
+  margin-bottom: 14px;
+}
+h1 {
+  font-size: 26px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  margin-bottom: 40px;
+}
+article p {
+  max-width: 640px;
+  font-size: 17px;
+  line-height: 2;
+  color: var(--ink-2);
+  margin-bottom: 28px;
+}
+/* 篇间导航：mono 小字、hairline 下划线 */
+.pager {
+  margin-top: 48px;
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--mono);
+  font-size: 12px;
+}
+.pager a {
+  color: var(--ink-3);
+  text-decoration: underline;
+  text-underline-offset: 5px;
+  text-decoration-thickness: 1px;
+  text-decoration-color: var(--hairline);
+}
+.pager a:hover { color: var(--amber); }
+
+/* ——— 侧栏：hairline 分隔，真实扩展 sidepanel ——— */
+aside {
+  flex: none;
+  width: 360px;
+  border-left: 1px solid var(--hairline);
+  background: #fafafa;
+}
+aside iframe { width: 100%; height: 100%; border: 0; display: block; }
+
+/* ——— 片头卡：纸底 + 居中词标，遮盖加载期 ——— */
+#rec-intro {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: var(--paper);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.6s ease;
+}
+#rec-intro span {
+  font-size: 56px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  color: var(--ink);
+}
+#rec-intro.out { opacity: 0; pointer-events: none; }
+
+/* ——— 键帽提示：mono 薄片，底部居中 ——— */
+#rec-keys {
+  position: fixed;
+  left: 50%;
+  bottom: 64px;
+  transform: translateX(-50%) translateY(6px);
+  z-index: 70;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 20px;
+  background: #fff;
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  font-family: var(--mono);
+  font-size: 17px;
+  color: var(--ink-3);
+  opacity: 0;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+  pointer-events: none;
+}
+#rec-keys.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+#rec-keys kbd {
+  font-family: var(--mono);
+  font-size: 16px;
+  color: var(--ink);
+  border: 1px solid var(--hairline);
+  border-radius: 6px;
+  padding: 4px 11px;
+  background: var(--paper);
+}
+
+/* ——— 解说字幕：底部居中薄片（键帽上方），白底衬线感正文 ——— */
+#rec-cap {
+  position: fixed;
+  left: 50%;
+  bottom: 138px;
+  transform: translateX(-50%) translateY(6px);
+  z-index: 70;
+  max-width: 720px;
+  padding: 11px 22px;
+  background: rgb(255 255 255 / 0.94);
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  font-size: 19px;
+  line-height: 1.5;
+  color: var(--ink-2);
+  opacity: 0;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  pointer-events: none;
+}
+#rec-cap.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+#rec-cap.top { top: 88px; bottom: auto; } /* Tooltip 占底部时（如 ⌥S 拍）字幕挪到顶部 */
+
+/* ——— 空镜收束卡：与片头同款居中词标 + 官方 slogan ——— */
+#rec-outro {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  opacity: 0;
+  transition: opacity 0.6s ease;
+  pointer-events: none;
+}
+#rec-outro.show { opacity: 1; }
+#rec-outro span {
+  font-size: 56px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  color: var(--ink);
+}
+#rec-outro p {
+  margin: 0;
+  font-size: 20px;
+  letter-spacing: 0.04em;
+  color: var(--ink-3);
+}
+
+/* ——— 虚拟光标：macOS 式黑箭头白描边（可读性需要，非 UI 装饰） ——— */
+#rec-cursor {
+  position: fixed;
+  left: 0; top: 0;
+  z-index: 80;
+  pointer-events: none;
+  transition: transform 0.09s ease;
+  will-change: transform;
+}
+#rec-cursor svg { display: block; }
+#rec-cursor.down svg { transform: scale(0.86); }
+#rec-cursor.hidden { opacity: 0; }
+#rec-ripple {
+  position: fixed;
+  z-index: 79;
+  width: 28px; height: 28px;
+  margin: -14px 0 0 -14px;
+  border: 1.5px solid var(--amber);
+  border-radius: 50%;
+  pointer-events: none;
+  animation: rec-ripple 0.45s ease-out forwards;
+}
+@keyframes rec-ripple {
+  from { transform: scale(0.4); opacity: 0.9; }
+  to { transform: scale(1.6); opacity: 0; }
+}
+
+/* ——— 收尾空镜：窗口淡出，只留纸底 ——— */
+body.outro .window { opacity: 0; }
+body.outro #rec-keys, body.outro #rec-cursor { opacity: 0; }

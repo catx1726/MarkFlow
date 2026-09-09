@@ -35,4 +35,5 @@ TEMP_REQUIREMENT.md
 
 AI_CR_RESULT.md
 
-.temp/
+.temp
+scripts/promo-video/.cache/

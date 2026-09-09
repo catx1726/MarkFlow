@@ -24,7 +24,7 @@
 
 通过 GitHub Gist 在多台设备间同步标记。
 
-![MarkFlow Preview](./assets/Highlight-Mark-Flow_4.gif)
+<video src="https://raw.githubusercontent.com/catx1726/Highlight-Mark-Flow/main/assets/markflow-promo.webm" autoplay muted loop playsinline></video>
 
 ---
 
