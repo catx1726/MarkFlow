@@ -26,7 +26,7 @@ Page structure drifted or containers reused? The system attempts automatic repai
 
 Sync your marks across devices via GitHub Gist.
 
-<video src="https://raw.githubusercontent.com/catx1726/Highlight-Mark-Flow/main/assets/markflow-promo.en.webm" autoplay muted loop playsinline></video>
+<video src="https://github.com/user-attachments/assets/c915ce1e-bd4b-4acd-9bb0-3968a6ee521e" autoplay muted loop playsinline></video>
 
 ---
 
