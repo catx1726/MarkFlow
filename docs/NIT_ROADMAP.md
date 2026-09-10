@@ -12,7 +12,7 @@
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | **Sidepanel 逻辑拆分 (Composables)** | PR #37 | 中 | 高 | [已完成] | 成功将 800+ 琛?Sidepanel.vue 拆分为 5 个 Composables 和 5 个组件。 |
 | **`structuredMarks` 性能优化 (shallowRef)** | CR #47 | 低 | 中 | ⭐⭐⭐⭐ | `structuredMarks` 是大型嵌套对象，使用 `shallowRef` 替代 `ref` 可避免深度响应式追踪开销。 |
-| **URL 规范化逻辑提取 (Dedupe)** | CR #47 | 低 | 中 | ⭐⭐⭐⭐ | `getNormalizedUrl` 在多处重复定义。提取到共享的 `~/logic/url.ts` 可提升一致性。 |
+| **URL 规范化逻辑提取 (Dedupe)** | CR #47 | 低 | 中 | [已完成] | 2026-09-10 核查：`getNormalizedUrl` 现仅存 `useMarkActions.ts` 单一定义，多处重复已随重构自然消解。 |
 | **样式辅助函数提取 (StyleHelpers)** | CR #47 | 低 | 低 | ⭐⭐⭐ | 将 `PageSection.vue` 中的 `getLevelClass` 等纯样式逻辑提取为通用工具，符合 DRY 原则。 |
 | **`ensureReady` 守卫解耦** | PR #45 | 中 | 高 | ⭐⭐⭐⭐ | 将守卫逻辑提取到独立模块，方便只读操作复用及单元测试直接引用，减少代码重复。 |
 | **ContentScripts 高亮元数据提取统一化** | 分析 | 中 | 高 | ⭐⭐⭐⭐ | `restorer.ts` 与 `ui.ts` 中存在 3 段几乎相同的 ShadowHost 构建/Rangy 序列化/上下文提取逻辑。提取为 `extractMarkPayload` 纯函数，可减少 60-80 行重复代码。 |
@@ -56,7 +56,7 @@
 | **品牌色统一（扩展/宣传页 → amber 琥珀橙）** | 宣传分析 2026-08-20 | 低 | 高 | [已完成] | 荧光笔隐喻色系（Driver 决策 2026-08-20）：扩展 UI、宣传页、扩展图标统一 amber；主按钮 amber-500+深字保证对比度；清理 teal 残留与硬编码 blue hex。 |
 | **主题手动切换开关** | 宣传分析 2026-08-20 | 低 | 中 | [已完成] | PR #71：settings.theme（auto/light/dark）+ 共享 isDark + localStorage 镜像防 FOUC，含 Shadow DOM 实时跟随。 |
 | **Tooltip 弹出/收起过渡动画** | 宣传分析 2026-08-20 | 低 | 中 | [已完成] | PR #66：进入动画绑定 isPositioned（CSS keyframes），收起由 Transition leave 托管。 |
-| **Popup 与宣传页 Logo 统一** | 宣传分析 2026-08-20 | 低 | 低 | ⭐⭐ | Popup 头部使用铅笔图标，宣传页使用 "M" 方块 Logo，品牌符号不一致。建议统一为宣传页的 "M" Logo（"Popup 视觉层次优化"条目的延伸）。 |
+| **Popup 与宣传页 Logo 统一** | 宣传分析 2026-08-20 | 低 | 低 | [已过时] | 原建议统一为宣传页 "M" 方块 Logo，但 2026-09-07 宣传页导航品牌字标已移除（中文版同构），且 2026-09-10 品牌图标重设计定稿「高亮段落」（858505d），"M Logo" 这一统一对象已不存在。品牌符号问题由新图标体系承接。 |
 | **记忆上次使用的标签，下次标记默认预选** | 用户需求 | 低 | 高 | [已完成] | 已实现（Issue #54）：`settings.lastUsedTags`（本地偏好，不同步）；新建标记 `ui.showTooltip` 传 lastUsedTags 作为 initialTags；`Tooltip.show()` 内 `filterExistingTags` 过滤悬空 id；`createHighlight`（仅新建分支）保存后写入。原注意点已全部覆盖：①编辑已有标记用原 tags 不受影响；②标签删除后悬空 id 经 `filterExistingTags` 过滤；③"清除记忆"靠空选保存实现（YAGNI，不设独立按钮）。 |
 | **页面内首次引导浮层（Coach Tip）** | 产品实测分析 2026-09-10 | 中 | 极高 | ⭐⭐⭐⭐⭐ | `Alt`+划词是核心手势但零发现机制，新用户安装后不知其存在。方案：首次**未按 Alt** 划词时，选区旁出现一次性轻提示"按住 Alt 划词即可标记"；设置项记录已读、可跳过。Chrome 上架前转化率最高的准备。 |
 | **删除撤销（Undo Toast）** | 产品实测分析 2026-09-10 | 中 | 高 | ⭐⭐⭐⭐⭐ | 误删即永删是信任级缺陷。同步层已有墓碑（`deletedAt`）机制：删除后 5s 内 Toast 提供"撤销"，超时才真正落碑。与既有条目"统一模态框替代原生 confirm/alert"联动设计。 |
@@ -71,7 +71,7 @@
 | 建议项目 | 来源 | 成本 | 收益 | 推荐等级 | 评估理由 |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | **typecheck 改用 vue-tsc 覆盖 .vue 文件** | 事故复盘 2026-08-20 | 低 | 高 | ⭐⭐⭐⭐ | 当前 `tsc --noEmit` 不解析 .vue SFC，导致 Tooltip.vue 中 `clampToViewport` 未导入的引用错误穿过 typecheck/lint/build 三层直到运行时才暴露。换 `vue-tsc --noEmit` 后 SFC 内 TS 错误可被 CI 拦截。 |
-| **审计日志双写统一（.gemini vs .project）** | 流程复盘 2026-08-20 | 低 | 中 | ⭐⭐⭐ | CI（Audit Guard）强制 `.gemini/ops_changelog.md`，AGENTS.md 索引 `.project/ops_changelog.md`，目前每次变更双写且曾遗漏导致 CI 失败。建议统一为单一日志（保留 CI 强制路径），并同步更新 AGENTS.md 与 PR 模板引用。 |
+| **审计日志双写统一（.gemini vs .project）** | 流程复盘 2026-08-20 | 低 | 中 | [已完成] | 2026-09-07（2a9567d）：CI audit_check 检查路径迁至 `.project/ops_changelog.md`，SSOT 统一；`.gemini` 日志标注废弃，PR 模板同步。 |
 | **git add 路径遗漏防护** | 事故复盘 2026-08-21 | 低 | 中 | ⭐⭐⭐ | PR #69 的 `vite.config.mts` setupFiles 行因 `git add src/ extension/` 路径枚举遗漏未提交，导致 main 测试崩溃。约定：提交前用 `git status` 全量核对替代路径枚举；PR 描述中列变更文件清单。 |
 | **导入顺序规范化 (Lint)** | PR #45 | 低 | 中 | ⭐⭐⭐ | 统一脚本的导入分组（外部库、内部模块、别名），提升代码扫描效率和可读性。 |
 | **统一 `catch` 块格式** | PR #45 | 低 | 低 | ⭐⭐ | 全局清理 `catch {}` 为 `catch (error) {}`，保持代码风格一致性，符合现代 TS 实践。 |
@@ -87,7 +87,7 @@
 | **theme-init.ts 添加 CSP 注释说明** | PR #51 | 低 | 低 | ⭐⭐ | 将内联脚本提取到外部模块是好的做法，建议在 `index.html` 中添加注释说明原因，帮助未来维护者理解。 |
 | **Popup.vue sidePanel.open 类型守卫** | PR #51 | 低 | 低 | ⭐⭐⭐ | 当前使用 `(browser as any).sidePanel`，建议创建类型定义文件扩展 `browser` 类型，避免 `as any`。 |
 | **search.ts 保留策略类注释** | PR #51 | 低 | 低 | ⭐⭐ | `ConsensusMatchStrategy` 等类已保留但不再使用，建议添加注释说明保留原因（如 SPEC-2026-06-26-001）。 |
-| **`mergeWithRemoteFile` 在 `performPull` 中未使用** | PR #51 | 低 | 低 | ⭐⭐ | `sync.ts` 中设计和测试了 `mergeWithRemoteFile`，但 `performPull` 仍直接用 `mergeMarks`/`mergeTags`。建议统一使用辅助函数或移除死代码。 |
+| **`mergeWithRemoteFile` 在 `performPull` 中未使用** | PR #51 | 低 | 低 | [已完成] | 2026-09-10 核查：`background/main.ts:713` 已改为调用 `mergeWithRemoteFile` 统一入口，死代码问题消解。 |
 | **`withTimeout` 实现简化** | PR #51 | 低 | 低 | ⭐⭐ | 当前实现带 `clearTimeout`，CR 建议可简化为不带 `clearTimeout` 的 `Promise.race` 版本，避免微妙时序问题。 |
 | **测试辅助函数共享化** | PR #53 | 低 | 低 | [已完成] | `buildSampleTree` 已提取到 `src/sidepanel/composables/__tests__/testUtils.ts`，`searchFilter.spec.ts` 与 `useSidepanelData.spec.ts` 复用。 |
 | **CR 误判记录：`useSidepanelData.ts` 中 `debounceTimer` 实际已使用** | PR #53 | - | - | - | 多轮 CR 均认为 `debounceTimer` 未使用，但它在 `watch([marksByUrl, tagsMetadata])` 回调中用于防抖 `buildTagTree`。无需修改，仅作记录。 |
@@ -106,8 +106,9 @@
 
 | 项目 | 来源 | 状态 | 关联 Issue/PR |
 | :--- | :--- | :--- | :--- |
-| **侧边栏 z-index 层级体系重构** | 用户反馈 2026-08-21 | 待办 | Issue #79（吸顶层遮挡菜单/存储栏，需分层 token） |
-| **大列表展开动画卡顿优化** | 用户反馈 2026-08-21 | 待办 | Issue #80（>20 标记时高度动画降级为淡入） |
+| **侧边栏 z-index 层级体系重构** | 用户反馈 2026-08-21 | 已完成 | Issue #79（0411836：`src/logic/layers.ts` z-index 分层 token 化） |
+| **大列表展开动画卡顿优化** | 用户反馈 2026-08-21 | 已完成 | Issue #80（0411836：折叠动画重构，clip 裁剪 + 滚动钉扎，861601a 续修） |
+| **宣传素材准备（浅色模式截图 / 三连动图 / B 站演示 GIF）** | 宣传分析 2026-08-20 | 已替代 | 2026-09-10（3f099db）：截图/动图计划由「真实扩展双语录制管线」取代，落地页与 README 已全部换为 webm 成片 |
 | **Chromium 商店上架** | 分析 | 待办 | - |
 | **页面内首次引导浮层（Coach Tip）** | 产品实测分析 2026-09-10 | 待办（P0） | 外壳 Sprint 起点，方案详见第 3 节 |
 | **删除撤销（Undo Toast）** | 产品实测分析 2026-09-10 | 待办（P0） | 复用同步墓碑机制 |
@@ -119,8 +120,7 @@
 | **AlternativeTo / SaaSHub 竞品替代位收录** | 品牌讨论 2026-09-10 | 待办（P1） | 详见第 7 节 |
 | **宣传页 OG/Twitter Card meta + 分享图（og-image 1200×630）** | 宣传分析 2026-08-20 | 已完成 | PR #64 |
 | **宣传页英文版** | 宣传分析 2026-08-20 | 已完成 | PR #70（`docs/lang/en/`） |
-| **宣传页 Tailwind CDN → 编译版迁移** | 宣传分析 2026-08-20 | 待办（P1） | 消除 production warning、可 purge、改善首屏；非阻塞 |
-| **宣传素材准备（浅色模式截图 / 三连动图 / B 站演示 GIF）** | 宣传分析 2026-08-20 | 待办（依赖已就绪） | 品牌色 ✅ 主题切换 ✅（PR #71）i18n ✅（PR #69） |
+| **宣传页 Tailwind CDN → 编译版迁移** | 宣传分析 2026-08-20 | 待办（P1） | 消除 production warning、可 purge、改善首屏；非阻塞（2026-09-10 核查：`docs/index.html` 仍用 CDN，条目有效） |
 | **品牌色统一（blue → amber 琥珀橙）** | 宣传分析 2026-08-20 | 已完成 | Issue #62, PR #63 |
 | **Tooltip 定位与拖拽优化** | 用户需求 2026-08-20 | 已完成 | Issue #62, PR #63/#67（含鼠标感知定位） |
 | **界面视觉精修 Sprint** | 设计走查 2026-08-20 | 已完成 | Issue #65, PR #66 |
