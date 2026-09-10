@@ -37,3 +37,6 @@ AI_CR_RESULT.md
 
 .temp
 scripts/promo-video/.cache/
+
+# 本地草稿与复盘笔记（不发布、不进版本库）
+notes/

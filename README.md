@@ -1,5 +1,7 @@
 # MarkFlow
 
+**中文** | [English](./README_EN.md)
+
 > 一款能够精准跳转的网页文本标记工具，支持 GitHub Gist 多端同步。
 
 [![Firefox Add-on](https://img.shields.io/badge/Firefox-Add--on-orange)](https://addons.mozilla.org/zh-CN/firefox/addon/markflow/) [![GitHub License](https://img.shields.io/badge/License-MIT-yellow)](./LICENSE) ![Local First](https://img.shields.io/badge/Storage-Local--First-blue) ![Sync](https://img.shields.io/badge/Sync-GitHub%20Gist-purple) ![Privacy](https://img.shields.io/badge/Privacy-No--Login-green)
