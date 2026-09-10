@@ -113,6 +113,10 @@
 | **删除撤销（Undo Toast）** | 产品实测分析 2026-09-10 | 待办（P0） | 复用同步墓碑机制 |
 | **本地 JSON 备份/导入** | 产品实测分析 2026-09-10 | 待办（P0） | 复用 sync.ts merge 策略 |
 | **恢复失败标记可见性** | 产品实测分析 2026-09-10 | 待办（P1） | 遵守 SPEC-2026-06-26-001，不重启 L3/L4 |
+| **商店 listing 标题关键词卡位（AMO 先行）** | 品牌讨论 2026-09-10 | 待办（P0） | 详见第 7 节；Chrome 上架时同构 |
+| **GitHub topics + description 关键词** | 品牌讨论 2026-09-10 | 待办（P0） | 5 分钟级，详见第 7 节 |
+| **落地页技术 SEO（title/JSON-LD/sitemap/hreflang）** | 品牌讨论 2026-09-10 | 待办（P0） | 详见第 7 节 |
+| **AlternativeTo / SaaSHub 竞品替代位收录** | 品牌讨论 2026-09-10 | 待办（P1） | 详见第 7 节 |
 | **宣传页 OG/Twitter Card meta + 分享图（og-image 1200×630）** | 宣传分析 2026-08-20 | 已完成 | PR #64 |
 | **宣传页英文版** | 宣传分析 2026-08-20 | 已完成 | PR #70（`docs/lang/en/`） |
 | **宣传页 Tailwind CDN → 编译版迁移** | 宣传分析 2026-08-20 | 待办（P1） | 消除 production warning、可 purge、改善首屏；非阻塞 |
@@ -124,8 +128,40 @@
 | 跳过 Level 3/4 恢复算法，侧边栏提示上下文 | `.temp/detail.md` | 已完成 | Issue #50, PR #51 |
 | 高亮标记高度自定义 (`highlightHeight`) | `.temp/detail.md` | 已完成 | Issue #50, PR #51 |
 | 侧边栏搜索功能（上下文保留 + 仅显示匹配项） | `.temp/detail.md` | 已完成 | Issue #52, PR #53 |
+---
+
+## 7. 推广与 SEO (Market & SEO, 2026-09-10 品牌讨论)
+
+### 命名决策（Driver 定，不改名）
+
+**MarkFlow = Mark（标记）+ Flow（顺畅/流动）**：既代表标记的手感与体验，也意味着标记之后知识的流动——而不是沉没在侧边栏。
+
+**已知的名称风险**（核查于 2026-09-10）：GitHub 搜索 `markflow` 有 213 个同名/近名仓库，几乎全是 Markdown 工具（头部 MarkFlowy 为 2.4k star 的 AI Markdown 编辑器）——存在搜索噪音与"Mark=Markdown"的语义错位。**对策：不改名，用组合词 owning 长尾**（"MarkFlow Highlighter"），并通过商店 listing 标题建立品类关联。
+
+### 待实施策略
+
+| 项目 | 渠道 | 成本 | 收益 | 优先级 | 要点 |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **商店 listing 标题关键词卡位** | AMO / 未来 CWS | 低 | 极高 | P0 | 商店搜索是扩展最大自然流量入口，标题权重最高。AMO 标题改「MarkFlow: 网页高亮 + 精准回跳」；Chrome 上架时用 "MarkFlow: Web Highlighter & Notes" 同构卡位 |
+| **GitHub repo SEO** | GitHub | 极低 | 中 | P0 | 补 topics：`web-highlighter` `annotation` `local-first` `browser-extension` `firefox-addon` `chrome-extension`；description 双语埋品类关键词 |
+| **落地页技术 SEO** | docs/ (Pages) | 低 | 高 | P0 | `<title>` 带品类词（中英）；加 `SoftwareApplication` JSON-LD 结构化数据；`sitemap.xml`；zh/en 互链 `hreflang` |
+| **竞品替代位收录** | AlternativeTo / SaaSHub | 低 | 高 | P1 | 列为 Weava / Glasp / Hypothesis / Liner 的 alternative——搜竞品名的人是精准用户，"无登录"是直接卖点 |
+| **长尾关键词覆盖** | 落地页 / 内容 | 低 | 中 | P1 | 不碰 "highlighter" 红海头部词，打组合长尾：`web highlighter no login`、`local-first web annotation`、`highlight and jump back`、`网页高亮 不用注册`；落地页 FAQ 与文案自然覆盖 |
+| **内容营销（双语）** | dev.to / HN / 少数派 / V2EX / 掘金 | 中 | 高 | P1 | 弹药现成：①"无登录本地优先高亮工具"产品叙事 ②**AI 录制宣传片工程复盘**（草稿在本地 notes/，HN 对工程故事有天然热度）。时机：Chrome 上架后一波打完 |
+| **Product Hunt 正式 launch** | Product Hunt | 中 | 高 | P2 | 前置依赖：Chrome 上架 + 复盘文发布 + 宣传片齐备（已就绪） |
+| **衡量闭环** | GSC / 商店后台 / GitHub Insights | 低 | 中 | P1 | 落地页接 Google Search Console；AMO/CWS 后台看展示→安装转化；GitHub Traffic 看来源构成 |
+
+### 节奏建议
+
+```
+Chrome 上架（分发前提）
+  → 商店标题卡位 + repo topics + 落地页 SEO（P0 三件套，与上架并行）
+  → AlternativeTo 收录 + 长尾覆盖（P1）
+  → 复盘文双语发布 → Product Hunt launch（P2，集中引爆）
+```
 
 ---
+
 **更新日期**: 2026-09-10
 **维护者**: OpenCode & Driver
 
