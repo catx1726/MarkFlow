@@ -164,9 +164,10 @@ async function exportBackup() {
 async function onImportFile(event: Event) {
   const input = event.target as HTMLInputElement
   const file = input.files?.[0]
-  input.value = '' // 允许再次选择同一文件
   if (!file)
     return
+  // File 对象已持有引用，此时清空 input 才能再次选择同一文件
+  input.value = ''
   let text: string
   try {
     text = await file.text()

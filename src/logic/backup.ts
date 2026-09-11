@@ -99,6 +99,13 @@ export function applyBackup(
   }
 }
 
+/**
+ * 恢复设置为「备份值 + 默认值补齐」。
+ * 安全白名单（有意决策，非默认值补齐的副作用）：仅接受 defaultSettings 已知键，
+ * 防止手改备份文件注入任意 settings 键。跨版本场景由 version 闸门拦截
+ * （超前版本直接拒绝导入），不存在「v2 备份降级导入丢字段」路径；
+ * 未知键唯一来源即手改文件——正是白名单要挡的向量。
+ */
 export function restoredSettings(backup: BackupFile): typeof defaultSettings {
   const result: Record<string, unknown> = { ...defaultSettings }
   for (const key of Object.keys(defaultSettings)) {

@@ -58,7 +58,7 @@ export interface BackupFile {
 | `buildBackup(marks, tags, settings): BackupFile` | 聚合三块数据 + `exportedAt: Date.now()` |
 | `parseBackupFile(text): BackupFile` | 严格校验，失败抛 `BackupParseError`（携带 i18n key）。校验链：JSON 可解析 → `format === BACKUP_FORMAT` → `version` 为整数且 `1 ≤ v ≤ BACKUP_VERSION` → `data` 为对象且 `marks`/`tags`/`settings` 均为对象（允许空对象） |
 | `applyBackup(localMarks, localTags, backup): { marks, tags }` | 复用 `sync.ts` 的 `mergeMarks`/`mergeTags`（时间戳新者胜，与 Gist 同步同一收敛语义） |
-| `restoredSettings(backup): Settings` | `{ ...defaultSettings, ...backup.data.settings }`——旧备份缺新字段由默认值补齐，防止未来版本字段缺失 |
+| `restoredSettings(backup): Settings` | **安全白名单**：仅接受 `defaultSettings` 已知键，备份值覆盖 + 缺失字段由默认值补齐，未知键丢弃（防止手改备份注入任意 settings 键；跨版本丢字段场景已由 version 闸门拦截——超前版本整体拒绝）。2026-09-11 PR #88 二轮审查回写：原文 `{...defaultSettings, ...备份值}` 描述与实现漂移，以此处为准 |
 | `countBackupStats(backup): { marks, tags }` | 标记总数（跨 URL 求和，含已删除标记）与标签数，供确认弹窗展示 |
 
 ### 3.3 Options UI（`Options.vue`）
@@ -114,6 +114,7 @@ export interface BackupFile {
 | 导入与 Gist 同步共存 | merge 语义与 Gist 相同（时间戳新者胜），导入后本地变新，下次 autoSync 推送自然携带恢复数据，多端一致收敛，无特判 |
 | 大备份文件 | 万级标记约数 MB；同步 `JSON.parse` 阻塞极短，可接受 |
 | 确认弹窗期间编辑设置未保存 | 导入替换 settings 后 `watch` 同步 `localSettings`，未保存编辑被覆盖——确认弹窗已有明确警告，预期行为（恢复优先） |
+| marks 数组元素结构 | **有意不做深度校验**（不校验元素含 `id`/`createdAt` 等 merge 依赖字段）：本地文件威胁模型弱，加严校验复杂度收益比低（YAGNI）；异常元素由 merge 语义兜底（PR #88 二轮审查建议记录） |
 | e2e 种子陷阱 | `webext-settings` 在 storage.local 中是 JSON 字符串（handoff §4.1）；e2e 断言须经 `useWebExtensionStorage` 或手动 `JSON.parse` |
 
 ## 6. 测试策略（TDD，先红后绿）
