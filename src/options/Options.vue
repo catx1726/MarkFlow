@@ -156,7 +156,7 @@ async function exportBackup() {
   a.href = url
   const now = new Date()
   const pad = (n: number) => String(n).padStart(2, '0')
-  a.download = `markflow-backup-${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}.json`
+  a.download = `markflow-backup-${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}.json`
   a.click()
   URL.revokeObjectURL(url)
 }
