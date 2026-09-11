@@ -94,6 +94,8 @@ handleMouseUp (index.ts)
 | :--- | :--- | :--- |
 | `coachTip.hint` | `按住 {key} 划词即可标记` | `Hold {key} while selecting to highlight` |
 
+> **2026-09-11 执行修订**：拆分为 `coachTip.hintPrefix` / `coachTip.hintSuffix` 两个 key + 中间独立 `<kbd>` 元素——键帽需独立 amber 着色，单 key 插值无法对占位符局部着色。先例：`options.quickStartPrefix/Suffix`（详见 Plan 头部声明）。
+
 - 键帽文案由纯函数 `coachKeyLabel(isMac): string` 提供：Mac → `⌥ Option`，其他 → `Alt`
 - 插值复用 `t()` 既有 `{key}` 参数机制
 

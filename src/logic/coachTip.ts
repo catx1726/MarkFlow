@@ -24,10 +24,7 @@ export function coachKeyLabel(isMac: boolean): string {
   return isMac ? '⌥ Option' : 'Alt'
 }
 
-/**
- * Options「重新显示」按钮禁用判定：两个一次性引导都从未展示时无物可重显。
- * 注意方向——已显示（true）才可点击；曾写反为「已显示→禁用」导致最常见重显场景按钮变灰。
- */
+/** Options「重新显示」按钮禁用判定：两个一次性引导都从未展示时无物可重显 */
 export function isReshowDisabled(coachTipDone: boolean, shortcutHintDone: boolean): boolean {
   return !coachTipDone && !shortcutHintDone
 }

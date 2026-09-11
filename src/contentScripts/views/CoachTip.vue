@@ -1,7 +1,7 @@
 <!-- src/contentScripts/views/CoachTip.vue -->
 <script setup lang="ts">
 import { nextTick, onUnmounted, reactive, ref } from 'vue'
-import { getMaxZIndex } from '../../logic/dom'
+import { getMaxZIndex } from '~/logic/dom'
 import { computeTooltipPosition } from '~/logic/tooltipPosition'
 import type { AnchorRect } from '~/logic/tooltipPosition'
 import { coachKeyLabel } from '~/logic/coachTip'
@@ -27,15 +27,15 @@ const keyLabel = coachKeyLabel(/mac/i.test(navigator.platform))
 
 let dismissTimer = 0
 
-function dismiss() {
-  hide()
-}
-
 async function show(anchorRect: AnchorRect) {
   // 重复 show()（未先 hide）时清掉旧定时器，避免孤儿定时器在原 6s 截止点提前隐藏重新显示的提示
   clearTimeout(dismissTimer)
   zIndex.value = getMaxZIndex() + 100
   isPositioned.value = false
+  // 两阶段渲染不变量：测量期必须处于中性状态——重置上一轮坐标，
+  // 避免隐藏测量帧挂在旧坐标上（未来若加 max-width/换行，旧坐标处的测量会失真）
+  position.x = 0
+  position.y = 0
   visible.value = true
   await nextTick()
   const el = tipRef.value
@@ -54,15 +54,15 @@ async function show(anchorRect: AnchorRect) {
     position.y = pos.y
   }
   isPositioned.value = true
-  window.addEventListener('mousedown', dismiss, true)
-  window.addEventListener('scroll', dismiss, true)
-  dismissTimer = window.setTimeout(dismiss, DISMISS_TIMEOUT_MS)
+  window.addEventListener('mousedown', hide, true)
+  window.addEventListener('scroll', hide, true)
+  dismissTimer = window.setTimeout(hide, DISMISS_TIMEOUT_MS)
 }
 
 function hide() {
   clearTimeout(dismissTimer)
-  window.removeEventListener('mousedown', dismiss, true)
-  window.removeEventListener('scroll', dismiss, true)
+  window.removeEventListener('mousedown', hide, true)
+  window.removeEventListener('scroll', hide, true)
   visible.value = false
   isPositioned.value = false
 }

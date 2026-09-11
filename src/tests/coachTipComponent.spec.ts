@@ -2,14 +2,15 @@ import { mount } from '@vue/test-utils'
 import { nextTick } from 'vue'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import CoachTip from '~/contentScripts/views/CoachTip.vue'
+import type { AnchorRect } from '~/logic/tooltipPosition'
 
 // jsdom 无布局，getBoundingClientRect 返回 0，computeTooltipPosition 对 0 尺寸照常钳制不抛错
-const anchor = { top: 100, left: 100, width: 200, height: 20 }
+const anchor: AnchorRect = { top: 100, left: 100, width: 200, height: 20 }
 
 // stub 掉 Transition，避免 leave 动画的异步钩子让 v-if 移除滞后
 const mountOptions = { global: { stubs: ['transition'] } }
 
-interface Exposed { show: (a: typeof anchor) => Promise<void>, hide: () => void }
+interface Exposed { show: (a: AnchorRect) => Promise<void>, hide: () => void }
 
 async function showTip(wrapper: ReturnType<typeof mount>) {
   await (wrapper.vm as unknown as Exposed).show(anchor)

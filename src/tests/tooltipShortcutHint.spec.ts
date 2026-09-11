@@ -3,6 +3,7 @@ import { nextTick } from 'vue'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import Tooltip from '~/contentScripts/views/Tooltip.vue'
 import { settings } from '~/logic/settings'
+import type { AnchorRect } from '~/logic/tooltipPosition'
 
 // webext-bridge 的 content-script 入口有环境守卫（jsdom 下直接 throw），
 // Tooltip 顶层导入 sendMessage——仅 mock 该环境守卫，行为走真实组件代码
@@ -10,11 +11,11 @@ vi.mock('webext-bridge/content-script', () => ({
   sendMessage: vi.fn(async () => ({})),
 }))
 
-const anchor = { top: 100, left: 100, width: 200, height: 20 }
+const anchor: AnchorRect = { top: 100, left: 100, width: 200, height: 20 }
 const mountOptions = { global: { stubs: ['transition'] } }
 
 interface Exposed {
-  show: (a: typeof anchor, highlighted: boolean, note?: string, color?: string, text?: string, tags?: string[], pointer?: { x: number, y: number }) => Promise<void>
+  show: (a: AnchorRect, highlighted: boolean, note?: string, color?: string, text?: string, tags?: string[], pointer?: { x: number, y: number }) => Promise<void>
 }
 
 async function showTooltip(wrapper: ReturnType<typeof mount>) {

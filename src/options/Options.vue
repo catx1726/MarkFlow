@@ -516,7 +516,7 @@ onUnmounted(() => {
           </p>
           <div class="flex items-center gap-[12px]">
             <span class="text-[13px] text-neutral-500">
-              {{ !settings.coachTipDone && !settings.tooltipShortcutHintDone ? t('options.coachTipStatusNotShown') : t('options.coachTipStatusShown') }}
+              {{ isReshowDisabled(settings.coachTipDone, settings.tooltipShortcutHintDone) ? t('options.coachTipStatusNotShown') : t('options.coachTipStatusShown') }}
             </span>
             <button
               class="rounded-md bg-amber-500 px-3 py-1.5 text-xs font-medium text-neutral-900 shadow-sm transition-colors hover:bg-amber-600 disabled:opacity-50"
