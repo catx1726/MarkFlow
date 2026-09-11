@@ -114,7 +114,7 @@ export interface BackupFile {
 | 导入与 Gist 同步共存 | merge 语义与 Gist 相同（时间戳新者胜），导入后本地变新，下次 autoSync 推送自然携带恢复数据，多端一致收敛，无特判 |
 | 大备份文件 | 万级标记约数 MB；同步 `JSON.parse` 阻塞极短，可接受 |
 | 确认弹窗期间编辑设置未保存 | 导入替换 settings 后 `watch` 同步 `localSettings`，未保存编辑被覆盖——确认弹窗已有明确警告，预期行为（恢复优先） |
-| marks 数组元素结构 | **有意不做深度校验**（不校验元素含 `id`/`createdAt` 等 merge 依赖字段）：本地文件威胁模型弱，加严校验复杂度收益比低（YAGNI）；异常元素由 merge 语义兜底（PR #88 二轮审查建议记录） |
+| marks 数组元素结构 | **元素级对象校验做**（`isPlainObject` 每元素，防 mergeMarks 对 null/原始值元素 TypeError）；**字段级校验有意不做**（不校验 `id`/`createdAt` 等 merge 依赖字段的存在与类型）：本地文件威胁模型弱，YAGNI；异常字段由 merge 语义兜底（PR #88 三轮审查后回写） |
 | e2e 种子陷阱 | `webext-settings` 在 storage.local 中是 JSON 字符串（handoff §4.1）；e2e 断言须经 `useWebExtensionStorage` 或手动 `JSON.parse` |
 
 ## 6. 测试策略（TDD，先红后绿）

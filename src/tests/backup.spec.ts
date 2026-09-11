@@ -83,6 +83,11 @@ describe('backup Logic', () => {
       expectParseError(JSON.stringify({ format: BACKUP_FORMAT, version: 1, data: { marks: [[{ id: 'x' }]], tags: {}, settings: {} } }), 'data')
     })
 
+    it('marks 数组含非对象元素（null/原始值）抛 data 错误', () => {
+      expectParseError(JSON.stringify({ format: BACKUP_FORMAT, version: 1, data: { marks: { u: [null] }, tags: {}, settings: {} } }), 'data')
+      expectParseError(JSON.stringify({ format: BACKUP_FORMAT, version: 1, data: { marks: { u: [42] }, tags: {}, settings: {} } }), 'data')
+    })
+
     it('缺 exportedAt 抛 data 错误', () => {
       expectParseError(JSON.stringify({ format: BACKUP_FORMAT, version: 1, data: { marks: {}, tags: {}, settings: {} } }), 'data')
     })

@@ -73,8 +73,9 @@ export function parseBackupFile(text: string): BackupFile {
   if (!isPlainObject(data) || !isPlainObject(data.marks) || !isPlainObject(data.tags) || !isPlainObject(data.settings))
     throw new BackupParseError('data', 'Backup data incomplete')
   for (const list of Object.values(data.marks as Record<string, unknown>)) {
-    if (!Array.isArray(list))
-      throw new BackupParseError('data', 'marks values must be arrays')
+    // 元素级校验：mergeMarks 依赖 rm.id/rm.createdAt 访问，null/原始值元素会 TypeError
+    if (!Array.isArray(list) || !list.every(el => isPlainObject(el)))
+      throw new BackupParseError('data', 'marks values must be arrays of objects')
   }
   return {
     format: BACKUP_FORMAT,

@@ -13,6 +13,7 @@ import { BackupParseError, applyBackup, buildBackup, countBackupStats, parseBack
 import type { BackupErrorKind, BackupFile } from '~/logic/backup'
 import { t } from '~/logic/i18n'
 import type { Messages } from '~/logic/i18n'
+import type { Mark, Tag } from '~/logic/storage'
 
 import { isDark } from '~/logic/theme'
 
@@ -199,7 +200,16 @@ async function onImportFile(event: Event) {
 
 async function applyImportedBackup(backup: BackupFile) {
   await Promise.all([dataReady, tagsReady, settingsReady])
-  const merged = applyBackup(marksByUrl.value, tagsMetadata.value, backup)
+  // applyBackup 为纯计算，先算后写——异常在此抛出时尚未写任何 storage；
+  // 兜底 catch 保证 fire-and-forget 路径（弹窗已关）也有用户反馈
+  let merged: { marks: Record<string, Mark[]>, tags: Record<string, Tag> }
+  try {
+    merged = applyBackup(marksByUrl.value, tagsMetadata.value, backup)
+  }
+  catch {
+    showAlert(t(backupErrorKeys.data))
+    return
+  }
   marksByUrl.value = merged.marks
   tagsMetadata.value = merged.tags
   // 整体替换设置：既有 watch(settings, deep) 会自动把 localSettings 同步回来。
