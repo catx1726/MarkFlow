@@ -4,7 +4,7 @@ import { nextTick, onUnmounted, reactive, ref } from 'vue'
 import { getMaxZIndex } from '~/logic/dom'
 import { computeTooltipPosition } from '~/logic/tooltipPosition'
 import type { AnchorRect } from '~/logic/tooltipPosition'
-import { coachKeyLabel } from '~/logic/coachTip'
+import { coachKeyLabel, isMacPlatform } from '~/logic/coachTip'
 import { t } from '~/logic/i18n'
 
 /**
@@ -23,7 +23,7 @@ const position = reactive({ x: 0, y: 0 })
 const tipRef = ref<HTMLElement | null>(null)
 const zIndex = ref(0)
 
-const keyLabel = coachKeyLabel(/mac/i.test(navigator.platform))
+const keyLabel = coachKeyLabel(isMacPlatform(navigator))
 
 let dismissTimer = 0
 
@@ -60,6 +60,10 @@ async function show(anchorRect: AnchorRect) {
 }
 
 function hide() {
+  // 幂等短路：已隐藏时直接返回，让「visible=false ⟹ 监听器/定时器已清理」成为显式不变量，
+  // 不再隐式依赖 add/removeEventListener 与 clearTimeout 的幂等性
+  if (!visible.value)
+    return
   clearTimeout(dismissTimer)
   window.removeEventListener('mousedown', hide, true)
   window.removeEventListener('scroll', hide, true)

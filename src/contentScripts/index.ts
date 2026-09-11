@@ -256,7 +256,7 @@ function processSelection(event: {
 
   // 首次引导（Coach Tip）：划了词但未按 Alt 且从未引导过 → 选区旁一次性提示核心手势。
   // 尝试显示即置位（先写标志再调用显示）：优先保证严格一次——若 ensureMounted/显示抛异常，
-  // 宁可用户错过提示也不重复打扰；storage 写失败最坏多显示一次，同样无害。
+  // 宁可用户错过提示也不重复打扰；storage 写失败或异步落盘前刷新页面，最坏多显示一次，同样无害。
   if (shouldShowCoachTip({
     altKey: event.altKey,
     isCollapsed: initialSelection.isCollapsed,

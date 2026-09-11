@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { coachKeyLabel, isReshowDisabled, shouldShowCoachTip } from '~/logic/coachTip'
+import { coachKeyLabel, isMacPlatform, isReshowDisabled, shouldShowCoachTip } from '~/logic/coachTip'
 
 describe('shouldShowCoachTip', () => {
   const base = { altKey: false, isCollapsed: false, onMarkElement: false, coachTipDone: false }
@@ -32,6 +32,17 @@ describe('coachKeyLabel', () => {
 
   it('mac 平台显示 ⌥ Option', () => {
     expect(coachKeyLabel(true)).toBe('⌥ Option')
+  })
+})
+
+describe('isMacPlatform', () => {
+  it('mac 平台字符串判定为 true', () => {
+    expect(isMacPlatform({ platform: 'MacIntel' })).toBe(true)
+  })
+
+  it('windows/linux 判定为 false', () => {
+    expect(isMacPlatform({ platform: 'Win32' })).toBe(false)
+    expect(isMacPlatform({ platform: 'Linux x86_64' })).toBe(false)
   })
 })
 

@@ -1,6 +1,7 @@
 import { mount } from '@vue/test-utils'
 import { nextTick } from 'vue'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { storage as mockedStorage } from 'webextension-polyfill'
 import Tooltip from '~/contentScripts/views/Tooltip.vue'
 import { settings } from '~/logic/settings'
 import type { AnchorRect } from '~/logic/tooltipPosition'
@@ -60,5 +61,19 @@ describe('tooltip shortcut hint（一次性快捷键提示）', () => {
       expect(kbd.classes()).toContain('text-gray-600')
       expect(kbd.classes()).toContain('dark:text-gray-200')
     }
+  })
+
+  it('写放大回归：置位后重复 show() 不再触发 settings 落盘（Vue 同值赋值不触发 watch）', async () => {
+    const wrapper = mount(Tooltip, mountOptions)
+    await showTooltip(wrapper) // 首次：undefined → true，应有一次落盘
+    expect(settings.value.tooltipShortcutHintDone).toBe(true)
+    const setMock = vi.mocked(mockedStorage.local.set)
+    setMock.mockClear()
+    await showTooltip(wrapper) // 重复：true → true，同值赋值不应触发 deep watch 写
+    await nextTick()
+    await Promise.resolve()
+    const settingsWrites = setMock.mock.calls.filter(args =>
+      args[0] && typeof args[0] === 'object' && 'webext-settings' in (args[0] as Record<string, unknown>))
+    expect(settingsWrites.length).toBe(0)
   })
 })
