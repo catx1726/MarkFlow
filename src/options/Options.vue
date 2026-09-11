@@ -5,10 +5,12 @@ import browser from 'webextension-polyfill'
 import { sendMessage } from 'webext-bridge/options'
 import { getLogs } from '../logic/errorCollector'
 import { getActiveSectionId } from './scrollSpy'
-import { settings } from '~/logic/settings'
+import { settings, settingsReady } from '~/logic/settings'
 import { isReshowDisabled } from '~/logic/coachTip'
 import { dataReady, marksByUrl, syncConfig, syncReady, syncStatus, tagsMetadata, tagsReady } from '~/logic/storage'
 import { createGist, getGists } from '~/logic/sync'
+import { BackupParseError, applyBackup, buildBackup, countBackupStats, parseBackupFile, restoredSettings } from '~/logic/backup'
+import type { BackupFile } from '~/logic/backup'
 import { t } from '~/logic/i18n'
 import type { Messages } from '~/logic/i18n'
 
@@ -63,7 +65,6 @@ function showAlert(message: string, title = t('options.alertTitle'), isHtml = fa
 }
 
 /** 确认模式：显示 取消/确定 双按钮，确定才执行回调 */
-// eslint-disable-next-line unused-imports/no-unused-vars -- Task 4 备份导入流程将使用
 function showConfirm(message: string, onConfirm: () => void, title = t('options.alertTitle')) {
   alertInfo.title = title
   alertInfo.message = message
@@ -134,6 +135,75 @@ async function exportLogs() {
   a.href = url
   a.download = `error-logs-${Date.now()}.json`
   a.click()
+}
+
+// ========== 备份与恢复 ==========
+const fileInputRef = ref<HTMLInputElement | null>(null)
+
+const backupErrorKeys = {
+  json: 'options.backupErrorJson',
+  format: 'options.backupErrorFormat',
+  version: 'options.backupErrorVersion',
+  data: 'options.backupErrorData',
+} as const
+
+async function exportBackup() {
+  await Promise.all([dataReady, tagsReady, settingsReady])
+  const backup = buildBackup(marksByUrl.value, tagsMetadata.value, settings.value)
+  const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  const now = new Date()
+  const pad = (n: number) => String(n).padStart(2, '0')
+  a.download = `markflow-backup-${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}.json`
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
+function onImportFile(event: Event) {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  input.value = '' // 允许再次选择同一文件
+  if (!file)
+    return
+  file.text()
+    .then((text) => {
+      let backup: BackupFile
+      try {
+        backup = parseBackupFile(text)
+      }
+      catch (err) {
+        const kind = err instanceof BackupParseError ? err.kind : 'json'
+        showAlert(t(backupErrorKeys[kind]))
+        return
+      }
+      const stats = countBackupStats(backup)
+      showConfirm(
+        t('options.backupImportConfirm', {
+          date: new Date(backup.exportedAt).toLocaleString(),
+          marks: stats.marks,
+          tags: stats.tags,
+        }),
+        () => void applyImportedBackup(backup),
+      )
+    })
+    .catch(() => showAlert(t(backupErrorKeys.json)))
+}
+
+async function applyImportedBackup(backup: BackupFile) {
+  await Promise.all([dataReady, tagsReady, settingsReady])
+  const merged = applyBackup(marksByUrl.value, tagsMetadata.value, backup)
+  marksByUrl.value = merged.marks
+  tagsMetadata.value = merged.tags
+  // 整体替换设置：既有 watch(settings, deep) 会自动把 localSettings 同步回来
+  settings.value = restoredSettings(backup)
+  await notifyContextsChanged()
+  const markCount = Object.values(merged.marks).reduce((sum, list) => sum + list.length, 0)
+  showAlert(t('options.backupImportSuccess', {
+    marks: markCount,
+    tags: Object.keys(merged.tags).length,
+  }))
 }
 
 /** 通知 background/sidepanel 与所有 content script：设置/数据已变化（保存设置、导入备份共用） */
@@ -262,6 +332,7 @@ const navItems: { id: string, label: OptionsKey }[] = [
   { id: 'shortcuts', label: 'options.shortcuts' },
   { id: 'blacklist', label: 'options.blacklist' },
   { id: 'github-sync', label: 'options.githubSync' },
+  { id: 'backup', label: 'options.backupSection' },
   { id: 'error-logs', label: 'options.errorLogs' },
 ]
 
@@ -768,6 +839,37 @@ onUnmounted(() => {
           </div>
         </div>
 
+        <!-- Backup & Restore -->
+        <div id="backup" class="setting-card scroll-mt-8">
+          <h2 class="text-[18px] font-semibold mb-[12px]">
+            {{ t('options.backupSection') }}
+          </h2>
+          <p class="text-[14px] text-neutral-500 mb-[16px]">
+            {{ t('options.backupDesc') }}
+          </p>
+          <div class="flex items-center gap-[12px]">
+            <button
+              class="px-[16px] py-2 text-[14px] font-medium text-neutral-900 bg-amber-500 rounded-md hover:bg-amber-600"
+              @click="exportBackup"
+            >
+              {{ t('options.exportBackup') }}
+            </button>
+            <button
+              class="px-[16px] py-2 text-[14px] font-medium rounded-md border border-neutral-300 dark:border-neutral-600 hover:bg-neutral-50 dark:hover:bg-neutral-700"
+              @click="fileInputRef?.click()"
+            >
+              {{ t('options.importBackup') }}
+            </button>
+            <input
+              ref="fileInputRef"
+              type="file"
+              accept=".json,application/json"
+              class="hidden"
+              @change="onImportFile"
+            >
+          </div>
+        </div>
+
         <!-- Error Logs -->
         <div id="error-logs" class="setting-card scroll-mt-8">
           <h2 class="text-[18px] font-semibold mb-[12px]">
@@ -825,7 +927,7 @@ onUnmounted(() => {
           </button>
           <button
             class="px-[16px] py-2 text-[14px] font-medium text-neutral-900 bg-amber-500 rounded-md hover:bg-amber-600"
-            @click="alertInfo.onConfirm ? confirmAlert() : hideAlert()"
+            @click="confirmAlert"
           >
             {{ t('common.confirm') }}
           </button>
