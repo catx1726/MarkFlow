@@ -65,9 +65,11 @@ export function parseBackupFile(text: string): BackupFile {
   }
   if (!isPlainObject(parsed) || parsed.format !== BACKUP_FORMAT)
     throw new BackupParseError('format', 'Not a MarkFlow backup file')
-  const { version, data, exportedAt } = parsed as Partial<BackupFile>
+  const { version, exportedAt, data } = parsed as Partial<BackupFile>
   if (typeof version !== 'number' || !Number.isInteger(version) || version < 1 || version > BACKUP_VERSION)
     throw new BackupParseError('version', 'Unsupported backup version')
+  if (typeof exportedAt !== 'number' || !Number.isFinite(exportedAt))
+    throw new BackupParseError('data', 'Backup file missing exportedAt')
   if (!isPlainObject(data) || !isPlainObject(data.marks) || !isPlainObject(data.tags) || !isPlainObject(data.settings))
     throw new BackupParseError('data', 'Backup data incomplete')
   for (const list of Object.values(data.marks as Record<string, unknown>)) {
@@ -77,7 +79,7 @@ export function parseBackupFile(text: string): BackupFile {
   return {
     format: BACKUP_FORMAT,
     version,
-    exportedAt: typeof exportedAt === 'number' ? exportedAt : Date.now(),
+    exportedAt,
     data: {
       marks: data.marks as Record<string, Mark[]>,
       tags: data.tags as Record<string, Tag>,
@@ -109,6 +111,6 @@ export function restoredSettings(backup: BackupFile): typeof defaultSettings {
 
 export function countBackupStats(backup: BackupFile): { marks: number, tags: number } {
   const marks = Object.values(backup.data.marks)
-    .reduce((sum, list) => sum + (Array.isArray(list) ? list.length : 0), 0)
+    .reduce((sum, list) => sum + list.length, 0)
   return { marks, tags: Object.keys(backup.data.tags).length }
 }

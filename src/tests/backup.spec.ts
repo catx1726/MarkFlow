@@ -82,6 +82,14 @@ describe('backup Logic', () => {
       expectParseError(JSON.stringify({ format: BACKUP_FORMAT, version: 1, data: { marks: [], tags: {}, settings: {} } }), 'data')
       expectParseError(JSON.stringify({ format: BACKUP_FORMAT, version: 1, data: { marks: [[{ id: 'x' }]], tags: {}, settings: {} } }), 'data')
     })
+
+    it('缺 exportedAt 抛 data 错误', () => {
+      expectParseError(JSON.stringify({ format: BACKUP_FORMAT, version: 1, data: { marks: {}, tags: {}, settings: {} } }), 'data')
+    })
+
+    it('非数字 exportedAt 抛 data 错误', () => {
+      expectParseError(JSON.stringify({ format: BACKUP_FORMAT, version: 1, exportedAt: 'yesterday', data: { marks: {}, tags: {}, settings: {} } }), 'data')
+    })
   })
 
   describe('applyBackup', () => {

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, reactive, ref, watch, watchEffect } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch, watchEffect } from 'vue'
 import { cloneDeep } from 'lodash-es'
 import browser from 'webextension-polyfill'
 import { sendMessage } from 'webext-bridge/options'
@@ -10,7 +10,7 @@ import { isReshowDisabled } from '~/logic/coachTip'
 import { dataReady, marksByUrl, syncConfig, syncReady, syncStatus, tagsMetadata, tagsReady } from '~/logic/storage'
 import { createGist, getGists } from '~/logic/sync'
 import { BackupParseError, applyBackup, buildBackup, countBackupStats, parseBackupFile, restoredSettings } from '~/logic/backup'
-import type { BackupFile } from '~/logic/backup'
+import type { BackupErrorKind, BackupFile } from '~/logic/backup'
 import { t } from '~/logic/i18n'
 import type { Messages } from '~/logic/i18n'
 
@@ -64,7 +64,7 @@ function showAlert(message: string, title = t('options.alertTitle'), isHtml = fa
   alertInfo.visible = true
 }
 
-/** 确认模式：显示 取消/确定 双按钮，确定才执行回调 */
+/** 确认模式：显示 取消/确定 双按钮，确定才执行回调（回调允许 async，弹窗不等待其完成——fire-and-forget） */
 function showConfirm(message: string, onConfirm: () => void, title = t('options.alertTitle')) {
   alertInfo.title = title
   alertInfo.message = message
@@ -140,12 +140,12 @@ async function exportLogs() {
 // ========== 备份与恢复 ==========
 const fileInputRef = ref<HTMLInputElement | null>(null)
 
-const backupErrorKeys = {
+const backupErrorKeys: Record<BackupErrorKind, string> = {
   json: 'options.backupErrorJson',
   format: 'options.backupErrorFormat',
   version: 'options.backupErrorVersion',
   data: 'options.backupErrorData',
-} as const
+}
 
 async function exportBackup() {
   await Promise.all([dataReady, tagsReady, settingsReady])
@@ -161,34 +161,39 @@ async function exportBackup() {
   URL.revokeObjectURL(url)
 }
 
-function onImportFile(event: Event) {
+async function onImportFile(event: Event) {
   const input = event.target as HTMLInputElement
   const file = input.files?.[0]
   input.value = '' // 允许再次选择同一文件
   if (!file)
     return
-  file.text()
-    .then((text) => {
-      let backup: BackupFile
-      try {
-        backup = parseBackupFile(text)
-      }
-      catch (err) {
-        const kind = err instanceof BackupParseError ? err.kind : 'json'
-        showAlert(t(backupErrorKeys[kind]))
-        return
-      }
-      const stats = countBackupStats(backup)
-      showConfirm(
-        t('options.backupImportConfirm', {
-          date: new Date(backup.exportedAt).toLocaleString(),
-          marks: stats.marks,
-          tags: stats.tags,
-        }),
-        () => void applyImportedBackup(backup),
-      )
-    })
-    .catch(() => showAlert(t(backupErrorKeys.json)))
+  let text: string
+  try {
+    text = await file.text()
+  }
+  catch {
+    // 文件读取失败（IO），与内容解析失败区分
+    showAlert(t(backupErrorKeys.json))
+    return
+  }
+  let backup: BackupFile
+  try {
+    backup = parseBackupFile(text)
+  }
+  catch (err) {
+    const kind = err instanceof BackupParseError ? err.kind : 'json'
+    showAlert(t(backupErrorKeys[kind]))
+    return
+  }
+  const stats = countBackupStats(backup)
+  showConfirm(
+    t('options.backupImportConfirm', {
+      date: new Date(backup.exportedAt).toLocaleString(),
+      marks: stats.marks,
+      tags: stats.tags,
+    }),
+    () => void applyImportedBackup(backup),
+  )
 }
 
 async function applyImportedBackup(backup: BackupFile) {
@@ -196,8 +201,12 @@ async function applyImportedBackup(backup: BackupFile) {
   const merged = applyBackup(marksByUrl.value, tagsMetadata.value, backup)
   marksByUrl.value = merged.marks
   tagsMetadata.value = merged.tags
-  // 整体替换设置：既有 watch(settings, deep) 会自动把 localSettings 同步回来
+  // 整体替换设置：既有 watch(settings, deep) 会自动把 localSettings 同步回来。
+  // 持久化时序：useWebExtensionStorage 内部 pausableWatch(data, write, { flush: 'pre' })
+  // （composables/useWebExtensionStorage.ts:130）——nextTick 保证 write 已入队启动后再广播；
+  // sidepanel 另有 storage.onChanged 事件路径双保险（set 完成后才触发）。与 saveSettings 同构（先例，e2e 覆盖）。
   settings.value = restoredSettings(backup)
+  await nextTick()
   await notifyContextsChanged()
   const markCount = Object.values(merged.marks).reduce((sum, list) => sum + list.length, 0)
   showAlert(t('options.backupImportSuccess', {
