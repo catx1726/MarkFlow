@@ -517,7 +517,7 @@ onUnmounted(() => {
               {{ settings.coachTipDone ? t('options.coachTipStatusShown') : t('options.coachTipStatusNotShown') }}
             </span>
             <button
-              class="rounded-md bg-amber-500 px-3 py-1.5 text-xs font-medium text-gray-900 shadow-sm transition-colors hover:bg-amber-600 disabled:opacity-50"
+              class="rounded-md bg-amber-500 px-3 py-1.5 text-xs font-medium text-neutral-900 shadow-sm transition-colors hover:bg-amber-600 disabled:opacity-50"
               :disabled="!settings.coachTipDone"
               @click="reshowCoachTip"
             >
