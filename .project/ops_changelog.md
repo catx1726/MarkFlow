@@ -115,3 +115,4 @@
 | 2026-09-11T18:46:49+08:00 | FEAT | src/options/Options.vue | 备份与恢复区：导出下载/导入校验确认/合并落库+广播刷新 | c900bd2 | git checkout HEAD -- src/options/Options.vue |
 | 2026-09-11T18:46:49+08:00 | FIX | src/options/Options.vue | CR 处置：导出文件名补秒位（HHmm → HHmmss） | 7450aff | git checkout c900bd2 -- src/options/Options.vue |
 | 2026-09-11T18:46:50+08:00 | DOCS | docs/NIT_ROADMAP.md + .project/ops_changelog.md | 本地备份 §6 转正 + 运维记录 | fc854a5 | git checkout HEAD -- docs/NIT_ROADMAP.md .project/ops_changelog.md |
+| 2026-09-11T19:49:53+08:00 | FEAT | docs/{index.html,lang/en/index.html,sitemap.xml} | 落地页技术 SEO（Driver 指示 main 直提免 PR）：title 中英品类词×3 处、canonical+hreflang 互链、SoftwareApplication JSON-LD ×2、sitemap 1→7 URL；roadmap $7 转正 | 05c5391 | git checkout HEAD~1 -- docs/ .project/ops_changelog.md |

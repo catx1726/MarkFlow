@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>MarkFlow - 一款支持回跳原文的网页文本标记工具</title>
+    <title>MarkFlow – 网页高亮与笔记，划词标记并回跳原文</title>
     <meta
       name="description"
       content="MarkFlow 是一款支持回跳原文的网页文本标记工具。按住 Alt 划词标记，点击侧边栏笔记即可跳回原文位置。支持标签归类、章节大纲、Markdown 导出，并可基于 GitHub Gist 实现多端同步。"
@@ -15,7 +15,7 @@
     <!-- Open Graph / 社交分享卡片 -->
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="MarkFlow" />
-    <meta property="og:title" content="MarkFlow - 一款支持回跳原文的网页文本标记工具" />
+    <meta property="og:title" content="MarkFlow – 网页高亮与笔记，划词标记并回跳原文" />
     <meta
       property="og:description"
       content="按住 Alt 划词标记，点击侧边栏笔记即可跳回原文位置。标签归类、章节大纲、Markdown 导出、GitHub Gist 多端同步，数据本地存储。"
@@ -25,15 +25,42 @@
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
     <meta property="og:locale" content="zh_CN" />
+    <meta property="og:locale:alternate" content="en_US" />
+    <!-- 多语言与规范化 -->
+    <link rel="canonical" href="https://flow.soulboy.site/" />
+    <link rel="alternate" hreflang="zh-CN" href="https://flow.soulboy.site/" />
+    <link rel="alternate" hreflang="en" href="https://flow.soulboy.site/lang/en/" />
+    <link rel="alternate" hreflang="x-default" href="https://flow.soulboy.site/" />
     <!-- Twitter/X 卡片 -->
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="MarkFlow - 一款支持回跳原文的网页文本标记工具" />
+    <meta name="twitter:title" content="MarkFlow – 网页高亮与笔记，划词标记并回跳原文" />
     <meta
       name="twitter:description"
       content="按住 Alt 划词标记，点击侧边栏笔记即可跳回原文位置。数据本地存储，支持 GitHub Gist 同步。"
     />
     <meta name="twitter:image" content="https://flow.soulboy.site/og-image.png" />
     <link rel="icon" href="./icon.png" />
+    <!-- 结构化数据：SoftwareApplication -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "MarkFlow",
+        "description": "MarkFlow 是一款网页高亮与笔记工具。按住 Alt 划词标记，点击侧边栏笔记即可跳回原文位置。支持标签归类、章节大纲、Markdown 导出，数据仅存本地，可选 GitHub Gist 多端同步。",
+        "applicationCategory": "BrowserApplication",
+        "operatingSystem": "Any",
+        "url": "https://flow.soulboy.site/",
+        "image": "https://flow.soulboy.site/og-image.png",
+        "inLanguage": "zh-CN",
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+        "featureList": [
+          "按住 Alt 划词高亮网页文本",
+          "点击笔记回跳原文位置",
+          "标签归类与章节大纲",
+          "数据仅存本地，可选 GitHub Gist 同步"
+        ]
+      }
+    </script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
       tailwind.config = { darkMode: 'class' }

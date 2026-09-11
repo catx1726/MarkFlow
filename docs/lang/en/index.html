@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>MarkFlow - Web Highlighter with Jump-Back</title>
+    <title>MarkFlow – Web Highlighter &amp; Notes with Jump-Back</title>
     <meta
       name="description"
       content="MarkFlow is a web highlighter with jump-back to the original text. Hold Alt to highlight text, then click a note in the Side Panel to jump back to the marked spot. Tag-based organization, structured outlines, Markdown export, and optional multi-device sync via GitHub Gist."
@@ -15,7 +15,7 @@
     <!-- Open Graph / social share card -->
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="MarkFlow" />
-    <meta property="og:title" content="MarkFlow - Web Highlighter with Jump-Back" />
+    <meta property="og:title" content="MarkFlow – Web Highlighter &amp; Notes with Jump-Back" />
     <meta
       property="og:description"
       content="Hold Alt to highlight text, then click a note in the Side Panel to jump back to the marked spot. Tag-based organization, structured outlines, Markdown export, GitHub Gist sync, and local-first storage."
@@ -25,15 +25,42 @@
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
     <meta property="og:locale" content="en_US" />
+    <meta property="og:locale:alternate" content="zh_CN" />
+    <!-- 多语言与规范化 -->
+    <link rel="canonical" href="https://flow.soulboy.site/lang/en/" />
+    <link rel="alternate" hreflang="zh-CN" href="https://flow.soulboy.site/" />
+    <link rel="alternate" hreflang="en" href="https://flow.soulboy.site/lang/en/" />
+    <link rel="alternate" hreflang="x-default" href="https://flow.soulboy.site/" />
     <!-- Twitter/X card -->
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="MarkFlow - Web Highlighter with Jump-Back" />
+    <meta name="twitter:title" content="MarkFlow – Web Highlighter &amp; Notes with Jump-Back" />
     <meta
       name="twitter:description"
       content="Hold Alt to highlight text, then click a note in the Side Panel to jump back to the marked spot. Local-first storage with optional GitHub Gist sync."
     />
     <meta name="twitter:image" content="https://flow.soulboy.site/og-image.png" />
     <link rel="icon" href="../../icon.png" />
+    <!-- Structured data: SoftwareApplication -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "MarkFlow",
+        "description": "MarkFlow is a web highlighter and notes tool with jump-back to the original text. Hold Alt to highlight text, then click a note in the side panel to jump back to the marked spot. Tag-based organization, structured outlines, Markdown export. Data stays local, no signup needed, with optional sync via GitHub Gist.",
+        "applicationCategory": "BrowserApplication",
+        "operatingSystem": "Any",
+        "url": "https://flow.soulboy.site/",
+        "image": "https://flow.soulboy.site/og-image.png",
+        "inLanguage": "en",
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+        "featureList": [
+          "Hold Alt to highlight text on any web page",
+          "Click a note to jump back to the source",
+          "Tag-based organization and structured outlines",
+          "Local-first storage, no signup, optional Gist sync"
+        ]
+      }
+    </script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
       tailwind.config = { darkMode: 'class' }
