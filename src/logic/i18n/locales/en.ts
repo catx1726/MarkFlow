@@ -92,6 +92,11 @@ export const en: Messages = {
     themeAuto: 'Follow system',
     themeLight: 'Light',
     themeDark: 'Dark',
+    coachTipLabel: 'First-use guide',
+    coachTipDesc: 'After install, the first plain text selection shows a tip about the "Hold Alt to highlight" gesture.',
+    coachTipStatusShown: 'Shown',
+    coachTipStatusNotShown: 'Not shown',
+    coachTipReshow: 'Show again',
     saveSettings: 'Save settings',
     savedShort: 'Saved ✓',
     settingsSaved: 'Settings saved!',
@@ -166,6 +171,10 @@ export const en: Messages = {
     copyText: 'Copy text',
     saveChanges: 'Save changes',
     confirmHighlight: 'Highlight',
+  },
+  coachTip: {
+    hintPrefix: 'Hold ',
+    hintSuffix: ' while selecting to highlight',
   },
   modal: {
     title: 'Confirm mark position',

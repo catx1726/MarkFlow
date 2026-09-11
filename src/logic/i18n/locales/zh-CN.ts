@@ -92,6 +92,11 @@ export const zhCN = {
     themeAuto: '跟随系统',
     themeLight: '浅色',
     themeDark: '深色',
+    coachTipLabel: '首次使用引导',
+    coachTipDesc: '安装后首次普通划词时，会提示「按住 Alt 划词即可标记」的核心手势。',
+    coachTipStatusShown: '已显示',
+    coachTipStatusNotShown: '未显示',
+    coachTipReshow: '重新显示',
     saveSettings: '保存设置',
     savedShort: '已保存 ✓',
     settingsSaved: '设置已保存！',
@@ -166,6 +171,10 @@ export const zhCN = {
     copyText: '复制文本',
     saveChanges: '保存修改',
     confirmHighlight: '确认高亮',
+  },
+  coachTip: {
+    hintPrefix: '按住 ',
+    hintSuffix: ' 划词即可标记',
   },
   modal: {
     title: '确认标记位置',
