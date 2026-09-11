@@ -52,7 +52,7 @@ export function buildBackup(
 }
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
 export function parseBackupFile(text: string): BackupFile {
@@ -65,7 +65,7 @@ export function parseBackupFile(text: string): BackupFile {
   }
   if (!isPlainObject(parsed) || parsed.format !== BACKUP_FORMAT)
     throw new BackupParseError('format', 'Not a MarkFlow backup file')
-  const { version, data } = parsed as Partial<BackupFile>
+  const { version, data, exportedAt } = parsed as Partial<BackupFile>
   if (typeof version !== 'number' || !Number.isInteger(version) || version < 1 || version > BACKUP_VERSION)
     throw new BackupParseError('version', 'Unsupported backup version')
   if (!isPlainObject(data) || !isPlainObject(data.marks) || !isPlainObject(data.tags) || !isPlainObject(data.settings))
@@ -74,7 +74,16 @@ export function parseBackupFile(text: string): BackupFile {
     if (!Array.isArray(list))
       throw new BackupParseError('data', 'marks values must be arrays')
   }
-  return parsed as BackupFile
+  return {
+    format: BACKUP_FORMAT,
+    version,
+    exportedAt: typeof exportedAt === 'number' ? exportedAt : Date.now(),
+    data: {
+      marks: data.marks as Record<string, Mark[]>,
+      tags: data.tags as Record<string, Tag>,
+      settings: data.settings as Record<string, unknown>,
+    },
+  }
 }
 
 export function applyBackup(
@@ -89,7 +98,13 @@ export function applyBackup(
 }
 
 export function restoredSettings(backup: BackupFile): typeof defaultSettings {
-  return { ...defaultSettings, ...backup.data.settings } as typeof defaultSettings
+  const result: Record<string, unknown> = { ...defaultSettings }
+  for (const key of Object.keys(defaultSettings)) {
+    const value = backup.data.settings[key]
+    if (value !== undefined)
+      result[key] = value
+  }
+  return result as typeof defaultSettings
 }
 
 export function countBackupStats(backup: BackupFile): { marks: number, tags: number } {

@@ -9,6 +9,7 @@ import {
   parseBackupFile,
   restoredSettings,
 } from '../logic/backup'
+import type { BackupErrorKind } from '../logic/backup'
 import type { Mark, Tag } from '../logic/storage'
 
 function mark(id: string, createdAt: number, extra: Partial<Mark> = {}): Mark {
@@ -19,7 +20,7 @@ function tag(id: string, createdAt: number): Tag {
   return { id, name: `tag-${id}`, color: '#99FF99', createdAt } as Tag
 }
 
-function expectParseError(text: string, kind: string) {
+function expectParseError(text: string, kind: BackupErrorKind) {
   try {
     parseBackupFile(text)
     throw new Error('expected BackupParseError but nothing was thrown')
@@ -78,6 +79,8 @@ describe('backup Logic', () => {
       expectParseError(JSON.stringify({ format: BACKUP_FORMAT, version: 1, data: null }), 'data')
       expectParseError(JSON.stringify({ format: BACKUP_FORMAT, version: 1, data: { marks: null, tags: {}, settings: {} } }), 'data')
       expectParseError(JSON.stringify({ format: BACKUP_FORMAT, version: 1, data: { marks: { u: 'not-array' }, tags: {}, settings: {} } }), 'data')
+      expectParseError(JSON.stringify({ format: BACKUP_FORMAT, version: 1, data: { marks: [], tags: {}, settings: {} } }), 'data')
+      expectParseError(JSON.stringify({ format: BACKUP_FORMAT, version: 1, data: { marks: [[{ id: 'x' }]], tags: {}, settings: {} } }), 'data')
     })
   })
 
@@ -101,10 +104,11 @@ describe('backup Logic', () => {
 
   describe('restoredSettings', () => {
     it('旧备份缺新字段由默认值补齐', () => {
-      const backup = buildBackup({}, {}, { defaultHighlightColor: '#FF0000' })
+      const backup = buildBackup({}, {}, { defaultHighlightColor: '#FF0000', bogusKey: 'x' })
       const settings = restoredSettings(backup)
       expect(settings.defaultHighlightColor).toBe('#FF0000')
       expect(settings.shortcutSave).toBe('Alt+S')
+      expect((settings as any).bogusKey).toBeUndefined()
     })
 
     it('备份值覆盖同名默认值', () => {
