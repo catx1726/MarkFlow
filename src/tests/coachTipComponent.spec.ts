@@ -7,7 +7,7 @@ import CoachTip from '~/contentScripts/views/CoachTip.vue'
 const anchor = { top: 100, left: 100, width: 200, height: 20 }
 
 // stub 掉 Transition，避免 leave 动画的异步钩子让 v-if 移除滞后
-const mountOptions = { global: { stubs: ['transition'] } } as const
+const mountOptions = { global: { stubs: ['transition'] } }
 
 interface Exposed { show: (a: typeof anchor) => Promise<void>, hide: () => void }
 
