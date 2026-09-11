@@ -93,7 +93,7 @@ export const en: Messages = {
     themeLight: 'Light',
     themeDark: 'Dark',
     coachTipLabel: 'First-use guide',
-    coachTipDesc: 'After install, the first plain text selection shows a tip about the "Hold Alt to highlight" gesture.',
+    coachTipDesc: 'Two one-time hints: the first plain selection shows "Hold Alt to highlight"; the first tooltip shows the save/delete shortcuts.',
     coachTipStatusShown: 'Shown',
     coachTipStatusNotShown: 'Not shown',
     coachTipReshow: 'Show again',

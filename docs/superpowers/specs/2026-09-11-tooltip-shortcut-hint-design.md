@@ -11,8 +11,10 @@
 - **触发**：`Tooltip.vue` `show()` —— flag 未置位 → 渲染提示行 + **显示即置位**（同 Coach Tip 哲学：保证严格一次；storage 写失败最坏多显示一次，无害）
 - **UI**：`.tooltip-actions` 上方一行提示：`[Alt+S] 保存 · [Alt+D] 删除`——
   - 键帽沿 Options 欢迎页 neutral 先例（`bg-neutral-200 dark:bg-neutral-600 rounded border font-mono`），非 Coach Tip 的 amber（此处是辅助信息不是主角）
+  - **kbd 必须带显式文字色**（`text-gray-600 dark:text-gray-200`）：键帽无自身文字色时会继承行的 muted 色，落在键帽底色上近不可读（深色 gray-500 on neutral-600 ≈2:1——2026-09-11 验收实测修复）；行文字用 `text-gray-400`（Tooltip muted 惯例，勿用 gray-500）
   - 键位**动态读 `settings.shortcutSave` / `shortcutDelete`**，用户自定义后自动跟随
-  - 文字 `text-[11px] text-gray-400 dark:text-gray-500`，px 任意值（Shadow DOM 约定）
+  - 文字 `text-[11px]`，px 任意值（Shadow DOM 约定）
+- **Options「重新显示」**（2026-09-11 验收修订）：重置**两个**一次性标志（`coachTipDone` + `tooltipShortcutHintDone`）；状态行与 disabled 判定改为「两者均已显示」
 - **i18n**：零新增 key——复用 `common.save` / `common.delete`
 - **测试**（TDD）：组件测试挂载 Tooltip——flag false → 提示行存在、键帽文本=当前设置值、flag 置位；flag true → 提示行不存在
 

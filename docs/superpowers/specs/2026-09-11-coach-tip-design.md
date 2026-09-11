@@ -84,8 +84,8 @@ handleMouseUp (index.ts)
 ### 3.5 Options UI
 
 - 一般设置区新增一行「首次使用引导」：
-  - 状态文案：已显示 / 未显示（读 `settings.coachTipDone`）
-  - 「重新显示」按钮 → `settings.coachTipDone = false`（即改即存既有机制）
+  - 状态文案：已显示 / 未显示（读 `settings.coachTipDone`；**2026-09-11 验收修订**：与 `tooltipShortcutHintDone` 联动，两者均已显示才为「已显示」）
+  - 「重新显示」按钮 → **同时重置** `coachTipDone` 与 `tooltipShortcutHintDone`（两个一次性引导统一重置，见 `2026-09-11-tooltip-shortcut-hint-design.md`）
 - i18n 词条：`options.coachTipSectionLabel` / `options.coachTipStatusShown` / `options.coachTipStatusNotShown` / `options.coachTipReshow`
 
 ### 3.6 i18n（双语同构，编译期校验）

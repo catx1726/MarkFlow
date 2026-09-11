@@ -93,7 +93,7 @@ export const zhCN = {
     themeLight: '浅色',
     themeDark: '深色',
     coachTipLabel: '首次使用引导',
-    coachTipDesc: '安装后首次普通划词时，会提示「按住 Alt 划词即可标记」的核心手势。',
+    coachTipDesc: '一次性引导共两处：首次普通划词时提示「按住 Alt 划词即可标记」；首次打开高亮工具栏时提示保存/删除快捷键。',
     coachTipStatusShown: '已显示',
     coachTipStatusNotShown: '未显示',
     coachTipReshow: '重新显示',

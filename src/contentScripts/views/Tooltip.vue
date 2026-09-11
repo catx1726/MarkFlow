@@ -385,12 +385,13 @@ defineExpose({ show, hide })
           @keydown.esc="hide"
         />
 
-        <!-- 快捷键一次性提示（首次打开时显示，键位动态读用户自定义值） -->
-        <div v-if="shortcutHintVisible" class="shortcut-hint flex items-center gap-[6px] text-[11px] text-gray-400 dark:text-gray-500">
-          <kbd class="rounded-[4px] border border-neutral-300 bg-neutral-200 px-[6px] py-[1px] font-mono text-[11px] dark:border-neutral-500 dark:bg-neutral-600">{{ settings.shortcutSave }}</kbd>
+        <!-- 快捷键一次性提示（首次打开时显示，键位动态读用户自定义值）。
+             kbd 必须带显式文字色：继承行的 muted 色会在键帽底色上近不可读（深色尤其） -->
+        <div v-if="shortcutHintVisible" class="shortcut-hint flex items-center gap-[6px] text-[11px] text-gray-400">
+          <kbd class="rounded-[4px] border border-neutral-300 bg-neutral-200 px-[6px] py-[1px] font-mono text-[11px] text-gray-600 dark:border-neutral-500 dark:bg-neutral-600 dark:text-gray-200">{{ settings.shortcutSave }}</kbd>
           <span>{{ t('common.save') }}</span>
           <span>·</span>
-          <kbd class="rounded-[4px] border border-neutral-300 bg-neutral-200 px-[6px] py-[1px] font-mono text-[11px] dark:border-neutral-500 dark:bg-neutral-600">{{ settings.shortcutDelete }}</kbd>
+          <kbd class="rounded-[4px] border border-neutral-300 bg-neutral-200 px-[6px] py-[1px] font-mono text-[11px] text-gray-600 dark:border-neutral-500 dark:bg-neutral-600 dark:text-gray-200">{{ settings.shortcutDelete }}</kbd>
           <span>{{ t('common.delete') }}</span>
         </div>
 

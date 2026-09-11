@@ -48,4 +48,16 @@ describe('tooltip shortcut hint（一次性快捷键提示）', () => {
     await showTooltip(wrapper)
     expect(wrapper.find('.shortcut-hint').exists()).toBe(false)
   })
+
+  it('对比度回归：kbd 带显式文字色，行文字不用 gray-500（继承 muted 色在键帽底上近不可读）', async () => {
+    const wrapper = mount(Tooltip, mountOptions)
+    await showTooltip(wrapper)
+    const hint = wrapper.find('.shortcut-hint')
+    expect(hint.classes()).toContain('text-gray-400')
+    expect(hint.classes()).not.toContain('dark:text-gray-500')
+    for (const kbd of wrapper.findAll('.shortcut-hint kbd')) {
+      expect(kbd.classes()).toContain('text-gray-600')
+      expect(kbd.classes()).toContain('dark:text-gray-200')
+    }
+  })
 })
