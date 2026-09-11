@@ -83,6 +83,13 @@ function removeColor(index: number) {
   localSettings.highlightColors.splice(index, 1)
 }
 
+function reshowCoachTip() {
+  // 本地偏好即改即存：直接写全局 settings（storage 即时生效，content script 经
+  // useWebExtensionStorage 监听自动同步）；上方 watch 会把 localSettings 同步回来，
+  // 无需走「保存设置」显式流程
+  settings.value.coachTipDone = false
+}
+
 async function saveSettings() {
   settings.value = cloneDeep(localSettings)
   saveStatus.value = t('options.settingsSaved')
@@ -498,6 +505,25 @@ onUnmounted(() => {
               {{ t('options.themeDark') }}
             </option>
           </select>
+
+          <p class="text-[14px] text-neutral-500 mt-[20px] mb-[4px]">
+            {{ t('options.coachTipLabel') }}
+          </p>
+          <p class="text-[13px] text-neutral-400 mb-[12px]">
+            {{ t('options.coachTipDesc') }}
+          </p>
+          <div class="flex items-center gap-[12px]">
+            <span class="text-[13px] text-neutral-500">
+              {{ settings.coachTipDone ? t('options.coachTipStatusShown') : t('options.coachTipStatusNotShown') }}
+            </span>
+            <button
+              class="rounded-md bg-amber-500 px-3 py-1.5 text-xs font-medium text-gray-900 shadow-sm transition-colors hover:bg-amber-600 disabled:opacity-50"
+              :disabled="!settings.coachTipDone"
+              @click="reshowCoachTip"
+            >
+              {{ t('options.coachTipReshow') }}
+            </button>
+          </div>
         </div>
 
         <!-- Default Color -->
