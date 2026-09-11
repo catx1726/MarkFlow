@@ -17,6 +17,8 @@ export const defaultSettings = {
   lastUsedTags: [] as string[], // 上次新建标记时选中的标签 id（本地偏好，不同步）
   language: 'auto' as 'auto' | 'zh-CN' | 'en', // UI 语言：auto 跟随浏览器（本地偏好，不同步）
   theme: 'auto' as 'auto' | 'light' | 'dark', // 界面主题：auto 跟随系统（本地偏好，不同步）
+  coachTipDone: false, // 首次引导浮层已展示或已学会 Alt 手势（本地偏好，不同步）
+  tooltipShortcutHintDone: false, // Tooltip 首次打开时已展示快捷键提示行（本地偏好，不同步）
 }
 
 export function isPageBlacklisted(url: string, blacklist: string[]): boolean {

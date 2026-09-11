@@ -1,6 +1,6 @@
 /**
  * zh-CN 源语言字典（i18n 类型来源：Messages = typeof zhCN）
- * 组织约定：按界面区域分组（popup/sidepanel/options/tooltip/modal/sync/common）
+ * 组织约定：按界面区域分组（popup/sidepanel/options/tooltip/coachTip/modal/sync/common）
  * 插值占位：{paramName}
  * 维护约定：新增 key 必须同步更新 en.ts（类型强制同构，tsc 会报错）并跑 npx vitest run src/tests/i18n.spec.ts
  */
@@ -92,6 +92,11 @@ export const zhCN = {
     themeAuto: '跟随系统',
     themeLight: '浅色',
     themeDark: '深色',
+    coachTipLabel: '首次使用引导',
+    coachTipDesc: '一次性引导共两处：首次普通划词时提示「按住 Alt 划词即可标记」；首次打开高亮工具栏时提示保存/删除快捷键。',
+    coachTipStatusShown: '已显示',
+    coachTipStatusNotShown: '未显示',
+    coachTipReshow: '重新显示',
     saveSettings: '保存设置',
     savedShort: '已保存 ✓',
     settingsSaved: '设置已保存！',
@@ -166,6 +171,10 @@ export const zhCN = {
     copyText: '复制文本',
     saveChanges: '保存修改',
     confirmHighlight: '确认高亮',
+  },
+  coachTip: {
+    hintPrefix: '按住 ',
+    hintSuffix: ' 划词即可标记',
   },
   modal: {
     title: '确认标记位置',

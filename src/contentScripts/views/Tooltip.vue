@@ -34,6 +34,7 @@ const textareaRef = ref<HTMLTextAreaElement | null>(null)
 const textToCopy = ref('')
 const copySuccess = ref(false)
 const zIndex = ref(0)
+const shortcutHintVisible = ref(false)
 
 const newTagInput = ref('')
 const allTags = ref<Tag[]>([])
@@ -195,6 +196,10 @@ async function show(
   }
 
   zIndex.value = getMaxZIndex() + 100
+  // 快捷键一次性提示：先置位后渲染——严格一次优先，show() 后续渲染链路抛异常时
+  // 宁可漏显示不重复打扰（同 Coach Tip 取舍）；置位为同值赋值时不触发落盘（见写放大回归测试）
+  shortcutHintVisible.value = !settings.value.tooltipShortcutHintDone
+  settings.value.tooltipShortcutHintDone = true
   isHighlighted.value = highlighted
   noteValue.value = initialNote
   // 过滤掉已删除标签的悬空 id（lastUsedTags 或旧 mark.tags 可能引用已删除标签）
@@ -380,6 +385,16 @@ defineExpose({ show, hide })
           @keydown.enter.ctrl.prevent="onSaveClick"
           @keydown.esc="hide"
         />
+
+        <!-- 快捷键一次性提示（首次打开时显示，键位动态读用户自定义值）。
+             kbd 必须带显式文字色：继承行的 muted 色会在键帽底色上近不可读（深色尤其） -->
+        <div v-if="shortcutHintVisible" class="shortcut-hint flex items-center gap-[6px] text-[11px] text-gray-400">
+          <kbd class="rounded-[4px] border border-neutral-300 bg-neutral-200 px-[6px] py-[1px] font-mono text-[11px] text-gray-600 dark:border-neutral-500 dark:bg-neutral-600 dark:text-gray-200">{{ settings.shortcutSave }}</kbd>
+          <span>{{ t('common.save') }}</span>
+          <span>·</span>
+          <kbd class="rounded-[4px] border border-neutral-300 bg-neutral-200 px-[6px] py-[1px] font-mono text-[11px] text-gray-600 dark:border-neutral-500 dark:bg-neutral-600 dark:text-gray-200">{{ settings.shortcutDelete }}</kbd>
+          <span>{{ t('common.delete') }}</span>
+        </div>
 
         <div class="tooltip-actions flex justify-between items-center w-full">
           <div class="flex gap-2">

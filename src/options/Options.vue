@@ -6,6 +6,7 @@ import { sendMessage } from 'webext-bridge/options'
 import { getLogs } from '../logic/errorCollector'
 import { getActiveSectionId } from './scrollSpy'
 import { settings } from '~/logic/settings'
+import { isReshowDisabled } from '~/logic/coachTip'
 import { dataReady, marksByUrl, syncConfig, syncReady, syncStatus, tagsMetadata, tagsReady } from '~/logic/storage'
 import { createGist, getGists } from '~/logic/sync'
 import { t } from '~/logic/i18n'
@@ -81,6 +82,14 @@ function removeColor(index: number) {
     localSettings.defaultHighlightColor = localSettings.highlightColors[index === 0 ? 1 : 0]
 
   localSettings.highlightColors.splice(index, 1)
+}
+
+function reshowCoachTip() {
+  // 本地偏好即改即存：直接写全局 settings（storage 即时生效，content script 经
+  // useWebExtensionStorage 监听自动同步）；上方 watch 会把 localSettings 同步回来，
+  // 无需走「保存设置」显式流程。一次性引导统一重置：页面 Coach Tip + Tooltip 快捷键提示
+  settings.value.coachTipDone = false
+  settings.value.tooltipShortcutHintDone = false
 }
 
 async function saveSettings() {
@@ -498,6 +507,25 @@ onUnmounted(() => {
               {{ t('options.themeDark') }}
             </option>
           </select>
+
+          <p class="text-[14px] text-neutral-500 mt-[20px] mb-[4px]">
+            {{ t('options.coachTipLabel') }}
+          </p>
+          <p class="text-[13px] text-neutral-400 mb-[12px]">
+            {{ t('options.coachTipDesc') }}
+          </p>
+          <div class="flex items-center gap-[12px]">
+            <span class="text-[13px] text-neutral-500">
+              {{ isReshowDisabled(settings.coachTipDone, settings.tooltipShortcutHintDone) ? t('options.coachTipStatusNotShown') : t('options.coachTipStatusShown') }}
+            </span>
+            <button
+              class="rounded-md bg-amber-500 px-3 py-1.5 text-xs font-medium text-neutral-900 shadow-sm transition-colors hover:bg-amber-600 disabled:opacity-50"
+              :disabled="isReshowDisabled(settings.coachTipDone, settings.tooltipShortcutHintDone)"
+              @click="reshowCoachTip"
+            >
+              {{ t('options.coachTipReshow') }}
+            </button>
+          </div>
         </div>
 
         <!-- Default Color -->
