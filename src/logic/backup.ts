@@ -1,0 +1,138 @@
+/**
+ * 本地 JSON 备份/导入纯逻辑
+ * Spec: docs/superpowers/specs/2026-09-11-local-backup-design.md
+ *
+ * 导出范围：marks + tags + settings（不含 syncConfig / GitHub Token）。
+ * 导入语义：marks/tags 复用 sync.ts 的 merge（时间戳新者胜，不丢现有数据）；
+ * settings 整体替换（旧备份缺新字段由默认值补齐）。
+ */
+import type { Mark, Tag } from './storage'
+import { defaultSettings } from './settings'
+import { mergeMarks, mergeTags } from './sync'
+
+export const BACKUP_FORMAT = 'markflow-backup'
+export const BACKUP_VERSION = 1
+
+export interface BackupData {
+  marks: Record<string, Mark[]>
+  tags: Record<string, Tag>
+  settings: Record<string, unknown>
+}
+
+export interface BackupFile {
+  format: typeof BACKUP_FORMAT
+  version: number
+  exportedAt: number
+  data: BackupData
+}
+
+/** 校验失败分类；上层按 kind 映射 i18n 词条（保持本模块零 i18n 依赖） */
+export type BackupErrorKind = 'json' | 'format' | 'version' | 'data'
+
+export class BackupParseError extends Error {
+  readonly kind: BackupErrorKind
+  constructor(kind: BackupErrorKind, message: string) {
+    super(message)
+    this.name = 'BackupParseError'
+    this.kind = kind
+  }
+}
+
+export function buildBackup(
+  marks: Record<string, Mark[]>,
+  tags: Record<string, Tag>,
+  settings: Record<string, unknown>,
+): BackupFile {
+  return {
+    format: BACKUP_FORMAT,
+    version: BACKUP_VERSION,
+    exportedAt: Date.now(),
+    data: { marks, tags, settings },
+  }
+}
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+export function parseBackupFile(text: string): BackupFile {
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(text)
+  }
+  catch {
+    throw new BackupParseError('json', 'File is not valid JSON')
+  }
+  if (!isPlainObject(parsed) || parsed.format !== BACKUP_FORMAT)
+    throw new BackupParseError('format', 'Not a MarkFlow backup file')
+  const { version, exportedAt, data } = parsed as Partial<BackupFile>
+  if (typeof version !== 'number' || !Number.isInteger(version) || version < 1 || version > BACKUP_VERSION)
+    throw new BackupParseError('version', 'Unsupported backup version')
+  if (typeof exportedAt !== 'number' || !Number.isFinite(exportedAt))
+    throw new BackupParseError('data', 'Backup file missing exportedAt')
+  if (!isPlainObject(data) || !isPlainObject(data.marks) || !isPlainObject(data.tags) || !isPlainObject(data.settings))
+    throw new BackupParseError('data', 'Backup data incomplete')
+  for (const list of Object.values(data.marks as Record<string, unknown>)) {
+    // 元素级校验：mergeMarks 依赖 rm.id/rm.createdAt 访问，null/原始值元素会 TypeError
+    if (!Array.isArray(list) || !list.every(el => isPlainObject(el)))
+      throw new BackupParseError('data', 'marks values must be arrays of objects')
+  }
+  return {
+    format: BACKUP_FORMAT,
+    version,
+    exportedAt,
+    data: {
+      marks: data.marks as Record<string, Mark[]>,
+      tags: data.tags as Record<string, Tag>,
+      settings: data.settings as Record<string, unknown>,
+    },
+  }
+}
+
+export function applyBackup(
+  localMarks: Record<string, Mark[]>,
+  localTags: Record<string, Tag>,
+  backup: BackupFile,
+): { marks: Record<string, Mark[]>, tags: Record<string, Tag> } {
+  return {
+    marks: mergeMarks(localMarks, backup.data.marks),
+    tags: mergeTags(localTags, backup.data.tags),
+  }
+}
+
+/**
+ * 恢复设置为「备份值 + 默认值补齐」。
+ * 安全白名单（有意决策，非默认值补齐的副作用）：仅接受 defaultSettings 已知键，
+ * 防止手改备份文件注入任意 settings 键。跨版本场景由 version 闸门拦截
+ * （超前版本直接拒绝导入），不存在「v2 备份降级导入丢字段」路径；
+ * 未知键唯一来源即手改文件——正是白名单要挡的向量。
+ * 值类型校验（PR #88 四轮审查）：已知键的值须与默认值同构（数组对数组、标量对标量，
+ * null 因 typeof 'object' 被标量默认值天然拒绝），不匹配回退默认值——防止
+ * `blacklist: "x"` 这类错型值穿透后炸掉 Options 的 join()/some() 调用链。
+ */
+function matchesDefaultType(value: unknown, defaultValue: unknown): boolean {
+  const valueIsArray = Array.isArray(value)
+  const defaultIsArray = Array.isArray(defaultValue)
+  if (valueIsArray || defaultIsArray)
+    return valueIsArray && defaultIsArray
+  if (value === null || typeof value === 'object')
+    return defaultValue !== null && typeof defaultValue === 'object'
+  return typeof value === typeof defaultValue
+}
+
+export function restoredSettings(backup: BackupFile): typeof defaultSettings {
+  const result: Record<string, unknown> = { ...defaultSettings }
+  for (const key of Object.keys(defaultSettings)) {
+    const value = backup.data.settings[key]
+    const reference = defaultSettings[key as keyof typeof defaultSettings]
+    if (value !== undefined && matchesDefaultType(value, reference))
+      result[key] = value
+  }
+  return result as typeof defaultSettings
+}
+
+export function countBackupStats(backup: BackupFile): { marks: number, tags: number } {
+  const marks = Object.values(backup.data.marks)
+    .reduce((sum, list) => sum + list.length, 0)
+  return { marks, tags: Object.keys(backup.data.tags).length }
+}

@@ -46,6 +46,7 @@ dependencies:
 ## 4. 环境陷阱备忘（本 session 实测踩坑，新 session 勿重复）
 
 1. **`webext-settings` 在 storage.local 中是 JSON 字符串**（useWebExtensionStorage 的 object 序列化器）。e2e 种子直接 set 对象会导致 Options 端 JSON.parse 抛错静默回退默认值——症状是「UI 全是默认值但 storage 读出来是对的」
+   > **2026-09-11 备份 session 勘误**：实测 `marks-by-url-storage` 与 `webmarker-tags-metadata` **同样是 JSON 字符串**——所有 useWebExtensionStorage 的 object 值都走该序列化器，e2e 断言这三个 key 一律要 `JSON.parse`
 2. **e2e dev 模式 content script 注入已坏**（playwright webServer 起 `npm run dev` 后内容脚本不加载，console 无任何日志；疑似 vite dev/HMR 管线问题，pre-existing）。扩展 e2e 请走生产构建 + `chromium.launchPersistentContext(--load-extension)`，参考本 session 的 .temp/tmp-*.mjs 模式（已删，本 handoff §5 有要点）
 3. **基线债务（main 上既有，非本分支引入）**：全量 vitest 5 failed + 1 suite error（tagTree×4/useUIState×1/useSidepanelData）；typecheck ~30 错误；lint 1386 错误（83 个 .md/.yml）；pnpm-lock.yaml 落后 package.json（缺 ts-ebml/webm-muxer）。验收标准一律用「触碰文件零新增」
 4. **子代理/reviewer 禁止在主仓库 checkout 其他 commit 做验证**——会砸掉 node_modules junction（.bin 丢失）；修复方式 `corepack pnpm install --force`，但会重生成 lockfile（记得 `git checkout HEAD -- pnpm-lock.yaml`）
@@ -61,6 +62,8 @@ dependencies:
 // 读标志：context.serviceWorkers()[0].evaluate(() => chrome.storage.local.get('webext-settings'))  // 注意 JSON.parse
 // Shadow DOM 可穿透：page.locator('.coach-tip') 直接命中（open shadow root）
 ```
+
+> **2026-09-11 备份 session 勘误（e2e 三则）**：① Options 页路径是 `chrome-extension://<id>/dist/options/index.html`（有 `dist/` 前缀）；② `launchPersistentContext` 需 `headless: false`——headless shell 不支持 `chrome://`/`chrome-extension://` 页面（ERR_INVALID_URL）；③ 确认弹窗按钮文案是「确认」非「确定」（`common.confirm`）。
 
 ## 6. 验证证据存档
 

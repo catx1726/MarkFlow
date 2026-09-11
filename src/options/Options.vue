@@ -1,16 +1,19 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, reactive, ref, watch, watchEffect } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch, watchEffect } from 'vue'
 import { cloneDeep } from 'lodash-es'
 import browser from 'webextension-polyfill'
 import { sendMessage } from 'webext-bridge/options'
 import { getLogs } from '../logic/errorCollector'
 import { getActiveSectionId } from './scrollSpy'
-import { settings } from '~/logic/settings'
+import { settings, settingsReady } from '~/logic/settings'
 import { isReshowDisabled } from '~/logic/coachTip'
 import { dataReady, marksByUrl, syncConfig, syncReady, syncStatus, tagsMetadata, tagsReady } from '~/logic/storage'
 import { createGist, getGists } from '~/logic/sync'
+import { BackupParseError, applyBackup, buildBackup, countBackupStats, parseBackupFile, restoredSettings } from '~/logic/backup'
+import type { BackupErrorKind, BackupFile } from '~/logic/backup'
 import { t } from '~/logic/i18n'
 import type { Messages } from '~/logic/i18n'
+import type { Mark, Tag } from '~/logic/storage'
 
 import { isDark } from '~/logic/theme'
 
@@ -51,17 +54,35 @@ const alertInfo = reactive({
   title: t('options.alertTitle'),
   message: '',
   isHtml: false,
+  onConfirm: null as null | (() => void),
 })
 
 function showAlert(message: string, title = t('options.alertTitle'), isHtml = false) {
   alertInfo.title = title
   alertInfo.message = message
   alertInfo.isHtml = isHtml
+  alertInfo.onConfirm = null
+  alertInfo.visible = true
+}
+
+/** 确认模式：显示 取消/确定 双按钮，确定才执行回调（回调允许 async，弹窗不等待其完成——fire-and-forget） */
+function showConfirm(message: string, onConfirm: () => void, title = t('options.alertTitle')) {
+  alertInfo.title = title
+  alertInfo.message = message
+  alertInfo.isHtml = false
+  alertInfo.onConfirm = onConfirm
   alertInfo.visible = true
 }
 
 function hideAlert() {
   alertInfo.visible = false
+  alertInfo.onConfirm = null
+}
+
+function confirmAlert() {
+  const action = alertInfo.onConfirm
+  hideAlert()
+  action?.()
 }
 
 function showSyncHelp() {
@@ -104,17 +125,7 @@ async function saveSettings() {
   saveResetTimeout = window.setTimeout(() => {
     isJustSaved.value = false
   }, 2000)
-  // 通知 background 脚本设置已更新，以便它可以广播刷新指令
-  sendMessage('refresh-sidepanel-data', {}, 'background').catch(() => {
-    // 忽略错误
-  })
-  // 通知所有 content script 刷新高亮样式
-  const tabs = await browser.tabs.query({ status: 'complete' })
-  for (const tab of tabs) {
-    if (tab.id && tab.url && tab.url.startsWith('http')) {
-      sendMessage('refresh-highlights', {}, { context: 'content-script', tabId: tab.id }).catch(() => {})
-    }
-  }
+  await notifyContextsChanged()
 }
 
 async function exportLogs() {
@@ -125,6 +136,109 @@ async function exportLogs() {
   a.href = url
   a.download = `error-logs-${Date.now()}.json`
   a.click()
+}
+
+// ========== 备份与恢复 ==========
+const fileInputRef = ref<HTMLInputElement | null>(null)
+
+const backupErrorKeys: Record<BackupErrorKind, string> = {
+  json: 'options.backupErrorJson',
+  format: 'options.backupErrorFormat',
+  version: 'options.backupErrorVersion',
+  data: 'options.backupErrorData',
+}
+
+async function exportBackup() {
+  await Promise.all([dataReady, tagsReady, settingsReady])
+  const backup = buildBackup(marksByUrl.value, tagsMetadata.value, settings.value)
+  const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  const now = new Date()
+  const pad = (n: number) => String(n).padStart(2, '0')
+  a.download = `markflow-backup-${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}.json`
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
+async function onImportFile(event: Event) {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!file)
+    return
+  // File 对象已持有引用，此时清空 input 才能再次选择同一文件
+  input.value = ''
+  let text: string
+  try {
+    text = await file.text()
+  }
+  catch {
+    // 文件读取失败（IO），与内容解析失败区分
+    showAlert(t(backupErrorKeys.json))
+    return
+  }
+  let backup: BackupFile
+  try {
+    backup = parseBackupFile(text)
+  }
+  catch (err) {
+    const kind = err instanceof BackupParseError ? err.kind : 'json'
+    showAlert(t(backupErrorKeys[kind]))
+    return
+  }
+  const stats = countBackupStats(backup)
+  showConfirm(
+    t('options.backupImportConfirm', {
+      date: new Date(backup.exportedAt).toLocaleString(),
+      marks: stats.marks,
+      tags: stats.tags,
+    }),
+    () => void applyImportedBackup(backup),
+  )
+}
+
+async function applyImportedBackup(backup: BackupFile) {
+  await Promise.all([dataReady, tagsReady, settingsReady])
+  // applyBackup 为纯计算，先算后写——异常在此抛出时尚未写任何 storage；
+  // 兜底 catch 保证 fire-and-forget 路径（弹窗已关）也有用户反馈
+  let merged: { marks: Record<string, Mark[]>, tags: Record<string, Tag> }
+  try {
+    merged = applyBackup(marksByUrl.value, tagsMetadata.value, backup)
+  }
+  catch {
+    showAlert(t(backupErrorKeys.data))
+    return
+  }
+  marksByUrl.value = merged.marks
+  tagsMetadata.value = merged.tags
+  // 整体替换设置：既有 watch(settings, deep) 会自动把 localSettings 同步回来。
+  // 持久化时序：useWebExtensionStorage 内部 pausableWatch(data, write, { flush: 'pre' })
+  // （composables/useWebExtensionStorage.ts:130）——nextTick 保证 write 已入队启动后再广播；
+  // sidepanel 另有 storage.onChanged 事件路径双保险（set 完成后才触发）。与 saveSettings 同构（先例，e2e 覆盖）。
+  settings.value = restoredSettings(backup)
+  await nextTick()
+  await notifyContextsChanged()
+  const markCount = Object.values(merged.marks).reduce((sum, list) => sum + list.length, 0)
+  showAlert(t('options.backupImportSuccess', {
+    marks: markCount,
+    tags: Object.keys(merged.tags).length,
+  }))
+}
+
+/** 通知 background/sidepanel 与所有 content script：设置/数据已变化（保存设置、导入备份共用） */
+async function notifyContextsChanged() {
+  // 通知 background 脚本，以便它可以广播刷新指令
+  sendMessage('refresh-sidepanel-data', {}, 'background').catch(() => {
+    // 忽略错误
+  })
+  // 通知所有 content script 刷新高亮样式
+  const tabs = await browser.tabs.query({ status: 'complete' })
+  for (const tab of tabs) {
+    if (tab.id && tab.url && tab.url.startsWith('http')) {
+      sendMessage('refresh-highlights', {}, { context: 'content-script', tabId: tab.id }).catch(() => {})
+    }
+  }
 }
 
 function withTimeout<T>(promise: Promise<T>, ms: number, reason: string): Promise<T> {
@@ -238,6 +352,7 @@ const navItems: { id: string, label: OptionsKey }[] = [
   { id: 'shortcuts', label: 'options.shortcuts' },
   { id: 'blacklist', label: 'options.blacklist' },
   { id: 'github-sync', label: 'options.githubSync' },
+  { id: 'backup', label: 'options.backupSection' },
   { id: 'error-logs', label: 'options.errorLogs' },
 ]
 
@@ -744,6 +859,37 @@ onUnmounted(() => {
           </div>
         </div>
 
+        <!-- Backup & Restore -->
+        <div id="backup" class="setting-card scroll-mt-8">
+          <h2 class="text-[18px] font-semibold mb-[12px]">
+            {{ t('options.backupSection') }}
+          </h2>
+          <p class="text-[14px] text-neutral-500 mb-[16px]">
+            {{ t('options.backupDesc') }}
+          </p>
+          <div class="flex items-center gap-[12px]">
+            <button
+              class="px-[16px] py-2 text-[14px] font-medium text-neutral-900 bg-amber-500 rounded-md hover:bg-amber-600"
+              @click="exportBackup"
+            >
+              {{ t('options.exportBackup') }}
+            </button>
+            <button
+              class="px-[16px] py-2 text-[14px] font-medium rounded-md border border-neutral-300 dark:border-neutral-600 hover:bg-neutral-50 dark:hover:bg-neutral-700"
+              @click="fileInputRef?.click()"
+            >
+              {{ t('options.importBackup') }}
+            </button>
+            <input
+              ref="fileInputRef"
+              type="file"
+              accept=".json,application/json"
+              class="hidden"
+              @change="onImportFile"
+            >
+          </div>
+        </div>
+
         <!-- Error Logs -->
         <div id="error-logs" class="setting-card scroll-mt-8">
           <h2 class="text-[18px] font-semibold mb-[12px]">
@@ -791,10 +937,17 @@ onUnmounted(() => {
         <p v-else class="text-[14px] mb-[24px]">
           {{ alertInfo.message }}
         </p>
-        <div class="flex justify-end">
+        <div class="flex justify-end gap-[12px]">
+          <button
+            v-if="alertInfo.onConfirm"
+            class="px-[16px] py-2 text-[14px] font-medium text-neutral-600 dark:text-neutral-300 bg-neutral-100 dark:bg-neutral-700 rounded-md hover:bg-neutral-200 dark:hover:bg-neutral-600"
+            @click="hideAlert"
+          >
+            {{ t('common.cancel') }}
+          </button>
           <button
             class="px-[16px] py-2 text-[14px] font-medium text-neutral-900 bg-amber-500 rounded-md hover:bg-amber-600"
-            @click="hideAlert"
+            @click="confirmAlert"
           >
             {{ t('common.confirm') }}
           </button>
