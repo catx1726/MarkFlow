@@ -79,7 +79,7 @@ handleMouseUp (index.ts)
 ### 3.4 设置与存储
 
 - `src/logic/settings.ts`：`defaultSettings` 新增 `coachTipDone: false`（注释标注「本地偏好，不同步」，同 `lastUsedTags` 惯例）
-- `useWebExtensionStorage('webext-settings', ...)` 既有机制自动合并，老用户升级无迁移成本
+- `useWebExtensionStorage('webext-settings', ...)` 读取时新字段为 `undefined`（falsy）→ 老用户升级后等同未置位，会看到一次提示（§2 决策已接受）；首次显示后 settings 全量回写，字段随之补齐，无迁移成本
 
 ### 3.5 Options UI
 
