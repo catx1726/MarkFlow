@@ -4,6 +4,7 @@ import browser from 'webextension-polyfill'
 import rangy from 'rangy/lib/rangy-core'
 import Tooltip from './views/Tooltip.vue'
 import DisambiguationModal from './views/DisambiguationModal.vue'
+import CoachTip from './views/CoachTip.vue'
 import type { HighlightStateManager } from './state'
 import type { Mark } from '~/logic/storage'
 import { isDark } from '~/logic/theme'
@@ -21,10 +22,17 @@ import {
 } from '~/logic/dom'
 import { ShadowDOMManager } from '~/logic/shadowDom'
 import type { Candidate } from '~/logic/search'
+import type { AnchorRect } from '~/logic/tooltipPosition'
+
+export interface CoachTipInstance {
+  show: (anchorRect: AnchorRect) => Promise<void>
+  hide: () => void
+}
 
 export class UIManager {
   private _originalColorForChange: string | null = null
   private _tooltipDebounceTimer: number = 0
+  private _coachTipApp: CoachTipInstance | null = null
 
   constructor(
     private state: HighlightStateManager,
@@ -78,6 +86,10 @@ export class UIManager {
           'onLeave-list-item': () => this.handleCandidateLeave(),
         }),
     }).mount(modalRoot)
+
+    const coachTipRoot = document.createElement('div')
+    uiRoot.appendChild(coachTipRoot)
+    this._coachTipApp = createApp(CoachTip).mount(coachTipRoot) as unknown as CoachTipInstance
 
     document.body.appendChild(newContainer)
 
@@ -281,6 +293,15 @@ export class UIManager {
     clearTimeout(this._tooltipDebounceTimer)
   }
 
+  showCoachTip(anchorRect: AnchorRect): void {
+    this.ensureMounted()
+    this._coachTipApp?.show(anchorRect)
+  }
+
+  hideCoachTip(): void {
+    this._coachTipApp?.hide()
+  }
+
   setOriginalColorForChange(color: string | null): void {
     this._originalColorForChange = color
   }
@@ -424,5 +445,7 @@ export class UIManager {
     await sendMessage('add-mark', markData, 'background')
     // 记录本次新建标记选中的标签（含空集合），供下次新建时预选。仅新建分支，编辑分支不更新。
     settings.value.lastUsedTags = [...tags]
+    // 学会即标记：已成功使用 Alt 手势创建标记，无需再展示首次引导
+    settings.value.coachTipDone = true
   }
 }
