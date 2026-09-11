@@ -23,7 +23,7 @@ const position = reactive({ x: 0, y: 0 })
 const tipRef = ref<HTMLElement | null>(null)
 const zIndex = ref(0)
 
-const keyLabel = coachKeyLabel(isMacPlatform(navigator))
+const keyLabel = coachKeyLabel(isMacPlatform(navigator.platform))
 
 let dismissTimer = 0
 
@@ -40,19 +40,20 @@ async function show(anchorRect: AnchorRect) {
   await nextTick()
   const el = tipRef.value
   if (!el) {
-    // 对齐 Tooltip 先例：元素未挂载时告警并跳过智能定位（isPositioned 仍置 true，至少以默认位置显示）
-    console.warn('[MarkFlow] CoachTip 元素未挂载，跳过智能定位')
+    // 元素未挂载属异常路径。纯提示浮层宁可不显示也不出现在错误位置——
+    // 区别于 Tooltip 的「至少以默认位置显示」先例（Tooltip 有交互价值，位置错误仍可用）
+    console.warn('[MarkFlow] CoachTip 元素未挂载，跳过显示')
+    hide()
+    return
   }
-  else {
-    const rect = el.getBoundingClientRect()
-    const pos = computeTooltipPosition(
-      anchorRect,
-      { width: rect.width, height: rect.height },
-      { width: window.innerWidth, height: window.innerHeight },
-    )
-    position.x = pos.x
-    position.y = pos.y
-  }
+  const rect = el.getBoundingClientRect()
+  const pos = computeTooltipPosition(
+    anchorRect,
+    { width: rect.width, height: rect.height },
+    { width: window.innerWidth, height: window.innerHeight },
+  )
+  position.x = pos.x
+  position.y = pos.y
   isPositioned.value = true
   window.addEventListener('mousedown', hide, true)
   window.addEventListener('scroll', hide, true)

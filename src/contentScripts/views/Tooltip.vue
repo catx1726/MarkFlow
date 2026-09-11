@@ -196,7 +196,8 @@ async function show(
   }
 
   zIndex.value = getMaxZIndex() + 100
-  // 快捷键一次性提示：显示即置位（同 Coach Tip 哲学，保证严格一次）
+  // 快捷键一次性提示：先置位后渲染——严格一次优先，show() 后续渲染链路抛异常时
+  // 宁可漏显示不重复打扰（同 Coach Tip 取舍）；置位为同值赋值时不触发落盘（见写放大回归测试）
   shortcutHintVisible.value = !settings.value.tooltipShortcutHintDone
   settings.value.tooltipShortcutHintDone = true
   isHighlighted.value = highlighted

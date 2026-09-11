@@ -37,12 +37,12 @@ describe('coachKeyLabel', () => {
 
 describe('isMacPlatform', () => {
   it('mac 平台字符串判定为 true', () => {
-    expect(isMacPlatform({ platform: 'MacIntel' })).toBe(true)
+    expect(isMacPlatform('MacIntel')).toBe(true)
   })
 
   it('windows/linux 判定为 false', () => {
-    expect(isMacPlatform({ platform: 'Win32' })).toBe(false)
-    expect(isMacPlatform({ platform: 'Linux x86_64' })).toBe(false)
+    expect(isMacPlatform('Win32')).toBe(false)
+    expect(isMacPlatform('Linux x86_64')).toBe(false)
   })
 })
 
