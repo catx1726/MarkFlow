@@ -1,5 +1,9 @@
 # Unreleased
 
+### [2026-09-11] feat: 本地 JSON 备份/导入——Options 备份与恢复区（roadmap §3 P0） (#88)
+feat: 本地 JSON 备份/导入——Options 备份与恢复区（roadmap §3 P0）
+
+
 ### [2026-09-11] feat(onboarding): add Coach Tip first-use overlay + Tooltip shortcut hint (#87)
 feat(onboarding): add Coach Tip first-use overlay + Tooltip shortcut hint
 
