@@ -64,4 +64,19 @@ describe('coachTip.vue', () => {
     await nextTick()
     expect(wrapper.find('.coach-tip').exists()).toBe(false)
   })
+
+  it('重复 show() 重置超时——旧定时器不提前隐藏', async () => {
+    const wrapper = mount(CoachTip, mountOptions)
+    await showTip(wrapper)
+    vi.advanceTimersByTime(5000)
+    await (wrapper.vm as unknown as Exposed).show(anchor)
+    await nextTick()
+    vi.advanceTimersByTime(2000)
+    await nextTick()
+    // 旧定时器（距首次 show 7s）不得隐藏；新定时器刚过 2s
+    expect(wrapper.find('.coach-tip').exists()).toBe(true)
+    vi.advanceTimersByTime(4000)
+    await nextTick()
+    expect(wrapper.find('.coach-tip').exists()).toBe(false)
+  })
 })

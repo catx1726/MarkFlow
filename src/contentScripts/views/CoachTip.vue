@@ -32,12 +32,18 @@ function dismiss() {
 }
 
 async function show(anchorRect: AnchorRect) {
+  // 重复 show()（未先 hide）时清掉旧定时器，避免孤儿定时器在原 6s 截止点提前隐藏重新显示的提示
+  clearTimeout(dismissTimer)
   zIndex.value = getMaxZIndex() + 100
   isPositioned.value = false
   visible.value = true
   await nextTick()
   const el = tipRef.value
-  if (el) {
+  if (!el) {
+    // 对齐 Tooltip 先例：元素未挂载时告警并跳过智能定位（isPositioned 仍置 true，至少以默认位置显示）
+    console.warn('[MarkFlow] CoachTip 元素未挂载，跳过智能定位')
+  }
+  else {
     const rect = el.getBoundingClientRect()
     const pos = computeTooltipPosition(
       anchorRect,
