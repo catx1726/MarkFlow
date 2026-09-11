@@ -127,6 +127,9 @@ export function useWebExtensionStorage<T>(
     }
   }
 
+  // 契约：Options 页保存/导入流程依赖本 watch 的 flush:'pre' 时序（data 赋值后、
+  // nextTick 前 write 已入队启动）——调整 flush 或 watch 实现时需同步核查
+  // src/options/Options.vue 中 notifyContextsChanged 的调用点（saveSettings / applyImportedBackup）
   const { pause: pauseWatch, resume: resumeWatch } = pausableWatch(
     data,
     write,

@@ -128,6 +128,20 @@ describe('backup Logic', () => {
       const backup = buildBackup({}, {}, { highlightHeight: 12 })
       expect(restoredSettings(backup).highlightHeight).toBe(12)
     })
+
+    it('类型不匹配的已知键值回退默认值，类型正确的保留', () => {
+      const backup = buildBackup({}, {}, {
+        blacklist: 'not-array',
+        highlightHeight: 'twelve',
+        highlightColors: 'oops',
+        defaultHighlightColor: '#FF0000',
+      })
+      const settings = restoredSettings(backup)
+      expect(settings.blacklist).toEqual([])
+      expect(settings.highlightHeight).toBe(5)
+      expect(settings.highlightColors).toEqual(['#FFFF00', '#99FF99', '#FF9999', '#99CCFF', '#FFCC99'])
+      expect(settings.defaultHighlightColor).toBe('#FF0000')
+    })
   })
 
   describe('countBackupStats', () => {

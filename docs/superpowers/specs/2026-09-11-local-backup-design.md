@@ -58,7 +58,7 @@ export interface BackupFile {
 | `buildBackup(marks, tags, settings): BackupFile` | 聚合三块数据 + `exportedAt: Date.now()` |
 | `parseBackupFile(text): BackupFile` | 严格校验，失败抛 `BackupParseError`（携带 i18n key）。校验链：JSON 可解析 → `format === BACKUP_FORMAT` → `version` 为整数且 `1 ≤ v ≤ BACKUP_VERSION` → `data` 为对象且 `marks`/`tags`/`settings` 均为对象（允许空对象） |
 | `applyBackup(localMarks, localTags, backup): { marks, tags }` | 复用 `sync.ts` 的 `mergeMarks`/`mergeTags`（时间戳新者胜，与 Gist 同步同一收敛语义） |
-| `restoredSettings(backup): Settings` | **安全白名单**：仅接受 `defaultSettings` 已知键，备份值覆盖 + 缺失字段由默认值补齐，未知键丢弃（防止手改备份注入任意 settings 键；跨版本丢字段场景已由 version 闸门拦截——超前版本整体拒绝）。2026-09-11 PR #88 二轮审查回写：原文 `{...defaultSettings, ...备份值}` 描述与实现漂移，以此处为准 |
+| `restoredSettings(backup): Settings` | **安全白名单**：仅接受 `defaultSettings` 已知键，备份值覆盖 + 缺失字段由默认值补齐，未知键丢弃（防止手改备份注入任意 settings 键；跨版本丢字段场景已由 version 闸门拦截——超前版本整体拒绝）。**值类型校验**（四轮审查追加）：已知键的值须与默认值同构（数组对数组、标量对标量），不匹配回退默认值——防 `blacklist: "x"` 错型值炸 Options/content 的 `join()`/`some()` 链。2026-09-11 PR #88 二轮审查回写：原文 `{...defaultSettings, ...备份值}` 描述与实现漂移，以此处为准 |
 | `countBackupStats(backup): { marks, tags }` | 标记总数（跨 URL 求和，含已删除标记）与标签数，供确认弹窗展示 |
 
 ### 3.3 Options UI（`Options.vue`）

@@ -106,12 +106,26 @@ export function applyBackup(
  * 防止手改备份文件注入任意 settings 键。跨版本场景由 version 闸门拦截
  * （超前版本直接拒绝导入），不存在「v2 备份降级导入丢字段」路径；
  * 未知键唯一来源即手改文件——正是白名单要挡的向量。
+ * 值类型校验（PR #88 四轮审查）：已知键的值须与默认值同构（数组对数组、标量对标量，
+ * null 因 typeof 'object' 被标量默认值天然拒绝），不匹配回退默认值——防止
+ * `blacklist: "x"` 这类错型值穿透后炸掉 Options 的 join()/some() 调用链。
  */
+function matchesDefaultType(value: unknown, defaultValue: unknown): boolean {
+  const valueIsArray = Array.isArray(value)
+  const defaultIsArray = Array.isArray(defaultValue)
+  if (valueIsArray || defaultIsArray)
+    return valueIsArray && defaultIsArray
+  if (value === null || typeof value === 'object')
+    return defaultValue !== null && typeof defaultValue === 'object'
+  return typeof value === typeof defaultValue
+}
+
 export function restoredSettings(backup: BackupFile): typeof defaultSettings {
   const result: Record<string, unknown> = { ...defaultSettings }
   for (const key of Object.keys(defaultSettings)) {
     const value = backup.data.settings[key]
-    if (value !== undefined)
+    const reference = defaultSettings[key as keyof typeof defaultSettings]
+    if (value !== undefined && matchesDefaultType(value, reference))
       result[key] = value
   }
   return result as typeof defaultSettings
