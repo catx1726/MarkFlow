@@ -143,7 +143,7 @@
 | 项目 | 渠道 | 成本 | 收益 | 优先级 | 要点 |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | **商店 listing 标题关键词卡位** | AMO / 未来 CWS | 低 | 极高 | P0 | 商店搜索是扩展最大自然流量入口，标题权重最高。AMO 标题改「MarkFlow: 网页高亮 + 精准回跳」；Chrome 上架时用 "MarkFlow: Web Highlighter & Notes" 同构卡位 |
-| **GitHub repo SEO** | GitHub | 极低 | 中 | P0 | 补 topics：`web-highlighter` `annotation` `local-first` `browser-extension` `firefox-addon` `chrome-extension`；description 双语埋品类关键词 |
+| **GitHub repo SEO** | GitHub | 极低 | 中 | [已完成] | 2026-09-11：description 按全站降调惯例重写（#85 漏掉的仓库元数据：智能/精准/instantly 移除，「数据仅存本地」核实表述 + 品类词 "Web Highlighter & Notes" 前置）；topics 15→19（补 web-highlighter/annotation/local-first/firefox-addon） |
 | **落地页技术 SEO** | docs/ (Pages) | 低 | 高 | P0 | `<title>` 带品类词（中英）；加 `SoftwareApplication` JSON-LD 结构化数据；`sitemap.xml`；zh/en 互链 `hreflang` |
 | **竞品替代位收录** | AlternativeTo / SaaSHub | 低 | 高 | P1 | 列为 Weava / Glasp / Hypothesis / Liner 的 alternative——搜竞品名的人是精准用户，"无登录"是直接卖点 |
 | **长尾关键词覆盖** | 落地页 / 内容 | 低 | 中 | P1 | 不碰 "highlighter" 红海头部词，打组合长尾：`web highlighter no login`、`local-first web annotation`、`highlight and jump back`、`网页高亮 不用注册`；落地页 FAQ 与文案自然覆盖 |
