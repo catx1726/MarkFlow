@@ -2,7 +2,7 @@
 
 **中文** | [English](./README_EN.md)
 
-> 一款能够精准跳转的网页文本标记工具，支持 GitHub Gist 多端同步。
+> 一款支持回跳原文的网页文本标记工具，支持 GitHub Gist 多端同步。
 
 [![Firefox Add-on](https://img.shields.io/badge/Firefox-Add--on-orange)](https://addons.mozilla.org/zh-CN/firefox/addon/markflow/) [![GitHub License](https://img.shields.io/badge/License-MIT-yellow)](./LICENSE) ![Local First](https://img.shields.io/badge/Storage-Local--First-blue) ![Sync](https://img.shields.io/badge/Sync-GitHub%20Gist-purple) ![Privacy](https://img.shields.io/badge/Privacy-No--Login-green)
 
@@ -10,13 +10,13 @@
 
 ## 它能做什么？
 
-### 精准跳转
+### 回跳原文
 
-在网页上按住 `Alt` 划词标记，点击侧边栏笔记，瞬间回跳原文位置。
+在网页上按住 `Alt` 划词标记，点击侧边栏笔记即可跳回原文位置。
 
 ### 结构化整理
 
-标记自动按章节归类，打上标签后跨网页构建知识图谱。
+标记自动按章节归类，打上标签后可跨网页聚合同主题的标记。
 
 ### 自适应恢复
 
@@ -34,7 +34,7 @@
 
 1. **安装扩展** — [Firefox 商店](https://addons.mozilla.org/zh-CN/firefox/addon/markflow/)（Chrome 即将上线）
 2. **打开任意网页**，按住 `Alt` 选中文本
-3. **点击侧边栏标记**，瞬间跳回原文
+3. **点击侧边栏标记**，跳回原文位置
 4. **（可选）多端同步** — 在设置页配置 GitHub Token，连接并开启同步
 
 ---
@@ -45,13 +45,13 @@
 A: 页面结构漂移、容器复用等常见场景下，系统会尝试自动恢复。若页面内容发生实质性增删或布局重构，可能无法自动恢复，此时会在侧边栏保留上下文供你确认。
 
 **Q: 数据存储在哪里？**  
-A: 默认 100% 本地存储，无需注册，不采集任何数据。可选开启 GitHub Gist 同步。
+A: 数据默认存储在本地，无需注册，不采集数据。可选开启 GitHub Gist 同步。
 
 **Q: 可以导出笔记吗？**  
-A: 支持一键导出 Markdown，可直接粘贴到 Obsidian/Notion。
+A: 支持导出 Markdown 文件，可直接导入 Obsidian/Notion。
 
-**Q: 为什么偶尔会弹出确认恢复的弹窗？**  
-A: 当网页内容发生大段删减或布局重构时，系统可能无法自动恢复，会在侧边栏保留上下文提示你。你可以根据上下文决定是否重新标记。
+**Q: 为什么有些标记会显示「原位置已变化」？**  
+A: 当网页内容发生大段删减或布局重构时，系统可能无法自动恢复。这类标记会在侧边栏显示「原位置已变化」提示，展开即可查看原有上下文，你可以据此决定是否重新标记。
 
 **Q: 多端同步安全吗？**  
 A: 同步使用 GitHub Gist，插件仅需 `gist` 权限，无法访问你的代码仓库。Token 存储在扩展私有空间中。

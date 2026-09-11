@@ -106,7 +106,7 @@ export const zhCN = {
     githubSync: 'GitHub 同步',
     welcomeTitle: '欢迎使用 MarkFlow',
     quickStartTitle: '快速开始',
-    quickStartPrefix: '在任意网页，按住 ',
+    quickStartPrefix: '在支持的网页上，按住 ',
     quickStartSuffix: ' 键并拖动鼠标选中文字，即可唤起高亮工具栏。',
     coreFeaturesTitle: '核心功能',
     featureMarkName: '标记 (Mark)',
@@ -114,7 +114,7 @@ export const zhCN = {
     featureReviewName: '回顾 (Review)',
     featureReviewDesc: '：一览所有标记片段',
     featureJumpName: '跳转 (Jump)',
-    featureJumpDesc: '：点击快速定位上下文',
+    featureJumpDesc: '：点击跳转回原文上下文',
     featureOrganizeName: '整理 (Organize)',
     featureOrganizeDesc: '：高效管理知识碎片',
     welcomeShortcutsTitle: '快捷键',
@@ -144,7 +144,7 @@ export const zhCN = {
     tokenScopePrefix: '请确保 Token 已勾选 ',
     tokenScopeSuffix: ' 权限（无需 repo 权限）。',
     generateToken: '点此快速生成 Token',
-    tokenWarning: '注意：Token 将以加密/私有形式存储在浏览器本地，建议使用最小权限。',
+    tokenWarning: '注意：Token 将保存在浏览器本地存储中，建议使用最小权限。',
     reconnect: '重新连接',
     connectAndSync: '连接并开启同步',
     syncFailed: '同步失败',
@@ -182,7 +182,7 @@ export const zhCN = {
       <div class="space-y-4">
         <section>
           <h4 class="font-bold text-amber-700 dark:text-amber-400 mb-1">Token 即身份</h4>
-          <p>同步功能完全依赖您生成的 GitHub Personal Access Token。插件<b>不会</b>上传您的 Token 到任何服务器，仅加密存储在当前浏览器本地。</p>
+          <p>同步功能完全依赖您生成的 GitHub Personal Access Token。Token 仅保存在本浏览器的本地存储中，仅在您开启同步时用于向 GitHub API 发起请求，不会发送给 GitHub 以外的任何第三方。</p>
         </section>
 
         <section>
@@ -198,7 +198,7 @@ export const zhCN = {
 
         <section>
           <h4 class="font-bold text-amber-700 dark:text-amber-400 mb-1">数据隐私</h4>
-          <p>您的数据存储在您账号下的 <b>Secret Gist</b>（私有代码片段）中，只有持有该 Token 的人可以访问。</p>
+          <p>您的数据存储在您账号下的 <b>Secret Gist</b>（私有代码片段）中，仅持有该 Token 或 Gist 链接的人可以访问。</p>
         </section>
 
         <section>

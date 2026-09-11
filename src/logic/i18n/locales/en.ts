@@ -106,7 +106,7 @@ export const en: Messages = {
     githubSync: 'GitHub sync',
     welcomeTitle: 'Welcome to MarkFlow',
     quickStartTitle: 'Quick start',
-    quickStartPrefix: 'On any page, hold ',
+    quickStartPrefix: 'On most pages, hold ',
     quickStartSuffix: ' and drag to select text to bring up the highlight toolbar.',
     coreFeaturesTitle: 'Core features',
     featureMarkName: 'Mark',
@@ -182,7 +182,7 @@ export const en: Messages = {
       <div class="space-y-4">
         <section>
           <h4 class="font-bold text-amber-700 dark:text-amber-400 mb-1">Your token is your identity</h4>
-          <p>Sync relies entirely on the GitHub Personal Access Token you generate. The extension <b>never</b> uploads your token to any server; it is stored encrypted locally in this browser.</p>
+          <p>Sync relies entirely on the GitHub Personal Access Token you generate. The token is kept only in this browser's local storage, is used only to call the GitHub API when sync is enabled, and is never sent to any third party.</p>
         </section>
 
         <section>
@@ -198,7 +198,7 @@ export const en: Messages = {
 
         <section>
           <h4 class="font-bold text-amber-700 dark:text-amber-400 mb-1">Data privacy</h4>
-          <p>Your data lives in a <b>Secret Gist</b> under your own account, accessible only to holders of that token.</p>
+          <p>Your data lives in a <b>Secret Gist</b> under your own account, accessible only to those who hold the token or the Gist URL.</p>
         </section>
 
         <section>
