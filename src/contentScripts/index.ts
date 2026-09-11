@@ -11,6 +11,7 @@ import { getCanonicalUrlForMark, getMarkIdFromElement, querySelectorAllDeep, que
 import { isPageBlacklisted, settings, settingsReady } from '~/logic/settings'
 import { getRangyRangeRect } from '~/logic/tooltipPosition'
 import { highlightDefaultStyle, shortcuts } from '~/logic/config'
+import { shouldShowCoachTip } from '~/logic/coachTip'
 import '../styles'
 
 window.addEventListener('error', event => collectError(event.error, 'content'))
@@ -252,6 +253,20 @@ function processSelection(event: {
   state.currentMarkIdForColorChange = null
   state.serializedSelection = null
   state.currentSerializationRoot = undefined
+
+  // 首次引导（Coach Tip）：划了词但未按 Alt 且从未引导过 → 选区旁一次性提示核心手势。
+  // 显示即置位（先写标志再显示）：保证严格一次；storage 写失败最坏多显示一次，无害。
+  if (shouldShowCoachTip({
+    altKey: event.altKey,
+    isCollapsed: initialSelection.isCollapsed,
+    onMarkElement: markElement !== null,
+    coachTipDone: settings.value.coachTipDone,
+  })) {
+    const range = initialSelection.rangeCount > 0 ? initialSelection.getRangeAt(0) : null
+    const anchorRect = (range ? getRangyRangeRect(range) : null) ?? new DOMRect(event.clientX, event.clientY, 0, 0)
+    settings.value.coachTipDone = true
+    ui.showCoachTip(anchorRect)
+  }
 }
 
 function handleExistingMarkClick(markElement: HTMLElement, x: number, y: number) {
