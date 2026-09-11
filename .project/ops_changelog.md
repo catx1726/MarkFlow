@@ -112,4 +112,4 @@
 | 2026-09-11T18:46:47+08:00 | FEAT | src/logic/i18n/locales/{zh-CN,en}.ts | Options 备份/导入双语词条 10 条 | bdeff07 | git checkout HEAD -- src/logic/i18n/locales/ |
 | 2026-09-11T18:46:48+08:00 | REFACTOR | src/options/Options.vue | 抽取 notifyContextsChanged 广播；alert 弹窗支持确认（取消/确定）模式 | c93aaa7 | git checkout HEAD -- src/options/Options.vue |
 | 2026-09-11T18:46:49+08:00 | FEAT | src/options/Options.vue | 备份与恢复区：导出下载/导入校验确认/合并落库+广播刷新；CR 处置：文件名补秒位 | 7450aff | git checkout HEAD -- src/options/Options.vue |
-| 2026-09-11T18:46:50+08:00 | DOCS | docs/NIT_ROADMAP.md + .project/ops_changelog.md | 本地备份 §6 转正 + 运维记录 | pending | git checkout HEAD -- docs/NIT_ROADMAP.md .project/ops_changelog.md |
+| 2026-09-11T18:46:50+08:00 | DOCS | docs/NIT_ROADMAP.md + .project/ops_changelog.md | 本地备份 §6 转正 + 运维记录 | fc854a5 | git checkout HEAD -- docs/NIT_ROADMAP.md .project/ops_changelog.md |
