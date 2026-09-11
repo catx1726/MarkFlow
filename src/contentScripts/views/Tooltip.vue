@@ -34,6 +34,7 @@ const textareaRef = ref<HTMLTextAreaElement | null>(null)
 const textToCopy = ref('')
 const copySuccess = ref(false)
 const zIndex = ref(0)
+const shortcutHintVisible = ref(false)
 
 const newTagInput = ref('')
 const allTags = ref<Tag[]>([])
@@ -195,6 +196,9 @@ async function show(
   }
 
   zIndex.value = getMaxZIndex() + 100
+  // 快捷键一次性提示：显示即置位（同 Coach Tip 哲学，保证严格一次）
+  shortcutHintVisible.value = !settings.value.tooltipShortcutHintDone
+  settings.value.tooltipShortcutHintDone = true
   isHighlighted.value = highlighted
   noteValue.value = initialNote
   // 过滤掉已删除标签的悬空 id（lastUsedTags 或旧 mark.tags 可能引用已删除标签）
@@ -380,6 +384,15 @@ defineExpose({ show, hide })
           @keydown.enter.ctrl.prevent="onSaveClick"
           @keydown.esc="hide"
         />
+
+        <!-- 快捷键一次性提示（首次打开时显示，键位动态读用户自定义值） -->
+        <div v-if="shortcutHintVisible" class="shortcut-hint flex items-center gap-[6px] text-[11px] text-gray-400 dark:text-gray-500">
+          <kbd class="rounded-[4px] border border-neutral-300 bg-neutral-200 px-[6px] py-[1px] font-mono text-[11px] dark:border-neutral-500 dark:bg-neutral-600">{{ settings.shortcutSave }}</kbd>
+          <span>{{ t('common.save') }}</span>
+          <span>·</span>
+          <kbd class="rounded-[4px] border border-neutral-300 bg-neutral-200 px-[6px] py-[1px] font-mono text-[11px] dark:border-neutral-500 dark:bg-neutral-600">{{ settings.shortcutDelete }}</kbd>
+          <span>{{ t('common.delete') }}</span>
+        </div>
 
         <div class="tooltip-actions flex justify-between items-center w-full">
           <div class="flex gap-2">
