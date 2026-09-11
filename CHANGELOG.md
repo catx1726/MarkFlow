@@ -1,5 +1,9 @@
 # Unreleased
 
+### [2026-09-11] feat(onboarding): add Coach Tip first-use overlay + Tooltip shortcut hint (#87)
+feat(onboarding): add Coach Tip first-use overlay + Tooltip shortcut hint
+
+
 ### [2026-09-08] feat(docs): 体验页与落地页补标记备注 (#85) (#86)
 feat(docs): 体验页与落地页补标记备注 (#85)
 
