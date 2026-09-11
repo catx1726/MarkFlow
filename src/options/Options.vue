@@ -51,17 +51,36 @@ const alertInfo = reactive({
   title: t('options.alertTitle'),
   message: '',
   isHtml: false,
+  onConfirm: null as null | (() => void),
 })
 
 function showAlert(message: string, title = t('options.alertTitle'), isHtml = false) {
   alertInfo.title = title
   alertInfo.message = message
   alertInfo.isHtml = isHtml
+  alertInfo.onConfirm = null
+  alertInfo.visible = true
+}
+
+/** 确认模式：显示 取消/确定 双按钮，确定才执行回调 */
+// eslint-disable-next-line unused-imports/no-unused-vars -- Task 4 备份导入流程将使用
+function showConfirm(message: string, onConfirm: () => void, title = t('options.alertTitle')) {
+  alertInfo.title = title
+  alertInfo.message = message
+  alertInfo.isHtml = false
+  alertInfo.onConfirm = onConfirm
   alertInfo.visible = true
 }
 
 function hideAlert() {
   alertInfo.visible = false
+  alertInfo.onConfirm = null
+}
+
+function confirmAlert() {
+  const action = alertInfo.onConfirm
+  hideAlert()
+  action?.()
 }
 
 function showSyncHelp() {
@@ -104,17 +123,7 @@ async function saveSettings() {
   saveResetTimeout = window.setTimeout(() => {
     isJustSaved.value = false
   }, 2000)
-  // 通知 background 脚本设置已更新，以便它可以广播刷新指令
-  sendMessage('refresh-sidepanel-data', {}, 'background').catch(() => {
-    // 忽略错误
-  })
-  // 通知所有 content script 刷新高亮样式
-  const tabs = await browser.tabs.query({ status: 'complete' })
-  for (const tab of tabs) {
-    if (tab.id && tab.url && tab.url.startsWith('http')) {
-      sendMessage('refresh-highlights', {}, { context: 'content-script', tabId: tab.id }).catch(() => {})
-    }
-  }
+  await notifyContextsChanged()
 }
 
 async function exportLogs() {
@@ -125,6 +134,21 @@ async function exportLogs() {
   a.href = url
   a.download = `error-logs-${Date.now()}.json`
   a.click()
+}
+
+/** 通知 background/sidepanel 与所有 content script：设置/数据已变化（保存设置、导入备份共用） */
+async function notifyContextsChanged() {
+  // 通知 background 脚本，以便它可以广播刷新指令
+  sendMessage('refresh-sidepanel-data', {}, 'background').catch(() => {
+    // 忽略错误
+  })
+  // 通知所有 content script 刷新高亮样式
+  const tabs = await browser.tabs.query({ status: 'complete' })
+  for (const tab of tabs) {
+    if (tab.id && tab.url && tab.url.startsWith('http')) {
+      sendMessage('refresh-highlights', {}, { context: 'content-script', tabId: tab.id }).catch(() => {})
+    }
+  }
 }
 
 function withTimeout<T>(promise: Promise<T>, ms: number, reason: string): Promise<T> {
@@ -791,10 +815,17 @@ onUnmounted(() => {
         <p v-else class="text-[14px] mb-[24px]">
           {{ alertInfo.message }}
         </p>
-        <div class="flex justify-end">
+        <div class="flex justify-end gap-[12px]">
+          <button
+            v-if="alertInfo.onConfirm"
+            class="px-[16px] py-2 text-[14px] font-medium text-neutral-600 dark:text-neutral-300 bg-neutral-100 dark:bg-neutral-700 rounded-md hover:bg-neutral-200 dark:hover:bg-neutral-600"
+            @click="hideAlert"
+          >
+            {{ t('common.cancel') }}
+          </button>
           <button
             class="px-[16px] py-2 text-[14px] font-medium text-neutral-900 bg-amber-500 rounded-md hover:bg-amber-600"
-            @click="hideAlert"
+            @click="alertInfo.onConfirm ? confirmAlert() : hideAlert()"
           >
             {{ t('common.confirm') }}
           </button>
