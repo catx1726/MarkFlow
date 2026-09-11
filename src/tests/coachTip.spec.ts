@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { coachKeyLabel, shouldShowCoachTip } from '~/logic/coachTip'
+import { coachKeyLabel, isReshowDisabled, shouldShowCoachTip } from '~/logic/coachTip'
 
 describe('shouldShowCoachTip', () => {
   const base = { altKey: false, isCollapsed: false, onMarkElement: false, coachTipDone: false }
@@ -32,5 +32,20 @@ describe('coachKeyLabel', () => {
 
   it('mac 平台显示 ⌥ Option', () => {
     expect(coachKeyLabel(true)).toBe('⌥ Option')
+  })
+})
+
+describe('isReshowDisabled', () => {
+  it('两个引导都从未显示 → 无物可重显，禁用', () => {
+    expect(isReshowDisabled(false, false)).toBe(true)
+  })
+
+  it('任一已显示 → 可点击重显', () => {
+    expect(isReshowDisabled(true, false)).toBe(false)
+    expect(isReshowDisabled(false, true)).toBe(false)
+  })
+
+  it('两个都已显示（最常见重显场景）→ 必须可点击', () => {
+    expect(isReshowDisabled(true, true)).toBe(false)
   })
 })

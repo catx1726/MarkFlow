@@ -6,6 +6,7 @@ import { sendMessage } from 'webext-bridge/options'
 import { getLogs } from '../logic/errorCollector'
 import { getActiveSectionId } from './scrollSpy'
 import { settings } from '~/logic/settings'
+import { isReshowDisabled } from '~/logic/coachTip'
 import { dataReady, marksByUrl, syncConfig, syncReady, syncStatus, tagsMetadata, tagsReady } from '~/logic/storage'
 import { createGist, getGists } from '~/logic/sync'
 import { t } from '~/logic/i18n'
@@ -515,11 +516,11 @@ onUnmounted(() => {
           </p>
           <div class="flex items-center gap-[12px]">
             <span class="text-[13px] text-neutral-500">
-              {{ settings.coachTipDone && settings.tooltipShortcutHintDone ? t('options.coachTipStatusShown') : t('options.coachTipStatusNotShown') }}
+              {{ !settings.coachTipDone && !settings.tooltipShortcutHintDone ? t('options.coachTipStatusNotShown') : t('options.coachTipStatusShown') }}
             </span>
             <button
               class="rounded-md bg-amber-500 px-3 py-1.5 text-xs font-medium text-neutral-900 shadow-sm transition-colors hover:bg-amber-600 disabled:opacity-50"
-              :disabled="settings.coachTipDone && settings.tooltipShortcutHintDone"
+              :disabled="isReshowDisabled(settings.coachTipDone, settings.tooltipShortcutHintDone)"
               @click="reshowCoachTip"
             >
               {{ t('options.coachTipReshow') }}
