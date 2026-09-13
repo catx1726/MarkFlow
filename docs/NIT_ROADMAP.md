@@ -142,7 +142,7 @@
 
 | 项目 | 渠道 | 成本 | 收益 | 优先级 | 要点 |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| **商店 listing 标题关键词卡位** | AMO / 未来 CWS | 低 | 极高 | P0 | 商店搜索是扩展最大自然流量入口，标题权重最高。AMO 标题改「MarkFlow: 网页高亮 + 精准回跳」；Chrome 上架时用 "MarkFlow: Web Highlighter & Notes" 同构卡位 |
+| **商店 listing 标题关键词卡位** | AMO / 未来 CWS | 低 | 极高 | P0（文案已备好，待 Driver 粘贴） | 商店搜索是扩展最大自然流量入口，标题权重最高。⚠️ 2026-09-13 修正：本行旧提议「MarkFlow: 网页高亮 + 精准回跳」含降调红线词（写于红线确立前），**作废**；新文案见 `docs/store-listing.md`（zh「MarkFlow: 网页高亮与笔记，回跳原文」/ en「MarkFlow: Web Highlighter & Notes」），AMO 现行描述中「精准跳转」「瞬间回跳」红线词一并清理；CWS 上架取同构文案 |
 | **GitHub repo SEO** | GitHub | 极低 | 中 | [已完成] | 2026-09-11：description 按全站降调惯例重写（#85 漏掉的仓库元数据：智能/精准/instantly 移除，「数据仅存本地」核实表述 + 品类词 "Web Highlighter & Notes" 前置）；topics 15→19（补 web-highlighter/annotation/local-first/firefox-addon） |
 | **落地页技术 SEO** | docs/ (Pages) | 低 | 高 | [已完成] | 2026-09-11（main 直提，Driver 指示纯静态免 PR）：title 中英带品类词（网页高亮与笔记 / Web Highlighter & Notes，三处同步）；`SoftwareApplication` JSON-LD ×2；sitemap 1→7 URL（补 en 落地页 + try×4，双落地页带 hreflang alternates）；zh/en canonical + hreflang 互链 |
 | **竞品替代位收录** | AlternativeTo / SaaSHub | 低 | 高 | P1 | 列为 Weava / Glasp / Hypothesis / Liner 的 alternative——搜竞品名的人是精准用户，"无登录"是直接卖点 |
