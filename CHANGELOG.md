@@ -1,5 +1,9 @@
 # Unreleased
 
+# Released
+
+## [v0.9.0] - 2026-09-13
+
 ### [2026-09-11] feat: 本地 JSON 备份/导入——Options 备份与恢复区（roadmap §3 P0） (#88)
 feat: 本地 JSON 备份/导入——Options 备份与恢复区（roadmap §3 P0）
 
@@ -19,6 +23,8 @@ feat: 免安装体验页组 docs/try/ + Options Welcome 快捷键说明 (#83)
 ### [2026-09-07] refactor+fix: 自有 UI 质感对齐宣传页（neutral/去阴影）+ 侧边栏标题交互修复 (#82)
 refactor+fix: 自有 UI 质感对齐宣传页（neutral/去阴影）+ 侧边栏标题交互修复
 
+
+## [v0.8.0] - 2026-08-21
 
 ### [2026-08-21] feat(sidepanel): 章节大纲级吸顶（四级堆叠完整） (#78)
 feat(sidepanel): 章节大纲级吸顶（四级堆叠完整）
@@ -75,24 +81,6 @@ docs(landing): OG/Twitter Card 分享卡片支持
 ### [2026-08-20] 宣传前 UI 优化：品牌色统一 amber + Tooltip 定位与拖拽 (#63)
 宣传前 UI 优化：品牌色统一 amber + Tooltip 定位与拖拽
 
-
-### [2026-07-29] docs(audit): add PR #59 ops changelog entry (#60)
-docs(audit): add PR #59 ops changelog entry
-
-
-### [2026-07-29] fix(tooltip): 修复 tooltip 创建标签第二次点击无响应 (#59)
-fix(tooltip): 修复 tooltip 创建标签第二次点击无响应
-
-
-### [2026-07-28] chore(release): bump version to 0.7.2 (#58)
-chore(release): bump version to 0.7.2
-
-
-### [2026-07-28] docs(release): finalize v0.7.2 release notes and changelog (#57)
-docs(release): finalize v0.7.2 release notes and changelog
-
-
-# Released
 
 ## [v0.7.2] - 2026-07-28
 
