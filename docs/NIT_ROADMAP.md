@@ -149,7 +149,7 @@
 | **长尾关键词覆盖** | 落地页 / 内容 | 低 | 中 | P1 | 不碰 "highlighter" 红海头部词，打组合长尾：`web highlighter no login`、`local-first web annotation`、`highlight and jump back`、`网页高亮 不用注册`；落地页 FAQ 与文案自然覆盖 |
 | **内容营销（双语）** | dev.to / HN / 少数派 / V2EX / 掘金 | 中 | 高 | P1 | 弹药现成：①"无登录本地优先高亮工具"产品叙事 ②**AI 录制宣传片工程复盘**（草稿在本地 notes/，HN 对工程故事有天然热度）。时机：Chrome 上架后一波打完 |
 | **Product Hunt 正式 launch** | Product Hunt | 中 | 高 | P2 | 前置依赖：Chrome 上架 + 复盘文发布 + 宣传片齐备（已就绪） |
-| **衡量闭环** | GSC / 商店后台 / GitHub Insights | 低 | 中 | P1 | 落地页接 Google Search Console；AMO/CWS 后台看展示→安装转化；GitHub Traffic 看来源构成 |
+| **衡量闭环** | GSC / 商店后台 / GitHub Insights | 低 | 中 | P1（SEO 侧已就绪，待 Driver 手动接入） | 2026-09-11 落地页 SEO 已上线，剩两步手动：①Rich Results Test（search.google.com/test/rich-results，免登录）直接测 `https://flow.soulboy.site/` 验证 JSON-LD 富摘要；②GSC（search.google.com/search-console）添加资源 `flow.soulboy.site` 并验证（推荐 DNS TXT 记录——域名 DNS 在注册商处管理，不动仓库；或 HTML meta 标签加 `docs/index.html` 重新部署），验证后 Sitemaps 页提交 `/sitemap.xml`；后续 AMO/CWS 后台看展示→安装转化，GitHub Traffic 看来源构成 |
 
 ### 节奏建议
 
