@@ -2,6 +2,11 @@
 
 # Released
 
+## [v0.9.1] - 2026-09-13
+
+### [2026-09-13] fix(assets): 清理旧品牌图标残留——popup 内联像素图标移除 + 删除孤儿 src/assets/logo.svg
+fix(assets): 清理旧品牌图标残留——popup 内联像素图标移除 + 删除孤儿 src/assets/logo.svg（蓝色时代资产，零引用）
+
 ## [v0.9.0] - 2026-09-13
 
 ### [2026-09-11] feat: 本地 JSON 备份/导入——Options 备份与恢复区（roadmap §3 P0） (#88)
