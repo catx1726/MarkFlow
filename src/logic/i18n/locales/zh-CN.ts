@@ -37,6 +37,7 @@ export const zhCN = {
     newTag: '新建标签',
     newTagPlaceholder: '新建标签...',
     openSettings: '打开设置',
+    jumpBack: '返回跳转前位置',
     showMatchesOnly: '仅显示匹配项',
     clearSearch: '清除搜索',
     emptyTitle: '还没有任何标记',

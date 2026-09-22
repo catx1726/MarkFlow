@@ -1,0 +1,40 @@
+# Local Hooks — 执行层 Enforcement
+# 原则: Success is silent; failures are verbose
+#
+# ⚠️ 重要：本文件只是配置，不会自动生效！
+# 首次使用本项目时，必须运行：
+#   ./scripts/setup-dev.sh        (macOS / Linux / WSL)
+#   .\scripts\setup-dev.ps1       (Windows PowerShell)
+#
+# 该命令会自动安装 lefthook 并把 hooks 注册到 .git/hooks/ 目录。
+# 详见 README.md
+
+pre-commit:
+  parallel: true
+  commands:
+    check-agents-md-size:
+      run: bash scripts/check-agents-md.sh
+      tags: [harness, agents]
+
+    forbid-destructive-in-diff:
+      run: bash scripts/forbid-destructive.sh
+      tags: [safety]
+
+    lint-markdown:
+      glob: "*.md"
+      run: npx markdownlint-cli2 {staged_files} 2>/dev/null || echo "ℹ️ markdownlint-cli2 not installed, skipping"
+      tags: [style]
+
+    check-docs-structure:
+      run: bash scripts/check-docs-structure.sh
+      tags: [harness, standards]
+
+    check-ops-changelog:
+      run: bash scripts/check-ops-changelog.sh
+      tags: [safety, audit]
+
+commit-msg:
+  commands:
+    check-conventional-commit:
+      run: bash scripts/check-conventional-commit.sh {1}
+      tags: [style]

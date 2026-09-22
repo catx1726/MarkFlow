@@ -7,6 +7,7 @@ import { HighlightStateManager } from './state'
 import { UIManager } from './ui'
 import { ContentChangeMonitor } from './monitor'
 import { HighlightRestorer } from './restorer'
+import { jumpHistory } from './jumpHistory'
 import { getCanonicalUrlForMark, getMarkIdFromElement, querySelectorAllDeep, querySelectorDeep } from '~/logic/dom'
 import { isPageBlacklisted, settings, settingsReady } from '~/logic/settings'
 import { getRangyRangeRect } from '~/logic/tooltipPosition'
@@ -81,7 +82,8 @@ async function initialize() {
         if (markId) {
           setTimeout(() => {
             try {
-              restorer.scrollToMark(markId)
+              // 跨页 hash 定位不入跳转历史（Spec: 2026-09-22-jump-back-history）
+              restorer.scrollToMark(markId, { recordHistory: false })
               history.replaceState(null, '', window.location.pathname + window.location.search)
             }
             catch (error) {
@@ -314,8 +316,17 @@ onMessage('refresh-highlights', async () => {
 onMessage('tab-prev', ({ data }) => {
   console.log(`[web-marker-extension] Navigate from page "${data.title}"`)
 })
-onMessage('goto-mark', ({ data }) => {
-  restorer.scrollToMark(data.markId)
+onMessage('goto-mark', async ({ data }) => {
+  await restorer.scrollToMark(data.markId)
+  // 返回入栈后的历史深度，侧边栏借此无竞态地刷新「返回」按钮状态
+  return { depth: jumpHistory.depth }
+})
+onMessage('jump-back', () => {
+  jumpHistory.restore()
+  return { depth: jumpHistory.depth }
+})
+onMessage('get-jump-history-depth', () => {
+  return { depth: jumpHistory.depth }
 })
 onMessage('remove-mark', async ({ data: markToRemove }) => {
   if (!markToRemove || !markToRemove.id)

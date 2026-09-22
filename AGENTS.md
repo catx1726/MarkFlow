@@ -1,3 +1,32 @@
+# MarkFlow AI 执行契约
+
+本项目以「母库引用」模式接入 And-You-Driven-Template。完整接入说明见
+D:/code/2026/And-You-Driven-Template/docs/superpowers/child-repo-guide.md。
+
+## SOP 位置
+
+- SOP-HOME：D:/code/2026/And-You-Driven-Template
+
+## 路径解析规则（最高优先级，冲突时覆盖 SOP 文档内的相对路径）
+
+1. 规范/流程/技能：一律从 SOP-HOME 读取，入口为 D:/code/2026/And-You-Driven-Template/AGENTS.md
+2. 运行时产物（Spec/Plan/handoff/decision/审计日志/CHANGELOG）：一律写入当前工作目录（子库）
+3. 脚本：执行子库 scripts/ 副本（bash scripts/xxx.sh 或 .\scripts\xxx.ps1），产物落当前 CWD
+4. 禁止向 SOP-HOME 写入任何文件
+
+## 资产分类速查
+
+| 类别 | 位置 |
+|------|------|
+| 读 | SOP-HOME：AGENTS.md、docs/standards/、docs/domain/、skills/、docs/superpowers/*.md（规范文件） |
+| 写 | 子库：docs/superpowers/{specs,plans,handoffs,decisions,evaluator-handoffs}/、docs/playbooks/、.project/、CHANGELOG.md |
+| 子库持有 | scripts/、lefthook.yml、.github/ |
+
+> 接入偏差说明：本地 git hook 沿用 simple-git-hooks（lint-staged），未安装 lefthook；
+> lefthook.yml 仅为门禁资产，不执行 setup-dev 不会生效。提交规范由 PR 层 CI（audit_check 等）强制。
+
+---
+
 # 工程标准索引 (Engineering Standards Index)
 
 AI 引擎在执行任务时，必须参考以下标准文档以确保工程质量。**严禁跳过规范直接编写代码。**
