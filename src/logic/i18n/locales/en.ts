@@ -37,6 +37,7 @@ export const en: Messages = {
     newTag: 'New tag',
     newTagPlaceholder: 'New tag...',
     openSettings: 'Open settings',
+    jumpBack: 'Back to pre-jump position',
     showMatchesOnly: 'Show matches only',
     clearSearch: 'Clear search',
     emptyTitle: 'No marks yet',

@@ -7,6 +7,7 @@ defineProps<{
   isCreatingTag: boolean
   searchQuery: string
   compactMode: boolean
+  jumpDepth: number
 }>()
 
 const emit = defineEmits<{
@@ -18,6 +19,7 @@ const emit = defineEmits<{
   (e: 'clearSearch'): void
   (e: 'startCreatingTag'): void
   (e: 'cancelCreatingTag'): void
+  (e: 'jump-back'): void
 }>()
 
 function onClearSearch() {
@@ -64,6 +66,20 @@ function onClearSearch() {
         >
           <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+          </svg>
+        </button>
+
+        <button
+          class="p-1.5 rounded-md transition-colors"
+          :class="jumpDepth > 0
+            ? 'text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-700'
+            : 'text-neutral-300 dark:text-neutral-600 cursor-not-allowed'"
+          :disabled="jumpDepth === 0"
+          :title="t('sidepanel.jumpBack')"
+          @click="emit('jump-back')"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3" />
           </svg>
         </button>
 

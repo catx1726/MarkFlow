@@ -37,7 +37,8 @@ export function useMarkActions() {
 
     if (tab?.id) {
       await browser.tabs.update(tab.id, { active: true })
-      sendMessage('goto-mark', { markId: mark.id }, { context: 'content-script', tabId: tab.id })
+      // await 以拿到入栈后的历史深度，供「返回」按钮无竞态刷新
+      return await sendMessage('goto-mark', { markId: mark.id }, { context: 'content-script', tabId: tab.id })
     }
     else {
       const urlWithHash = new URL(mark.url)

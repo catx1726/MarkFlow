@@ -1,6 +1,7 @@
 import { sendMessage } from 'webext-bridge/content-script'
 import rangy from 'rangy/lib/rangy-core'
 import type { HighlightStateManager } from './state'
+import { jumpHistory } from './jumpHistory'
 import type { Mark } from '~/logic/storage'
 import { FLASH_COLOR, highlightDefaultStyle } from '~/logic/config'
 import { settings } from '~/logic/settings'
@@ -376,13 +377,15 @@ export class HighlightRestorer {
     await this.restoreHighlights()
   }
 
-  async scrollToMark(markId: string) {
+  async scrollToMark(markId: string, options?: { recordHistory?: boolean }) {
     const className = `webext-highlight-${markId}`
     const element = querySelectorDeep(`.${className}`)
     if (element) {
       const mark = await sendMessage('get-mark-by-id', { id: markId, url: getCanonicalUrlForMark() }, 'background')
       if (!mark)
         return
+      if (options?.recordHistory !== false)
+        jumpHistory.capture(element)
       element.scrollIntoView({ behavior: 'auto', block: 'center' })
       querySelectorAllDeep(`.${className}`).forEach((el) => {
         if (!(el instanceof HTMLElement))

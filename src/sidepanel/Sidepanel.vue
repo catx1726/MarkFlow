@@ -8,6 +8,7 @@ import { useSidepanelData } from './composables/useSidepanelData'
 import { useUIState } from './composables/useUIState'
 import { useTagActions } from './composables/useTagActions'
 import { useMarkActions } from './composables/useMarkActions'
+import { useJumpBack } from './composables/useJumpBack'
 import { useStorageMonitor } from './composables/useStorageMonitor'
 
 // Components
@@ -16,6 +17,7 @@ import TagFolder from './components/TagFolder.vue'
 import StorageManager from './components/StorageManager.vue'
 import { FOLD } from './composables/foldAnimation'
 import { marksByUrl, tagsMetadata } from '~/logic/storage'
+import type { Mark } from '~/logic/storage'
 import { Z_LAYERS } from '~/logic/layers'
 import { t } from '~/logic/i18n'
 
@@ -74,6 +76,17 @@ const {
   exportTagFolder,
   exportGroup,
 } = useMarkActions()
+
+const {
+  depth: jumpDepth,
+  jumpBack,
+} = useJumpBack()
+
+async function handleGotoMark(mark: Mark) {
+  const res = await gotoMark(mark)
+  if (res)
+    jumpDepth.value = res.depth
+}
 
 const {
   storageUsage,
@@ -213,11 +226,13 @@ async function handleDeleteTag(tagId: string) {
       v-model:search-query="searchQuery"
       v-model:compact-mode="compactMode"
       :is-creating-tag="isCreatingTag"
+      :jump-depth="jumpDepth"
       @create-tag="createTag"
       @open-options="handleOpenOptions"
       @start-creating-tag="startCreatingTag"
       @cancel-creating-tag="cancelCreatingTag"
       @clear-search="clearSearch"
+      @jump-back="jumpBack"
     />
 
     <div
@@ -279,7 +294,7 @@ async function handleDeleteTag(tagId: string) {
           @export-group="exportGroup"
           @open-group-tag-picker="(u, _t) => openTagPicker(u)"
           @remove-group-marks="removeGroupMarks"
-          @goto-mark="gotoMark"
+          @goto-mark="handleGotoMark"
           @edit-mark="m => { editingMarkId = m.id }"
           @save-note="(m, note) => { saveNote(m.id, m.url, note); editingMarkId = null }"
           @cancel-edit="editingMarkId = null"
