@@ -89,9 +89,11 @@ function decodePng(file) {
   return { w, h, bpp, data }
 }
 
-/** 扫描 videoFile 的 [startMs, endMs]，返回底部灰带时间窗 [[s,e],…]（毫秒）
-   注意：Playwright 产出的 webm 时间戳不规律，-to 可能失效导致全片抽帧（实测 4 分钟
-   视频抽出 1.9 万帧 4K PNG）。故：-t 限时长 + -frames:v 硬上限 + 缩到 480p 再解码。 */
+/** 扫描 videoFile 的 [startMs, endMs]，返回坏帧时间窗 [[s,e],…]（毫秒）
+    坏帧两类：①底部纯灰带（采样点同时为灰）②撕裂帧（视口在录制中 resize 导致帧几何
+    突变，内容缩进左上、右下四分位纯黑——纸底内容帧该区域恒亮，阈值安全）。
+    注意：Playwright 产出的 webm 时间戳不规律，-to 可能失效导致全片抽帧（实测 4 分钟
+    视频抽出 1.9 万帧 4K PNG）。故：-t 限时长 + -frames:v 硬上限 + 缩到 480p 再解码。 */
 function detectGraySpans(videoFile, startMs, endMs) {
   const dir = fs.mkdtempSync(path.join(TMP_DIR, 'scan-'))
   const FPS = 20, STEP = 1000 / FPS
@@ -103,11 +105,21 @@ function detectGraySpans(videoFile, startMs, endMs) {
     const o = (y * p.w + x) * p.bpp
     return Math.abs(p.data[o] - 127) < 7 && Math.abs(p.data[o + 1] - 127) < 7
   }
+  // 撕裂帧：右下四分位平均亮度（纸底 ~245，撕裂帧纯黑 ≈0）
+  const isTorn = (p) => {
+    let sum = 0, n = 0
+    for (let y = Math.floor(p.h * 0.75); y < p.h; y += 2)
+      for (let x = Math.floor(p.w * 0.75); x < p.w; x += 2) {
+        const o = (y * p.w + x) * p.bpp
+        sum += (p.data[o] + p.data[o + 1] + p.data[o + 2]) / 3; n++
+      }
+    return sum / n < 100
+  }
   const flagged = []
   for (const f of fs.readdirSync(dir).sort()) {
     const p = decodePng(path.join(dir, f))
-    // 三个采样点同时为纯灰才判定（避免误伤内容帧）；坐标已随 scale=480:270 折算
-    flagged.push(isGray(p, 120, 260) && isGray(p, 240, 260) && isGray(p, 360, 260))
+    // 三个采样点同时为纯灰才判定灰带（避免误伤内容帧）；坐标已随 scale=480:270 折算
+    flagged.push((isGray(p, 120, 260) && isGray(p, 240, 260) && isGray(p, 360, 260)) || isTorn(p))
   }
   const spans = []
   for (let i = 0; i < flagged.length; i++) {
