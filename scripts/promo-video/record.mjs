@@ -15,13 +15,13 @@
  * （事件已正确到达页面），合成 KeyboardEvent 走同一 handleKeydown 闭环且对镜头不可见，故采用。
  */
 import { createRequire } from 'node:module'
-import { execFileSync } from 'node:child_process'
 import http from 'node:http'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
-import zlib from 'node:zlib'
 import { fileURLToPath } from 'node:url'
+import { findBundledFfmpeg } from './engine/ffmpeg.mjs'
+import { detectGraySpans } from './engine/frame-detect.mjs'
 
 /* 录屏组件（chromium/ffmpeg）装在项目内 node_modules，须在 require 前指定 */
 process.env.PLAYWRIGHT_BROWSERS_PATH = '0'
@@ -36,103 +36,19 @@ const PAGES_DIR = path.join(__dirname, 'pages')
 const LANG = process.argv[2] === 'en' ? 'en' : 'zh'
 const OUT_FILE = path.join(ROOT, 'assets', LANG === 'en' ? 'markflow-promo.en.webm' : 'markflow-promo.webm')
 const TMP_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'mf-promo-'))
-const FFMPEG = (() => {
-  const dir = path.join(ROOT, 'node_modules/playwright-core/.local-browsers')
-  const d = fs.readdirSync(dir).find(d => d.startsWith('ffmpeg-'))
-  if (!d) throw new Error('内置 ffmpeg 未安装：npx playwright install ffmpeg')
-  return path.join(dir, d, 'ffmpeg-mac')
-})()
+const FFMPEG = findBundledFfmpeg(ROOT)
 
 const VW = 1920
 const VH = 1080
 const ZOOM_TEXT = 1.4
 const ZOOM_SIDEBAR = 1.2
 
-/* ——— screencast 灰带自动检测：goto-mark 点击后合成器偶发不再栅格化
-     底部瓦片（纯灰 #808080），重锤治愈前的残留窗口在此帧级剪掉 ——— */
-/** 极简 PNG 解码（8-bit RGB/RGBA，无隔行）：返回 { w, h, bpp, data } */
-function decodePng(file) {
-  const d = fs.readFileSync(file)
-  let pos = 8, w = 0, h = 0, bpp = 3
-  const idat = []
-  while (pos < d.length) {
-    const ln = d.readUInt32BE(pos)
-    const typ = d.toString('ascii', pos + 4, pos + 8)
-    if (typ === 'IHDR') {
-      w = d.readUInt32BE(pos + 8); h = d.readUInt32BE(pos + 12)
-      bpp = d[pos + 8 + 9] === 6 ? 4 : 3 // colortype 6=RGBA 2=RGB
-    } else if (typ === 'IDAT') idat.push(d.subarray(pos + 8, pos + 8 + ln))
-    else if (typ === 'IEND') break
-    pos += 12 + ln
-  }
-  const raw = zlib.inflateSync(Buffer.concat(idat))
-  const stride = w * bpp
-  const data = Buffer.alloc(h * stride)
-  const paeth = (a, b, c) => {
-    const p = a + b - c, pa = Math.abs(p - a), pb = Math.abs(p - b), pc = Math.abs(p - c)
-    return pa <= pb && pa <= pc ? a : pb <= pc ? b : c
-  }
-  for (let y = 0; y < h; y++) {
-    const f = raw[y * (stride + 1)]
-    const row = raw.subarray(y * (stride + 1) + 1, (y + 1) * (stride + 1))
-    const prev = y ? data.subarray((y - 1) * stride, y * stride) : Buffer.alloc(stride)
-    const out = data.subarray(y * stride, (y + 1) * stride)
-    for (let x = 0; x < stride; x++) {
-      const a = x >= bpp ? out[x - bpp] : 0, b = prev[x], c = x >= bpp ? prev[x - bpp] : 0
-      out[x] = f === 1 ? (row[x] + a) & 255
-        : f === 2 ? (row[x] + b) & 255
-        : f === 3 ? (row[x] + ((a + b) >> 1)) & 255
-        : f === 4 ? (row[x] + paeth(a, b, c)) & 255
-        : row[x]
-    }
-  }
-  return { w, h, bpp, data }
-}
-
-/** 扫描 videoFile 的 [startMs, endMs]，返回坏帧时间窗 [[s,e],…]（毫秒）
-    坏帧两类：①底部纯灰带（采样点同时为灰）②撕裂帧（视口在录制中 resize 导致帧几何
-    突变，内容缩进左上、右下四分位纯黑——纸底内容帧该区域恒亮，阈值安全）。
-    注意：Playwright 产出的 webm 时间戳不规律，-to 可能失效导致全片抽帧（实测 4 分钟
-    视频抽出 1.9 万帧 4K PNG）。故：-t 限时长 + -frames:v 硬上限 + 缩到 480p 再解码。 */
-function detectGraySpans(videoFile, startMs, endMs) {
-  const dir = fs.mkdtempSync(path.join(TMP_DIR, 'scan-'))
-  const FPS = 20, STEP = 1000 / FPS
-  const durS = (endMs - startMs) / 1000
-  execFileSync(FFMPEG, ['-y', '-ss', (startMs / 1000).toFixed(3), '-i', videoFile,
-    '-t', (durS + 0.5).toFixed(3), '-vf', 'scale=480:270', '-r', String(FPS),
-    '-frames:v', String(Math.ceil(durS * FPS) + FPS), path.join(dir, 'g-%04d.png')], { stdio: 'pipe' })
-  const isGray = (p, x, y) => {
-    const o = (y * p.w + x) * p.bpp
-    return Math.abs(p.data[o] - 127) < 7 && Math.abs(p.data[o + 1] - 127) < 7
-  }
-  // 撕裂帧：右下四分位平均亮度（纸底 ~245，撕裂帧纯黑 ≈0）
-  const isTorn = (p) => {
-    let sum = 0, n = 0
-    for (let y = Math.floor(p.h * 0.75); y < p.h; y += 2)
-      for (let x = Math.floor(p.w * 0.75); x < p.w; x += 2) {
-        const o = (y * p.w + x) * p.bpp
-        sum += (p.data[o] + p.data[o + 1] + p.data[o + 2]) / 3; n++
-      }
-    return sum / n < 100
-  }
-  const flagged = []
-  for (const f of fs.readdirSync(dir).sort()) {
-    const p = decodePng(path.join(dir, f))
-    // 三个采样点同时为纯灰才判定灰带（避免误伤内容帧）；坐标已随 scale=480:270 折算
-    flagged.push((isGray(p, 120, 260) && isGray(p, 240, 260) && isGray(p, 360, 260)) || isTorn(p))
-  }
-  const spans = []
-  for (let i = 0; i < flagged.length; i++) {
-    if (!flagged[i]) continue
-    let j = i
-    while (j + 1 < flagged.length && flagged[j + 1]) j++
-    const s = Math.max(startMs, Math.round(startMs + i * STEP - 3 * STEP)) // 前后各扩三帧（采样间隔内可能漏灰帧）
-    const e = Math.min(endMs, Math.round(startMs + (j + 1) * STEP + 3 * STEP))
-    if (e - s >= 80) spans.push([s, e])
-    i = j
-  }
-  fs.rmSync(dir, { recursive: true, force: true })
-  return spans
+/* ——— MarkFlow 舞台标定（L0）：detectGraySpans 引擎参数。
+     纸底 #f5f2ec 亮度 ~243；grayPoints 位于底部灰带区（480×270 坐标系），
+     永不为内容灰。换产品须重新标定，方法见 SKILL「标定指南」。 ——— */
+const DETECT_CALIB = {
+  grayPoints: [[120, 260], [240, 260], [360, 260]],
+  tornThreshold: 100,
 }
 
 /* ——— WAR patch：允许 sidepanel 被 http 页面 iframe 嵌入（仅改 gitignored 构建产物） ——— */
@@ -209,7 +125,7 @@ const BEATS = T.beats
 
 async function main() {
   patchManifest()
-  const { renderVideo } = await import('./webm-concat.mjs')
+  const { renderVideo } = await import('./engine/webm-concat.mjs')
 
   const server = http.createServer(serve)
   await new Promise(r => server.listen(0, '127.0.0.1', r))
@@ -595,7 +511,7 @@ async function main() {
   const seg = (file, startMs, endMs) => ({ file, startMs: Math.max(0, Math.round(startMs)), endMs: Math.round(endMs) })
   // T0：裁掉首帧加载白屏、止于跨页点击后；并自动切除 screencast 灰带残留窗口
   const t0Start = 300, t0End = tClickA - t0 + 350
-  const graySpans = detectGraySpans(f0, t0Start, t0End)
+  const graySpans = detectGraySpans(f0, { ffmpeg: FFMPEG, tmpDir: TMP_DIR, startMs: t0Start, endMs: t0End, calib: DETECT_CALIB })
   if (graySpans.length) console.log('[gray-cut]', JSON.stringify(graySpans))
   const t0Segs = []
   let cutAt = t0Start
