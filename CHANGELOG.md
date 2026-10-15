@@ -1,5 +1,9 @@
 # Unreleased
 
+### [2026-10-15] fix(contentScripts): 消除打字触发的 300ms 循环全文搜索卡顿 (#91) (#92)
+fix(contentScripts): 消除打字触发的 300ms 循环全文搜索卡顿 (#91)
+
+
 ### [2026-09-22] feat(sidepanel): 跳转历史回退——标记跳转后可返回跳转前位置（多级栈） (#90)
 feat(sidepanel): 跳转历史回退——标记跳转后可返回跳转前位置（多级栈）
 
