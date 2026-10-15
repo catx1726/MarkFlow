@@ -90,6 +90,16 @@ AI 在验证阶段必须按三层架构呈现证据：
 
 ---
 
+## 会话卫生 (Session Hygiene)
+
+每次任务结束前必须执行：
+
+1. **临时文件清理**：诊断脚本、抽帧、中间产物一律放系统临时目录（`$TMPDIR`，如 `/var/folders/.../T/opencode/`），任务结束即 `rm -rf` 对应目录；不得把临时产物留在仓库工作区
+2. **后台进程检查**：`ps aux | grep -E 'ffmpeg|http.server|node'` 确认无残留；shell 会话结束不会杀死子进程，长任务用 nohup + 轮询并记录 PID
+3. **发热控制**：本机跑批量 ffmpeg 解码 / 逐像素分析会明显发热，一律低分辨率 + 低采样率 + 单趟串行执行，完事即清
+
+---
+
 ## 快速参考
 
 - **技能系统入口**: 任务启动时检查 `skills/` 下是否有匹配 skill (`skills/meta/project-entry/SKILL.md`)
@@ -101,3 +111,4 @@ AI 在验证阶段必须按三层架构呈现证据：
 - **合规检查**: `skills/custom/meta-compliance-checker/SKILL.md`
 - **技能同步脚本**: `scripts/sync-skills.sh` / `.ps1`
 - **手术切入式工作流**: `docs/superpowers/surgical-workflow-concept.md`
+- **宣传片录制/修复**: `skills/custom/promo-video-recording/SKILL.md`（录完先人工看，AI 只做定向验证）

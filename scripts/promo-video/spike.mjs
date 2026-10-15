@@ -238,7 +238,7 @@ async function main() {
     const p1 = await v1.path()
     const p2 = await v2.path()
     const joined = path.join(TMP, 'joined.webm')
-    const { renderVideo } = await import('./webm-concat.mjs')
+    const { renderVideo } = await import('./engine/webm-concat.mjs')
     // 故意取非关键帧时刻（关键帧约 5s 一个）：验证重编码裁剪的帧级精度
     const r = renderVideo(FFMPEG, [
       { file: p1, startMs: 1300, endMs: 3300 },
