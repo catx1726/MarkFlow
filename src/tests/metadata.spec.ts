@@ -75,11 +75,11 @@ describe('metadata capture', () => {
     const marksByUrl = {
       'https://example.com': [
         { id: '1', url: 'https://example.com', text: 't1', createdAt: 100, tags: ['inbox'] },
-        { id: '2', url: 'https://example.com', text: 't2', createdAt: 200, tags: ['tag1'] }
-      ]
+        { id: '2', url: 'https://example.com', text: 't2', createdAt: 200, tags: ['tag1'] },
+      ],
     }
     const tagsMetadata = {
-      tag1: { id: 'tag1', name: 'Tag 1', color: 'red', createdAt: 0 }
+      tag1: { id: 'tag1', name: 'Tag 1', color: 'red', createdAt: 0 },
     }
     const tree = buildTagTree(marksByUrl as any, tagsMetadata as any)
     expect(tree.inbox.totalMarks).toBe(1)

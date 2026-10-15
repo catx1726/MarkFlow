@@ -29,7 +29,7 @@ describe('stripHighlights', () => {
     span.className = 'webext-highlight-123'
     span.textContent = 'content'
     fragment.appendChild(span)
-    
+
     // Note: querySelectorAll on fragment works in JSDOM/Browsers
     stripHighlights(fragment)
     expect(fragment.textContent).toBe('content')

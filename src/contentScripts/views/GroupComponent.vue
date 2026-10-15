@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { type Candidate } from '~/logic/search'
 import ListItemComponent from './ListItemComponent.vue'
+import type { Candidate } from '~/logic/search'
 
-const props = defineProps<{
+defineProps<{
   groupTitle: string
   items: Candidate[]
   selectedMarkIds: Set<string>
@@ -22,7 +22,7 @@ const emit = defineEmits<{
       {{ groupTitle }}
     </h3>
     <ListItemComponent
-      v-for="(item, index) in items"
+      v-for="item in items"
       :key="item.id"
       :item="item"
       :is-selected="selectedMarkIds.has(item.id)"
