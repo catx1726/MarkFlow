@@ -66,8 +66,9 @@ class ExactMatchStrategy implements SearchStrategy {
         candidate.similarityScore = 100
         candidates.push(candidate)
       }
-      // 候选数封顶（对齐 Regex 策略）：防重复文本页面候选爆炸（issue #91 B2）
-      if (candidates.length > 10)
+      // 候选数封顶 10（收集满即停；Regex 策略沿用基线 >10 写法）：
+      // 防重复文本页面候选爆炸（issue #91 B2，PR #92 CR2 Nit 1）
+      if (candidates.length >= 10)
         break
       mIdx = fullText.indexOf(mark.text, mIdx + 1)
     }
@@ -254,8 +255,8 @@ export class LocalAligner {
     const excluded = this.context.structureBoundaries
       .filter(b => !this.markText.includes(b.text))
       .sort((a, b) => a.index - b.index)
-    // prefixMaxEnd[k] = 前 k+1 个未包含边界的最大 end
-    const prefixMaxEnd: number[] = Array.from({ length: excluded.length })
+    // prefixMaxEnd[k] = 前 k+1 个未包含边界的最大 end（fill(-1) 显式初始值）
+    const prefixMaxEnd: number[] = Array.from({ length: excluded.length }, () => -1)
     let runningMax = -1
     for (let k = 0; k < excluded.length; k++) {
       if (excluded[k].end > runningMax)
@@ -350,6 +351,13 @@ export class LocalAligner {
  * 覆盖写（旧 fullText 立即可回收）；已从 DOM 移除的 root 条目依赖 WeakMap
  * 语义随节点引用 GC 回收；document.documentElement 等常驻 root 始终只保留
  * 最新一份，不会累积。
+ *
+ * 高亮应用后为何必须失效（PR #92 CR2 Blocking #2，经对照实验证实）：
+ * context.textNodes 持有的是 Text 节点引用。Rangy 高亮会 split/移除原文本
+ * 节点并在 span 内创建新节点——textContent 拼接（fullText）虽不变，但旧
+ * 节点已脱离 DOM：findCommonAncestor 对脱离节点返回 null，直接导致后续
+ * createCandidate 抛 TypeError（而非仅丢失候选）。缓存收益受损仅限"连续
+ * 成功"场景，失败链（不修改 DOM）的复用收益完整保留。
  */
 let searchCacheVersion = 0
 const searchContextCache = new WeakMap<Node, { version: number, context: SearchContext }>()

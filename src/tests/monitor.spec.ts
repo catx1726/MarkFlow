@@ -143,6 +143,24 @@ describe('contentChangeMonitor', () => {
       expect(restoreCallback).toHaveBeenCalledWith([wrapper])
     })
 
+    it('同防抖窗口内乱序/移动新增收敛到最小覆盖集合（PR #92 CR2 Blocking #3）', async () => {
+      // root 先独立挂载（进入 pending），随后 outer 挂载并把 root 移入——
+      // 处理顺序为 [root, outer, root(移动)]，最终应收敛为 {outer}
+      const outer = document.createElement('div')
+      const root = document.createElement('section')
+      monitor = new ContentChangeMonitor(restoreCallback)
+      monitor.setupBodyObserver()
+      document.body.appendChild(root)
+      document.body.appendChild(outer)
+      outer.appendChild(root)
+      await vi.advanceTimersByTimeAsync(300)
+      const call = restoreCallback.mock.lastCall
+      const scope: Element[] = call?.[0] ?? []
+      expect(scope.length).toBe(1)
+      expect(scope[0]).toBe(outer)
+      expect(scope[0].contains(root)).toBe(true)
+    })
+
     it('1s 节流窗内的后续增量触发应被延迟合并', async () => {
       monitor = new ContentChangeMonitor(restoreCallback)
       monitor.setupBodyObserver()

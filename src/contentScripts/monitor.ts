@@ -20,6 +20,9 @@ function isFromTypingContext(node: Node): boolean {
 }
 
 function isContentEditableAttr(el: HTMLElement): boolean {
+  // contenteditable="" 等价 "true"；"inherit" 按规范应继承父级，此处判 true
+  // 属保守方向（误判为打字 → 跳过恢复，绝不反向把打字误判为页面变更触发
+  // 搜索）。渲染语义下的精确继承由 isContentEditable 负责（PR #92 CR2 Nit 3）
   const attr = el.getAttribute('contenteditable')
   return attr !== null && attr !== 'false'
 }
@@ -72,10 +75,10 @@ export class ContentChangeMonitor {
   }
 
   /**
-   * 收集新增子树根作为增量搜索范围。两阶段去重（PR #92 CR Blocking #1）：
-   * 阶段一完整移除被新根覆盖的全部旧根（可能多个，不首中即断）；
-   * 阶段二再判断新根是否被任一现存根覆盖，未被覆盖才加入。
-   * 无论迭代顺序如何，最终都收敛到最小覆盖集合。
+   * 收集新增子树根作为增量搜索范围。去重次序（PR #92 CR2 Blocking #3）：
+   * 先判"新根是否已被现存根覆盖"（covered 则直接跳过，不做任何修改），
+   * 未覆盖才两趟独立遍历（先收集待删项再删除，杜绝 Set 迭代中修改）。
+   * 无论 candidates 顺序如何，最终收敛到最小覆盖集合。
    */
   private collectAddedRoots(mutations: MutationRecord[]) {
     const candidates: Element[] = []
@@ -90,12 +93,7 @@ export class ContentChangeMonitor {
       }
     }
     for (const root of candidates) {
-      // 阶段一：新根包含的旧根全部移除（新根为其超集）
-      for (const existing of this.pendingAddedRoots) {
-        if (root.contains(existing))
-          this.pendingAddedRoots.delete(existing)
-      }
-      // 阶段二：新根已被现存根覆盖则跳过
+      // 前置判定：已被现存根覆盖则整体跳过（先判后改，避免中途状态）
       let covered = false
       for (const existing of this.pendingAddedRoots) {
         if (existing.contains(root)) {
@@ -103,8 +101,19 @@ export class ContentChangeMonitor {
           break
         }
       }
-      if (!covered)
-        this.pendingAddedRoots.add(root)
+      if (covered)
+        continue
+
+      // 未被覆盖：收集被新根覆盖的旧根（两趟遍历，不边迭代边删）
+      const superseded: Element[] = []
+      for (const existing of this.pendingAddedRoots) {
+        if (root.contains(existing))
+          superseded.push(existing)
+      }
+      for (const item of superseded)
+        this.pendingAddedRoots.delete(item)
+
+      this.pendingAddedRoots.add(root)
     }
   }
 

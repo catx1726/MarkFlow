@@ -275,7 +275,9 @@ export class HighlightRestorer {
     if (mark.shadowHostSelector && !deserializationRoot) {
       console.warn(`[HighlightRestorer] Shadow host not found for ${mark.id}, skipping search fallback.`)
       reportRestoreFailure(mark, 'Shadow host missing', { selector: mark.shadowHostSelector })
-      this.state.markFailed(mark.id)
+      // 结构性未就绪（SPA 尚未挂载 shadow DOM）≠ 内容性失败：重试成本仅一次
+      // querySelector，走固定 3s 冷且不累积退避（PR #92 CR2 Blocking #1）
+      this.state.markTransientFailure(mark.id)
       return false
     }
 

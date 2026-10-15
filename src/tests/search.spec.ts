@@ -72,4 +72,28 @@ describe('search logic - recursive traversal', () => {
     const fullText = nodes.map((n: Text) => n.textContent).join('')
     expect(fullText).toBe('Hello World')
   })
+
+  describe('searchContext 缓存失效必要性（PR #92 CR2 Blocking #2 对照实验）', () => {
+    it('高亮替换文本节点后：不失效的缓存导致运行时异常，失效后正常', () => {
+      // 场景：成功应用高亮后，p 内文本全部被 span 包裹——旧 Text 节点
+      // 脱离 DOM，span 内是新节点（Rangy applier 的真实 DOM 形态）
+      document.body.innerHTML = '<div id="c"><p>target text</p><p>other content</p></div>'
+      const mark = { id: 'm1', text: 'target' } as Mark
+
+      // 首次搜索：建立缓存
+      expect(findCandidateElements(mark, document.body).candidates.length).toBe(1)
+
+      // 模拟高亮成功应用：旧文本节点被移除出 DOM
+      const p = document.querySelector('p')!
+      p.innerHTML = '<span class="webext-highlight-m2">target text</span>'
+
+      // 不失效（命中脏缓存）：脱离 DOM 的旧节点使 findCommonAncestor 返回
+      // null，证明"textContent 不变 → 无需失效"不成立——失效是必需的
+      expect(() => findCandidateElements(mark, document.body)).toThrow(TypeError)
+
+      // 失效重建：恢复正常
+      invalidateSearchContextCache()
+      expect(findCandidateElements(mark, document.body).candidates.length).toBe(1)
+    })
+  })
 })

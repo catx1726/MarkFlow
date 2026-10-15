@@ -48,6 +48,16 @@ export class HighlightStateManager {
     this.failedRestoreCooldowns.set(id, Date.now() + backoff)
   }
 
+  /**
+   * 瞬时失败（如 shadow host 尚未挂载）：固定 3s 冷却且不累积退避。
+   * 语义区分（PR #92 CR2 Blocking #1）：结构性未就绪的重试成本极低
+   * （仅 querySelector，无搜索），不应随连续失败退避到 30s——
+   * 否则 SPA 挂载 shadow DOM 后用户最长需等 30s 才能重试。
+   */
+  markTransientFailure(id: string): void {
+    this.failedRestoreCooldowns.set(id, Date.now() + COOLDOWN_DURATION)
+  }
+
   isOnCooldown(id: string): boolean {
     const cooldown = this.failedRestoreCooldowns.get(id)
     return cooldown !== undefined && Date.now() < cooldown
