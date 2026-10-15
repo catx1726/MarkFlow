@@ -1,9 +1,14 @@
-import { describe, expect, it } from 'vitest'
-import { findCandidateElements } from '../logic/search'
+import { beforeEach, describe, expect, it } from 'vitest'
+import { findCandidateElements, invalidateSearchContextCache } from '../logic/search'
 import { getAllTextNodes } from '../logic/dom'
 import type { Mark } from '../logic/storage'
 
 describe('search logic - recursive traversal', () => {
+  beforeEach(() => {
+    // SearchContext 为 pass 级缓存（root 引用 + 版本号），直接调用方需自行失效
+    invalidateSearchContextCache()
+  })
+
   it('should find text in simple DOM', () => {
     document.body.innerHTML = '<div>Hello World</div>'
     const mark = { text: 'Hello' } as Mark

@@ -12,8 +12,8 @@ describe('turndown service', () => {
   it('should handle strikethrough with custom rule', () => {
     const turndownService = new TurndownService()
     turndownService.addRule('strikethrough', {
-      filter: ['del', 's', 'strike'],
-      replacement: (content) => `~~${content}~~`,
+      filter: ['del', 's', 'strike'] as any,
+      replacement: content => `~~${content}~~`,
     })
     const html = '<strike>deleted</strike>'
     const markdown = turndownService.turndown(html)

@@ -25,10 +25,10 @@ console.log('[WebMarker] CONTENT SCRIPT LOADED AT TOP LEVEL')
 const state = new HighlightStateManager()
 const restorer = new HighlightRestorer(state)
 const ui = new UIManager(state)
-const monitor = new ContentChangeMonitor(async () => {
+const monitor = new ContentChangeMonitor(async (scopeRoots?: Element[]) => {
   if (state.modalState.visible)
     return
-  await restorer.restoreHighlights()
+  await restorer.restoreHighlights(scopeRoots)
 })
 let selectionTimer: number
 // #endregion

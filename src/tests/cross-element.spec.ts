@@ -1,13 +1,18 @@
-import { beforeAll, describe, expect, it } from 'vitest'
+import { beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import rangy from 'rangy/lib/rangy-core'
 import 'rangy/lib/rangy-classapplier'
-import { findCandidateElements } from '../logic/search'
+import { findCandidateElements, invalidateSearchContextCache } from '../logic/search'
 import { applyPreciseHighlight } from '../logic/dom'
 import type { Mark } from '../logic/storage'
 
 describe('cross-element integration', () => {
   beforeAll(() => {
     rangy.init()
+  })
+
+  beforeEach(() => {
+    // SearchContext 为 pass 级缓存（root 引用 + 版本号），直接调用方需自行失效
+    invalidateSearchContextCache()
   })
 
   it('should find and apply highlight across two <p> tags', () => {
@@ -22,7 +27,7 @@ describe('cross-element integration', () => {
     const { ambiguityLevel, candidates } = findCandidateElements(mark, document.body)
     expect(ambiguityLevel).toBe('unique')
     expect(candidates.length).toBe(1)
-    
+
     const candidate = candidates[0]
     expect(candidate.displayTextSnippet).toBe('Hello World')
     expect(candidate.candidateElement.id).toBe('container')
@@ -33,12 +38,12 @@ describe('cross-element integration', () => {
       candidate.candidateElement,
       candidate.displayTextSnippet,
       applier,
-      candidate.matchIndex
+      candidate.matchIndex,
     )
 
     expect(rangeResult).not.toBeNull()
     expect(rangeResult!.actualText).toBe('Hello World')
-    
+
     // 验证 DOM 结构
     const highlights = document.querySelectorAll('.test-highlight')
     expect(highlights.length).toBe(2) // 一个在 p1，一个在 p2
@@ -63,12 +68,12 @@ describe('cross-element integration', () => {
       candidate.candidateElement,
       candidate.displayTextSnippet,
       applier,
-      candidate.matchIndex
+      candidate.matchIndex,
     )
 
     expect(rangeResult).not.toBeNull()
     expect(rangeResult!.actualText).toBe('rt Middle E')
-    
+
     const highlights = document.querySelectorAll('.test-highlight-2')
     expect(highlights.length).toBe(3) // "rt", "Middle", "E"
   })
@@ -87,23 +92,23 @@ describe('cross-element integration', () => {
 
     const mark = {
       id: 'reported-id',
-      text: "妮好 corporis inventore aspernatur laborum amet culpa? 123WE1111113\n    妮好 repudiandae fuga? Nulla 124ER1111114",
-      surroundingSnippet: "1-2\\n    妮好 Lorem...1111112\\n    3-4\\n    妮好 corporis inventore aspernatur laborum amet culpa? 123WE1111113\\n    妮好 repudiandae fuga? Nulla 124ER1111114\\n    5-6",
+      text: '妮好 corporis inventore aspernatur laborum amet culpa? 123WE1111113\n    妮好 repudiandae fuga? Nulla 124ER1111114',
+      surroundingSnippet: '1-2\\n    妮好 Lorem...1111112\\n    3-4\\n    妮好 corporis inventore aspernatur laborum amet culpa? 123WE1111113\\n    妮好 repudiandae fuga? Nulla 124ER1111114\\n    5-6',
     } as Mark
 
     // 执行删除操作
     const d3 = document.getElementById('d3')!
-    d3.textContent = "妮好  laborum amet culpa? 123WE1111113"
+    d3.textContent = '妮好  laborum amet culpa? 123WE1111113'
 
     // 1. Search
     const { candidates } = findCandidateElements(mark, document.body)
-    
+
     expect(candidates.length).toBeGreaterThan(0)
     const candidate = candidates[0]
-    
+
     // 验证内容是否包含两部分，且不包含 H1 (3-4)
-    expect(candidate.displayTextSnippet).not.toContain("3-4")
-    expect(candidate.displayTextSnippet).toContain("laborum amet culpa")
-    expect(candidate.displayTextSnippet).toContain("124ER1111114")
+    expect(candidate.displayTextSnippet).not.toContain('3-4')
+    expect(candidate.displayTextSnippet).toContain('laborum amet culpa')
+    expect(candidate.displayTextSnippet).toContain('124ER1111114')
   })
 })

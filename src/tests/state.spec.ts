@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { HighlightStateManager } from '../contentScripts/state'
 import type { Candidate } from '~/logic/search'
 
@@ -16,7 +16,7 @@ function makeCandidate(originalMarkId: string, id?: string): Candidate {
   }
 }
 
-describe('HighlightStateManager', () => {
+describe('highlightStateManager', () => {
   it('should initialize with empty state', () => {
     const state = new HighlightStateManager()
     expect(state.restoredMarkIds.size).toBe(0)
@@ -126,5 +126,59 @@ describe('HighlightStateManager', () => {
     expect(state.isRestored('mark-1')).toBe(true)
     state.deleteRestored('mark-1')
     expect(state.isRestored('mark-1')).toBe(false)
+  })
+
+  describe('failure cooldown exponential backoff (issue #91)', () => {
+    afterEach(() => {
+      vi.useRealTimers()
+    })
+
+    it('连续失败冷却时长按 3s→6s→12s→24s 指数退避', () => {
+      vi.useFakeTimers()
+      vi.setSystemTime(new Date('2026-10-15T00:00:00Z'))
+      const state = new HighlightStateManager()
+      const backoffs = [3000, 6000, 12000, 24000]
+      for (const backoff of backoffs) {
+        state.markFailed('mark-1')
+        expect(state.failedRestoreCooldowns.get('mark-1')).toBe(Date.now() + backoff)
+        // 推进到冷却结束后再次失败
+        vi.setSystemTime(new Date(Date.now() + backoff + 1))
+      }
+    })
+
+    it('连续失败冷却时长在 30s 封顶', () => {
+      vi.useFakeTimers()
+      vi.setSystemTime(new Date('2026-10-15T00:00:00Z'))
+      const state = new HighlightStateManager()
+      for (let i = 0; i < 8; i++) {
+        state.markFailed('mark-1')
+        vi.setSystemTime(new Date(Date.now() + 31_000))
+      }
+      state.markFailed('mark-1')
+      expect(state.failedRestoreCooldowns.get('mark-1')).toBe(Date.now() + 30_000)
+    })
+
+    it('恢复成功后退避计数清零，下次失败回到 3s', () => {
+      vi.useFakeTimers()
+      vi.setSystemTime(new Date('2026-10-15T00:00:00Z'))
+      const state = new HighlightStateManager()
+      state.markFailed('mark-1')
+      state.markFailed('mark-1')
+      expect(state.failedRestoreCooldowns.get('mark-1')).toBe(Date.now() + 6000)
+      state.markRestored('mark-1')
+      state.markFailed('mark-1')
+      expect(state.failedRestoreCooldowns.get('mark-1')).toBe(Date.now() + 3000)
+    })
+
+    it('clearCooldown 同时清零退避计数', () => {
+      vi.useFakeTimers()
+      vi.setSystemTime(new Date('2026-10-15T00:00:00Z'))
+      const state = new HighlightStateManager()
+      state.markFailed('mark-1')
+      state.markFailed('mark-1')
+      state.clearCooldown('mark-1')
+      state.markFailed('mark-1')
+      expect(state.failedRestoreCooldowns.get('mark-1')).toBe(Date.now() + 3000)
+    })
   })
 })

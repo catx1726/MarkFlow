@@ -16,7 +16,7 @@ import {
   querySelectorDeep,
   stripHighlights,
 } from '~/logic/dom'
-import { type Candidate, findCandidateElements } from '~/logic/search'
+import { type Candidate, findCandidateElements, findCandidateElementsInRoots, invalidateSearchContextCache } from '~/logic/search'
 
 const L1_SIMILARITY_THRESHOLD = 95
 const CONTEXT_SIMILARITY_THRESHOLD = 80
@@ -64,20 +64,27 @@ export class HighlightRestorer {
     private state: HighlightStateManager,
   ) {}
 
-  async restoreHighlights(): Promise<Candidate[]> {
+  /**
+   * 恢复当前页面的高亮标记。
+   * @param scopeRoots 增量恢复范围（仅搜索这些子树）。提供时绕过 5s 完成态早退；
+   *                   但若全量重验窗已过期则自动升级为全量 pass，以兜底虚拟列表回收等场景。
+   */
+  async restoreHighlights(scopeRoots?: Element[]): Promise<Candidate[]> {
     if (this.state.isRestoring)
       return this.state.ambiguousMarksQueue.value
 
     const canonicalUrl = getCanonicalUrlForMark()
-    // 早退：当前 URL 的恢复已完成且在重验窗内，跳过 sendMessage 往返与 DOM 查询。
-    // 这是 monitor 在无限滚动场景下的主要节流点。
-    if (
-      this.restorationCompleteUrl === canonicalUrl
+    const withinRevalidateWindow
+      = this.restorationCompleteUrl === canonicalUrl
       && Date.now() - this.restorationCompletedAt < HighlightRestorer.REVALIDATE_INTERVAL_MS
-    ) {
+    // 全量触发 + 窗内 → 早退（monitor 在无限滚动场景下的主要节流点）
+    if (!scopeRoots && withinRevalidateWindow)
       return this.state.ambiguousMarksQueue.value
-    }
+    // 增量触发 + 窗外/首次 → 升级全量
+    if (scopeRoots && !withinRevalidateWindow)
+      scopeRoots = undefined
 
+    invalidateSearchContextCache()
     this.state.isRestoring = true
     try {
       const marks = await sendMessage('get-marks-for-url', { url: canonicalUrl }, 'background')
@@ -110,10 +117,11 @@ export class HighlightRestorer {
       })
 
       if (marksToRestore.length > 0) {
-        await this.applyMarksTwoPhases(marksToRestore)
+        await this.applyMarksTwoPhases(marksToRestore, scopeRoots)
       }
       else {
-        // 所有标记均已恢复（marksToRestore 为空）→ 进入完成态，启用早退节流
+        // 所有标记均已恢复或冷却中 → 进入完成态，启用早退节流。
+        // 失败标记在冷却期内，故失败页同样能进入完成态（issue #91 修复）。
         this.markRestorationComplete(canonicalUrl)
       }
 
@@ -150,7 +158,7 @@ export class HighlightRestorer {
     }
   }
 
-  private async applyMarksTwoPhases(marks: Mark[]) {
+  private async applyMarksTwoPhases(marks: Mark[], scopeRoots?: Element[]) {
     const failedMarks: Mark[] = []
 
     // 第一阶段：快速路径 (Path Only) - 极速尝试 Rangy 路径，不进行任何耗时的搜索
@@ -169,8 +177,7 @@ export class HighlightRestorer {
         const range = rangy.deserializeRange(mark.rangySerialized, root, document)
         if (range && this.validateRange(range, mark)) {
           applier.applyToRange(range)
-          this.state.restoredMarkIds.add(mark.id)
-          this.state.failedRestoreCooldowns.delete(mark.id)
+          this.state.markRestored(mark.id)
           this.state.removeFromAmbiguousQueue(mark.id)
           continue
         }
@@ -183,6 +190,7 @@ export class HighlightRestorer {
 
     // 第二阶段：回退路径 (Search Fallback) - 处理失效的标记
     // 异步执行，且通过 requestAnimationFrame 避免长任务阻塞 UI
+    // 增量模式下仅搜索 scopeRoots 子树（O(新增) 而非 O(全页)，issue #91）
     // 快照当前已恢复的 ID，避免循环过程中状态变化导致重复处理
     const restoredSnapshot = new Set(this.state.restoredMarkIds)
     const marksToSearch = failedMarks.filter(m => !restoredSnapshot.has(m.id))
@@ -193,7 +201,7 @@ export class HighlightRestorer {
       if (this.state.restoredMarkIds.has(mark.id))
         continue
 
-      const success = await this.restoreBySearch(mark)
+      const success = await this.restoreBySearch(mark, scopeRoots)
       if (!success) {
         await sendMessage('update-mark-details', {
           id: mark.id,
@@ -245,23 +253,38 @@ export class HighlightRestorer {
     return (host && host.shadowRoot) ? host.shadowRoot : undefined
   }
 
-  private async restoreBySearch(mark: Mark): Promise<boolean> {
+  /**
+   * 搜索兜底恢复。所有失败路径统一写入冷却（含指数退避），确保任何失败
+   * 都不会在下一个防抖周期被重复搜索（issue #91 三重节流失效修复）。
+   * @param mark 待恢复的标记
+   * @param scopeRoots 增量搜索范围；缺省为全页（含 shadow 标记的 shadow root）
+   */
+  private async restoreBySearch(mark: Mark, scopeRoots?: Element[]): Promise<boolean> {
     const applier = rangy.createClassApplier(`webext-highlight-${mark.id}`, {
       elementTagName: 'span',
       elementAttributes: { style: highlightDefaultStyle(mark.color, settings.value.highlightHeight) },
     })
     const deserializationRoot = this.getDeserializationRoot(mark)
+
     if (mark.shadowHostSelector && !deserializationRoot) {
       console.warn(`[HighlightRestorer] Shadow host not found for ${mark.id}, skipping search fallback.`)
       reportRestoreFailure(mark, 'Shadow host missing', { selector: mark.shadowHostSelector })
+      this.state.markFailed(mark.id)
       return false
     }
-    const root = deserializationRoot || document.documentElement
+
+    // 增量模式不穿透 Shadow DOM（MutationObserver 不观察 shadow root 内部变更），
+    // shadow 标记交由全量重验兜底：不搜索也不写冷却
+    if (scopeRoots && mark.shadowHostSelector)
+      return false
 
     console.warn(`[HighlightRestorer] Path failed for ${mark.id}, falling back to search.`)
-    let { ambiguityLevel, candidates } = findCandidateElements(mark, root, 10)
+    let { ambiguityLevel, candidates }
+      = scopeRoots && scopeRoots.length > 0
+        ? findCandidateElementsInRoots(mark, scopeRoots, 10)
+        : findCandidateElements(mark, deserializationRoot || document.documentElement, 10)
 
-    if (candidates.length === 0 && root !== document.documentElement) {
+    if (candidates.length === 0 && !scopeRoots && deserializationRoot && deserializationRoot !== document.documentElement) {
       const globalResult = findCandidateElements(mark, document.documentElement, 10)
       ambiguityLevel = globalResult.ambiguityLevel
       candidates = globalResult.candidates
@@ -283,8 +306,7 @@ export class HighlightRestorer {
         if (rangeResult) {
           // ... 成功逻辑 ...
           const { range } = rangeResult
-          this.state.restoredMarkIds.add(mark.id)
-          this.state.failedRestoreCooldowns.delete(mark.id)
+          this.state.markRestored(mark.id)
           this.state.removeFromAmbiguousQueue(mark.id)
 
           const root = candidate.candidateElement.getRootNode()
@@ -328,22 +350,28 @@ export class HighlightRestorer {
             url: mark.url,
             restoreFailedAt: null,
           } as any, 'background')
+          // 高亮已修改 DOM，使同 pass 内后续标记的搜索缓存失效，避免脏 context
+          invalidateSearchContextCache()
           return true
         }
         // applyPreciseHighlight 失败
         reportRestoreFailure(mark, 'Apply highlight failed', { similarity })
+        this.state.markFailed(mark.id)
         return false
       }
       // similarity 不足
       reportRestoreFailure(mark, 'Similarity too low', { similarity, threshold: L3_SIMILARITY_THRESHOLD })
+      this.state.markFailed(mark.id)
       return false
     }
     else if (ambiguityLevel === 'multiple') {
+      // 歧义标记同样进入冷却：否则会在每个防抖周期被重新搜索（issue #91 A1）
+      this.state.markFailed(mark.id)
       return false
     }
     else {
       reportRestoreFailure(mark, 'No candidates found')
-      this.state.failedRestoreCooldowns.set(mark.id, Date.now() + 3000)
+      this.state.markFailed(mark.id)
       return false
     }
   }

@@ -1,8 +1,9 @@
 /**
- * # 标记搜索 algorithm (Mark Search Algorithm)
+ * 标记搜索 algorithm (Mark Search Algorithm)
  *
  * 本模块实现了网页标记的模糊搜索与恢复机制。
  */
+/* eslint-disable no-console -- 搜索诊断日志（[WebMarker-Search]）为线上排障功能面输出 */
 
 import type { Mark } from './storage'
 import { calculateSimilarity, findCommonAncestor, getAllTextNodes } from './dom'
@@ -62,7 +63,13 @@ class ExactMatchStrategy implements SearchStrategy {
     let mIdx = fullText.indexOf(mark.text)
     while (mIdx !== -1) {
       const candidate = createCandidate(mark, mIdx, mark.text.length, context)
-      if (candidate) { candidate.similarityScore = 100; candidates.push(candidate) }
+      if (candidate) {
+        candidate.similarityScore = 100
+        candidates.push(candidate)
+      }
+      // 候选数封顶（对齐 Regex 策略）：防重复文本页面候选爆炸（issue #91 B2）
+      if (candidates.length > 10)
+        break
       mIdx = fullText.indexOf(mark.text, mIdx + 1)
     }
     return candidates
@@ -78,18 +85,23 @@ class RegexMatchStrategy implements SearchStrategy {
     if (nMark.length <= SEARCH_CONFIG.MIN_REGEX_LENGTH)
       return []
     const candidates: Candidate[] = []
-    const regexSource = nMark.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/ /g, '[\\s\\u200b]*')
+    // 空白量词限界 {0,10}：防长文本非匹配时的回溯爆炸（issue #91 B3）
+    const regexSource = nMark.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/ /g, '[\\s\\u200b]{0,10}')
     try {
       const regex = new RegExp(regexSource, 'g')
-      let match
-      while ((match = regex.exec(fullText)) !== null) {
+      let match = regex.exec(fullText)
+      while (match !== null) {
         const candidate = createCandidate(mark, match.index, match[0].length, context)
-        if (candidate) { candidate.similarityScore = 98; candidates.push(candidate) }
+        if (candidate) {
+          candidate.similarityScore = 98
+          candidates.push(candidate)
+        }
         if (candidates.length > 10)
           break
+        match = regex.exec(fullText)
       }
     }
-    catch (e) {}
+    catch {}
     return candidates
   }
 }
@@ -160,11 +172,14 @@ export class ConsensusAnchorManager {
     if (votes.length === 0)
       return null
     votes.sort((a, b) => a.val - b.val)
-    let maxWeight = 0; let bestVal = votes[0].val
+    let maxWeight = 0
+    let bestVal = votes[0].val
     for (let i = 0; i < votes.length; i++) {
-      let weight = 0; let j = i
+      let weight = 0
+      let j = i
       while (j < votes.length && votes[j].val - votes[i].val <= SEARCH_CONFIG.CONSENSUS_CLUSTER_SIZE) {
-        weight += votes[j].weight; j++
+        weight += votes[j].weight
+        j++
       }
       if (weight > maxWeight) {
         maxWeight = weight
@@ -209,9 +224,13 @@ export class ConsensusAnchorManager {
     const source = target.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s*')
     try {
       const regex = new RegExp(source, 'g')
-      let m; while ((m = regex.exec(fullText)) !== null && matches.length < 5) matches.push(m.index)
+      let m = regex.exec(fullText)
+      while (m !== null && matches.length < 5) {
+        matches.push(m.index)
+        m = regex.exec(fullText)
+      }
     }
-    catch (e) {}
+    catch {}
     return matches
   }
 }
@@ -219,30 +238,93 @@ export class ConsensusAnchorManager {
 export class LocalAligner {
   constructor(private markText: string, private context: SearchContext) {}
   refineBoundary(suggestedStart: number, suggestedEnd: number): { start: number, end: number, score: number } {
-    const { fullText, structureBoundaries } = this.context
-    let bestSim = 0; let finalStart = Math.max(0, suggestedStart); let finalEnd = Math.max(0, suggestedEnd)
+    const { fullText } = this.context
+    let bestSim = 0
+    let finalStart = Math.max(0, suggestedStart)
+    let finalEnd = Math.max(0, suggestedEnd)
 
-    const startMin = Math.max(0, suggestedStart - 40); const startMax = Math.min(fullText.length, suggestedStart + 40)
-    const endMin = Math.max(finalStart + 1, suggestedEnd - 40); const endMax = Math.min(fullText.length, suggestedEnd + 40)
+    const startMin = Math.max(0, suggestedStart - 40)
+    const startMax = Math.min(fullText.length, suggestedStart + 40)
+    const endMin = Math.max(finalStart + 1, suggestedEnd - 40)
+    const endMax = Math.min(fullText.length, suggestedEnd + 40)
+
+    // 预处理（issue #91 B4）：仅保留标记未包含的结构边界并按起点排序，
+    // 将热循环内的 O(B) some() 扫描降为二分 + 单调前进指针
+    const excluded = this.context.structureBoundaries
+      .filter(b => !this.markText.includes(b.text))
+      .sort((a, b) => a.index - b.index)
+    // prefixMaxEnd[k] = 前 k+1 个未包含边界的最大 end
+    const prefixMaxEnd: number[] = Array.from({ length: excluded.length })
+    let runningMax = -1
+    for (let k = 0; k < excluded.length; k++) {
+      if (excluded[k].end > runningMax)
+        runningMax = excluded[k].end
+      prefixMaxEnd[k] = runningMax
+    }
+    // 二分：最后一个 index < i 的未包含边界位置
+    const lastBefore = (i: number): number => {
+      let lo = 0
+      let hi = excluded.length - 1
+      let ans = -1
+      while (lo <= hi) {
+        const mid = (lo + hi) >> 1
+        if (excluded[mid].index < i) {
+          ans = mid
+          lo = mid + 1
+        }
+        else {
+          hi = mid - 1
+        }
+      }
+      return ans
+    }
+    // 二分：第一个 index > i 的未包含边界位置
+    const firstAfter = (i: number): number => {
+      let lo = 0
+      let hi = excluded.length - 1
+      let ans = excluded.length
+      while (lo <= hi) {
+        const mid = (lo + hi) >> 1
+        if (excluded[mid].index > i) {
+          ans = mid
+          hi = mid - 1
+        }
+        else {
+          lo = mid + 1
+        }
+      }
+      return ans
+    }
+    // 起点检查：i 严格位于某未包含边界的 (index, end) 内 → 跨结构起始，跳过
+    const isBadStart = (i: number): boolean => {
+      const k = lastBefore(i)
+      return k !== -1 && prefixMaxEnd[k] > i
+    }
 
     for (let i = startMin; i < startMax; i++) {
-      // 检查起始点是否跨越了原本不该跨越的结构边界
-      if (structureBoundaries.some(b => i > b.index && i < b.end && !this.markText.includes(b.text)))
+      if (isBadStart(i))
         continue
 
+      // 跨界检查滑窗：p 单调前进，[startP, p) 即落入 (i, j) 的未包含边界
+      const startP = firstAfter(i)
+      let p = startP
       for (let j = endMin; j < endMax; j++) {
-        const sub = fullText.substring(i, j)
-
+        while (p < excluded.length && excluded[p].index < j)
+          p++
         // 核心约束：如果原本标记中不包含特定的块级标签内容，则不应跨越新出现的块级边界
-        const crossesBoundary = structureBoundaries.some(b => b.index > i && b.index < j && !this.markText.includes(b.text))
-        if (crossesBoundary)
+        if (p > startP)
           continue
 
+        const sub = fullText.substring(i, j)
         const sim = calculateSimilarity(sub, this.markText)
         const lengthRatio = Math.min(sub.length, this.markText.length) / Math.max(sub.length, this.markText.length)
         const weightedSim = sim * (0.8 + 0.2 * lengthRatio)
 
-        if (weightedSim > bestSim) { bestSim = weightedSim; finalStart = i; finalEnd = j }
+        if (weightedSim > bestSim) {
+          bestSim = weightedSim
+          finalStart = i
+          finalEnd = j
+        }
         if (sim === 100 && lengthRatio > 0.98)
           break
       }
@@ -258,24 +340,58 @@ export class LocalAligner {
 
 // --- Dispatcher & Utils ---
 
+/**
+ * SearchContext pass 级缓存：同一恢复批次内多个标记、多根重搜复用同一份
+ * 全文/结构边界，避免每标记重复 O(N) 全页遍历（issue #91 B1/B5）。
+ * 失效时机由调用方控制（restoreHighlights 入口 + 高亮应用后）。
+ */
+let searchCacheVersion = 0
+const searchContextCache = new WeakMap<Node, { version: number, context: SearchContext }>()
+
+/** 使所有已缓存的 SearchContext 失效（新 pass 或 DOM 已被高亮修改时调用） */
+export function invalidateSearchContextCache(): void {
+  searchCacheVersion++
+}
+
+function getSearchContext(root: Node): SearchContext {
+  const cached = searchContextCache.get(root)
+  if (cached && cached.version === searchCacheVersion)
+    return cached.context
+  const context = createSearchContext(root)
+  searchContextCache.set(root, { version: searchCacheVersion, context })
+  return context
+}
+
 export function findCandidateElements(mark: Mark, searchRoot: Node, _extLen: number = 10): { ambiguityLevel: AmbiguityLevel, candidates: Candidate[] } {
+  return findCandidateElementsInRoots(mark, [searchRoot], _extLen)
+}
+
+/**
+ * 在多个搜索根（如增量恢复的新增子树）中查找标记候选。
+ * 各根独立执行策略（context 按根缓存去重），候选聚合后统一去重与歧义裁决。
+ */
+export function findCandidateElementsInRoots(mark: Mark, roots: Node[], _extLen: number = 10): { ambiguityLevel: AmbiguityLevel, candidates: Candidate[] } {
   console.log(`[WebMarker-Search] Searching ID: ${mark.id}`)
-  const context = createSearchContext(searchRoot)
   const strategies: SearchStrategy[] = [new ExactMatchStrategy(), new RegexMatchStrategy()]
-  let candidates: Candidate[] = []
-  for (const strategy of strategies) {
-    const results = strategy.execute(mark, context)
-    if (results.length > 0) {
-      if (strategy.name === 'ExactMatch') {
-        // ExactMatch 结果可直接信任，提前终止
-        candidates = results
-        break
+  const candidates: Candidate[] = []
+  for (const root of roots) {
+    const context = getSearchContext(root)
+    for (const strategy of strategies) {
+      const results = strategy.execute(mark, context)
+      if (results.length > 0) {
+        if (strategy.name === 'ExactMatch') {
+          // ExactMatch 结果可直接信任，提前终止当前根的策略链
+          candidates.push(...results)
+          break
+        }
+        // 非精确匹配策略累积结果，后续统一去重和排序选择最佳
+        candidates.push(...results)
       }
-      // 非精确匹配策略累积结果，后续统一去重和排序选择最佳
-      candidates.push(...results)
     }
   }
-  const uniqueCandidates = Array.from(new Map(candidates.map(c => [`${c.candidateElement.innerHTML}-${c.matchIndex}`, c])).values())
+  // 去重键含 surroundingSnippet（绝对位置周边文本）：不同容器中相同文本+相同相对位置
+  // 的候选是合法的歧义双候选，不应被 innerHTML-matchIndex 误合并（issue #91 A1 场景）
+  const uniqueCandidates = Array.from(new Map(candidates.map(c => [`${c.candidateElement.innerHTML}-${c.matchIndex}-${c.surroundingSnippet}`, c])).values())
   uniqueCandidates.sort((a, b) => (b.similarityScore || 0) - (a.similarityScore || 0))
   return resolveAmbiguity(uniqueCandidates)
 }
@@ -306,7 +422,8 @@ function resolveAmbiguity(candidates: Candidate[]): { ambiguityLevel: AmbiguityL
   }
 
   const [best, second] = validCandidates
-  const bestScore = best.similarityScore || 0; const secondScore = second.similarityScore || 0
+  const bestScore = best.similarityScore || 0
+  const secondScore = second.similarityScore || 0
   const hasClearWinner = bestScore >= SEARCH_CONFIG.AUTO_RESTORE_MIN_SCORE && (bestScore - secondScore) > SEARCH_CONFIG.AUTO_RESTORE_SCORE_MARGIN
   return { ambiguityLevel: hasClearWinner ? 'unique' : 'multiple', candidates: validCandidates }
 }
@@ -316,8 +433,14 @@ function createSearchContext(searchRoot: Node): SearchContext {
   const fullText = textNodes.map(n => n.textContent || '').join('')
   const cumulativeOffsets: number[] = []
   let currentOffset = 0
-  for (const node of textNodes) { cumulativeOffsets.push(currentOffset); currentOffset += (node.textContent || '').length }
+  for (const node of textNodes) {
+    cumulativeOffsets.push(currentOffset)
+    currentOffset += (node.textContent || '').length
+  }
   cumulativeOffsets.push(currentOffset)
+  // Map 索引替代 Array.indexOf：O(E×N) → O(N)（issue #91 B1）
+  const nodeIndex = new Map<Text, number>()
+  textNodes.forEach((n, i) => nodeIndex.set(n, i))
   const structureBoundaries: { index: number, end: number, text: string, type: string }[] = []
   if (searchRoot instanceof HTMLElement || searchRoot instanceof ShadowRoot) {
     const elements = (searchRoot as HTMLElement).querySelectorAll('h1, h2, h3, h4, h5, h6, div, p, li, section, article')
@@ -326,8 +449,9 @@ function createSearchContext(searchRoot: Node): SearchContext {
       if (txt && txt.length > 2) {
         const elNodes = getAllTextNodes(el)
         if (elNodes.length > 0) {
-          const first = textNodes.indexOf(elNodes[0]); const last = textNodes.indexOf(elNodes[elNodes.length - 1])
-          if (first !== -1 && last !== -1)
+          const first = nodeIndex.get(elNodes[0])
+          const last = nodeIndex.get(elNodes[elNodes.length - 1])
+          if (first !== undefined && last !== undefined)
             structureBoundaries.push({ index: cumulativeOffsets[first], end: cumulativeOffsets[last + 1], text: txt.substring(0, 20), type: el.tagName })
         }
       }
@@ -348,13 +472,16 @@ function findNearestBlockContainer(node: Node): HTMLElement | null {
 }
 
 function findTextNodeIndex(charIndex: number, cumulativeOffsets: number[]): number {
-  let low = 0; let high = cumulativeOffsets.length - 2
+  let low = 0
+  let high = cumulativeOffsets.length - 2
   while (low <= high) {
     const mid = Math.floor((low + high) / 2)
     if (charIndex >= cumulativeOffsets[mid] && charIndex < cumulativeOffsets[mid + 1])
       return mid
     if (charIndex < cumulativeOffsets[mid])
-      high = mid - 1; else low = mid + 1
+      high = mid - 1
+    else
+      low = mid + 1
   }
   return -1
 }
@@ -363,7 +490,8 @@ function createCandidate(mark: Mark, matchIndex: number, matchLength: number, co
   const clampedIdx = Math.max(0, matchIndex)
   const { textNodes, fullText, cumulativeOffsets } = context
   const matchEnd = clampedIdx + matchLength
-  const startNodeIdx = findTextNodeIndex(clampedIdx, cumulativeOffsets); const endNodeIdx = findTextNodeIndex(matchEnd - 1, cumulativeOffsets)
+  const startNodeIdx = findTextNodeIndex(clampedIdx, cumulativeOffsets)
+  const endNodeIdx = findTextNodeIndex(matchEnd - 1, cumulativeOffsets)
   if (startNodeIdx === -1 || endNodeIdx === -1)
     return null
   const involvedNodes = textNodes.slice(startNodeIdx, endNodeIdx + 1)
@@ -379,7 +507,8 @@ function createCandidate(mark: Mark, matchIndex: number, matchLength: number, co
 
   // 精准提取当前候选位置的物理上下文
   const contextLength = 25
-  const start = Math.max(0, clampedIdx - contextLength); const end = Math.min(fullText.length, matchEnd + contextLength)
+  const start = Math.max(0, clampedIdx - contextLength)
+  const end = Math.min(fullText.length, matchEnd + contextLength)
   const surroundingSnippet = fullText.substring(start, end)
 
   // [核心修复] 计算此候选位置的上下文匹配得分

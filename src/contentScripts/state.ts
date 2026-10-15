@@ -13,10 +13,13 @@ export interface DisambiguationModalInstance {
 }
 
 const COOLDOWN_DURATION = 3000
+/** 连续失败指数退避上限：3s → 6s → 12s → 24s → 30s(封顶) */
+const COOLDOWN_MAX_DURATION = 30_000
 
 export class HighlightStateManager {
   restoredMarkIds = new Set<string>()
   failedRestoreCooldowns = new Map<string, number>()
+  private failureStreaks = new Map<string, number>()
   ambiguousMarksQueue = ref<Candidate[]>([])
   modalState = reactive({ marks: [] as Candidate[], visible: false })
   isRestoring = false
@@ -35,10 +38,14 @@ export class HighlightStateManager {
   markRestored(id: string): void {
     this.restoredMarkIds.add(id)
     this.failedRestoreCooldowns.delete(id)
+    this.failureStreaks.delete(id)
   }
 
   markFailed(id: string): void {
-    this.failedRestoreCooldowns.set(id, Date.now() + COOLDOWN_DURATION)
+    const streak = (this.failureStreaks.get(id) || 0) + 1
+    this.failureStreaks.set(id, streak)
+    const backoff = Math.min(COOLDOWN_DURATION * 2 ** (streak - 1), COOLDOWN_MAX_DURATION)
+    this.failedRestoreCooldowns.set(id, Date.now() + backoff)
   }
 
   isOnCooldown(id: string): boolean {
@@ -48,6 +55,7 @@ export class HighlightStateManager {
 
   clearCooldown(id: string): void {
     this.failedRestoreCooldowns.delete(id)
+    this.failureStreaks.delete(id)
   }
 
   deleteRestored(id: string): void {
@@ -82,6 +90,7 @@ export class HighlightStateManager {
   clearAll(): void {
     this.restoredMarkIds.clear()
     this.failedRestoreCooldowns.clear()
+    this.failureStreaks.clear()
     this.ambiguousMarksQueue.value = []
     this.modalState.marks = []
     this.modalState.visible = false

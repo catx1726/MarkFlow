@@ -1,7 +1,7 @@
-import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ContentChangeMonitor } from '../contentScripts/monitor'
 
-describe('ContentChangeMonitor', () => {
+describe('contentChangeMonitor', () => {
   let restoreCallback: ReturnType<typeof vi.fn>
 
   beforeEach(() => {
@@ -52,19 +52,21 @@ describe('ContentChangeMonitor', () => {
     expect(history.pushState).toBe(originalPushState)
   })
 
-  it('should call restoreCallback after debounce delay', () => {
+  it('should call restoreCallback after debounce delay', async () => {
     const monitor = new ContentChangeMonitor(restoreCallback)
-    monitor['debouncedRestore']()
-    vi.advanceTimersByTime(300)
+    monitor.setupGlobalObserver()
+    history.pushState({}, '', '/debounce-single')
+    await vi.advanceTimersByTimeAsync(300)
     expect(restoreCallback).toHaveBeenCalledTimes(1)
   })
 
-  it('should debounce multiple rapid calls', () => {
+  it('should debounce multiple rapid calls', async () => {
     const monitor = new ContentChangeMonitor(restoreCallback)
-    monitor['debouncedRestore']()
-    monitor['debouncedRestore']()
-    monitor['debouncedRestore']()
-    vi.advanceTimersByTime(300)
+    monitor.setupGlobalObserver()
+    history.pushState({}, '', '/debounce-a')
+    history.pushState({}, '', '/debounce-b')
+    history.pushState({}, '', '/debounce-c')
+    await vi.advanceTimersByTimeAsync(300)
     expect(restoreCallback).toHaveBeenCalledTimes(1)
   })
 
@@ -74,5 +76,99 @@ describe('ContentChangeMonitor', () => {
     history.pushState({}, '', '/new-url')
     vi.advanceTimersByTime(300)
     expect(restoreCallback).toHaveBeenCalledTimes(1)
+  })
+
+  describe('typing-context filtering & incremental scope (issue #91)', () => {
+    let monitor: ContentChangeMonitor | undefined
+
+    beforeEach(() => {
+      document.body.innerHTML = ''
+    })
+
+    afterEach(() => {
+      monitor?.destroy()
+      document.body.innerHTML = ''
+    })
+
+    it('textarea 子树内的新增节点不应触发恢复回调', async () => {
+      // 输入框为页面预置（observer 启动前已存在），打字产生的变更位于其子树内
+      const textarea = document.createElement('textarea')
+      document.body.appendChild(textarea)
+      monitor = new ContentChangeMonitor(restoreCallback)
+      monitor.setupBodyObserver()
+      textarea.appendChild(document.createTextNode('typed'))
+      await vi.advanceTimersByTimeAsync(1000)
+      expect(restoreCallback).not.toHaveBeenCalled()
+    })
+
+    it('contenteditable 子树内的新增节点不应触发恢复回调', async () => {
+      const editor = document.createElement('div')
+      editor.setAttribute('contenteditable', 'true')
+      document.body.appendChild(editor)
+      monitor = new ContentChangeMonitor(restoreCallback)
+      monitor.setupBodyObserver()
+      editor.appendChild(document.createTextNode('typed'))
+      await vi.advanceTimersByTimeAsync(1000)
+      expect(restoreCallback).not.toHaveBeenCalled()
+    })
+
+    it('输入区外的页面变更应正常触发恢复回调', async () => {
+      monitor = new ContentChangeMonitor(restoreCallback)
+      monitor.setupBodyObserver()
+      const section = document.createElement('section')
+      section.textContent = 'new content'
+      document.body.appendChild(section)
+      await vi.advanceTimersByTimeAsync(300)
+      expect(restoreCallback).toHaveBeenCalledTimes(1)
+    })
+
+    it('observer 触发应传递新增子树作为增量 scope', async () => {
+      monitor = new ContentChangeMonitor(restoreCallback)
+      monitor.setupBodyObserver()
+      const section = document.createElement('section')
+      section.textContent = 'new content'
+      document.body.appendChild(section)
+      await vi.advanceTimersByTimeAsync(300)
+      expect(restoreCallback).toHaveBeenCalledWith([section])
+    })
+
+    it('防抖窗口内嵌套新增应去重为最外层子树根', async () => {
+      monitor = new ContentChangeMonitor(restoreCallback)
+      monitor.setupBodyObserver()
+      const wrapper = document.createElement('div')
+      document.body.appendChild(wrapper)
+      const inner = document.createElement('p')
+      wrapper.appendChild(inner)
+      await vi.advanceTimersByTimeAsync(300)
+      expect(restoreCallback).toHaveBeenCalledWith([wrapper])
+    })
+
+    it('1s 节流窗内的后续增量触发应被延迟合并', async () => {
+      monitor = new ContentChangeMonitor(restoreCallback)
+      monitor.setupBodyObserver()
+      const first = document.createElement('section')
+      document.body.appendChild(first)
+      await vi.advanceTimersByTimeAsync(300)
+      expect(restoreCallback).toHaveBeenCalledTimes(1)
+
+      const second = document.createElement('article')
+      document.body.appendChild(second)
+      await vi.advanceTimersByTimeAsync(300)
+      // 距上次增量不足 1s，被节流延迟
+      expect(restoreCallback).toHaveBeenCalledTimes(1)
+      await vi.advanceTimersByTimeAsync(1000)
+      expect(restoreCallback).toHaveBeenCalledTimes(2)
+      expect(restoreCallback).toHaveBeenLastCalledWith([second])
+    })
+
+    it('pushState 触发的全量恢复不携带增量 scope', async () => {
+      monitor = new ContentChangeMonitor(restoreCallback)
+      monitor.setupBodyObserver()
+      monitor.setupGlobalObserver()
+      history.pushState({}, '', '/spa-route')
+      await vi.advanceTimersByTimeAsync(300)
+      expect(restoreCallback).toHaveBeenCalledTimes(1)
+      expect(restoreCallback).toHaveBeenLastCalledWith()
+    })
   })
 })

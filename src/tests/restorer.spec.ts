@@ -127,7 +127,7 @@ describe('highlightRestorer', () => {
       await restorer.restoreHighlights()
 
       const titleCalls = vi.mocked(sendMessage).mock.calls
-        .filter(([type, payload]: [string, any]) => type === 'update-mark-details' && payload?.title)
+        .filter(([type, payload]: any[]) => type === 'update-mark-details' && payload?.title)
       expect(titleCalls.length).toBe(1)
       expect(titleCalls[0][1]).toMatchObject({
         id: 'legacy-1',
@@ -150,7 +150,7 @@ describe('highlightRestorer', () => {
       await restorer.restoreHighlights()
 
       const titleCalls = vi.mocked(sendMessage).mock.calls
-        .filter(([type, payload]: [string, any]) => type === 'update-mark-details' && payload?.title)
+        .filter(([type, payload]: any[]) => type === 'update-mark-details' && payload?.title)
       expect(titleCalls.length).toBe(0)
     })
   })
@@ -201,6 +201,99 @@ describe('highlightRestorer', () => {
 
       await restorer.refreshHighlights() // 重置 + 内部 restoreHighlights 应重新 ping
       expect(await pingCount()).toBeGreaterThan(afterFirst)
+    })
+  })
+
+  describe('unified failure cooldown (issue #91)', () => {
+    afterEach(() => {
+      document.body.innerHTML = ''
+      vi.restoreAllMocks()
+    })
+
+    function searchLogCount(spy: ReturnType<typeof vi.spyOn>): number {
+      return spy.mock.calls.filter(args => String(args[0]).includes('Searching ID')).length
+    }
+
+    it('multiple 歧义标记失败后进入冷却，冷却期内不重复触发搜索', async () => {
+      const { sendMessage } = await import('webext-bridge/content-script')
+      document.body.innerHTML = `
+        <div><p>duplicated target text</p></div>
+        <div><p>duplicated target text</p></div>`
+      const mark = {
+        id: 'ambiguous-1',
+        url: 'https://example.com/page',
+        text: 'duplicated target text',
+        note: '',
+        color: '#FFFF00',
+        rangySerialized: 'invalid-serialized-range',
+        createdAt: Date.now(),
+      }
+      vi.mocked(sendMessage).mockImplementation(async (messageType: string) => {
+        if (messageType === 'get-marks-for-url')
+          return [mark]
+        if (messageType === 'update-mark-details')
+          return { success: true }
+        return undefined
+      })
+      const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+
+      await restorer.restoreHighlights()
+      // 核心断言：歧义（multiple）失败同样进入冷却（原实现裸 return false 无冷却）
+      expect(state.isOnCooldown('ambiguous-1')).toBe(true)
+
+      const afterFirst = searchLogCount(logSpy)
+      expect(afterFirst).toBeGreaterThan(0)
+
+      // 冷却期内（3s）再次触发：不应重复搜索
+      await restorer.restoreHighlights()
+      expect(searchLogCount(logSpy)).toBe(afterFirst)
+    })
+
+    it('存在失败标记的页面在冷却后进入完成态，5s 早退对失败页生效', async () => {
+      const { sendMessage } = await import('webext-bridge/content-script')
+      document.body.innerHTML = '<div><p>totally absent text</p></div>'
+      const mark = {
+        id: 'missing-1',
+        url: 'https://example.com/page',
+        text: 'text that does not exist in the dom',
+        note: '',
+        color: '#FFFF00',
+        rangySerialized: 'invalid-serialized-range',
+        createdAt: Date.now(),
+      }
+      vi.mocked(sendMessage).mockImplementation(async (messageType: string) => {
+        if (messageType === 'get-marks-for-url')
+          return [mark]
+        if (messageType === 'update-mark-details')
+          return { success: true }
+        return undefined
+      })
+      const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+
+      await restorer.restoreHighlights() // 失败 → 进冷却
+      expect(state.isOnCooldown('missing-1')).toBe(true)
+      const afterFirst = searchLogCount(logSpy)
+
+      await restorer.restoreHighlights() // 冷却内：marksToRestore 空 → 进入完成态
+      expect(searchLogCount(logSpy)).toBe(afterFirst)
+
+      await restorer.restoreHighlights() // 完成态窗内：早退，无消息往返
+      expect(searchLogCount(logSpy)).toBe(afterFirst)
+      const pings = vi.mocked(sendMessage).mock.calls.filter(([type]) => type === 'get-marks-for-url').length
+      await restorer.restoreHighlights()
+      expect(vi.mocked(sendMessage).mock.calls.filter(([type]) => type === 'get-marks-for-url').length).toBe(pings)
+    })
+
+    it('增量 pass（scopeRoots）绕过 5s 完成态早退', async () => {
+      const { sendMessage } = await import('webext-bridge/content-script')
+      vi.mocked(sendMessage).mockResolvedValue([])
+
+      await restorer.restoreHighlights() // 完成态
+      const pings = vi.mocked(sendMessage).mock.calls.filter(([type]) => type === 'get-marks-for-url').length
+
+      const scope = document.createElement('section')
+      await restorer.restoreHighlights([scope]) // 增量触发：应绕过早退重新 ping
+      expect(vi.mocked(sendMessage).mock.calls.filter(([type]) => type === 'get-marks-for-url').length).toBeGreaterThan(pings)
     })
   })
 })
