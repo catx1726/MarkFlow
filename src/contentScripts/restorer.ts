@@ -201,6 +201,12 @@ export class HighlightRestorer {
       if (this.state.restoredMarkIds.has(mark.id))
         continue
 
+      // 增量模式不穿透 Shadow DOM（MutationObserver 不观察 shadow root 内部变更）：
+      // shadow 标记直接跳过整轮兜底——不搜索、不写冷却、不上报 restoreFailedAt
+      // （未尝试 ≠ 失败），由全量重验兜底（PR #92 CR Blocking #2）
+      if (scopeRoots && mark.shadowHostSelector)
+        continue
+
       const success = await this.restoreBySearch(mark, scopeRoots)
       if (!success) {
         await sendMessage('update-mark-details', {

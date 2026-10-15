@@ -284,16 +284,55 @@ describe('highlightRestorer', () => {
       expect(vi.mocked(sendMessage).mock.calls.filter(([type]) => type === 'get-marks-for-url').length).toBe(pings)
     })
 
-    it('增量 pass（scopeRoots）绕过 5s 完成态早退', async () => {
+    it('增量 pass 中 shadow 标记跳过兜底：不搜索、不刷新冷却、不上报 restoreFailedAt（CR Blocking #2）', async () => {
       const { sendMessage } = await import('webext-bridge/content-script')
-      vi.mocked(sendMessage).mockResolvedValue([])
+      document.body.innerHTML = '<div><p>plain text</p></div>'
+      const mark = {
+        id: 'shadow-1',
+        url: 'https://example.com/page',
+        text: 'text that does not exist in the dom',
+        note: '',
+        color: '#FFFF00',
+        rangySerialized: 'invalid-serialized-range',
+        shadowHostSelector: '#shadow-host',
+        createdAt: Date.now(),
+      }
+      vi.mocked(sendMessage).mockImplementation(async (messageType: string) => {
+        if (messageType === 'get-marks-for-url')
+          return [mark]
+        if (messageType === 'update-mark-details')
+          return { success: true }
+        return undefined
+      })
+      const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
 
-      await restorer.restoreHighlights() // 完成态
-      const pings = vi.mocked(sendMessage).mock.calls.filter(([type]) => type === 'get-marks-for-url').length
+      // Pass #1 全量：host 缺失 → 失败上报 + 3s 冷却（此时未进入完成态）
+      await restorer.restoreHighlights()
+      const failedAfterFull = vi.mocked(sendMessage).mock.calls
+        .filter(([type, payload]: any[]) => type === 'update-mark-details' && payload?.restoreFailedAt).length
+      expect(failedAfterFull).toBe(1)
 
+      // Pass #2 全量（冷却内）：marksToRestore 空 → 进入完成态
+      await restorer.restoreHighlights()
+
+      // 推进 3.5s：冷却(3s)已过、重验窗(5s)内——增量 pass 的目标区间
+      vi.useFakeTimers()
+      vi.setSystemTime(Date.now() + 3500)
+      const cooldownBefore = state.failedRestoreCooldowns.get('shadow-1')
       const scope = document.createElement('section')
-      await restorer.restoreHighlights([scope]) // 增量触发：应绕过早退重新 ping
-      expect(vi.mocked(sendMessage).mock.calls.filter(([type]) => type === 'get-marks-for-url').length).toBeGreaterThan(pings)
+      await restorer.restoreHighlights([scope]) // Pass #3 增量
+      vi.useRealTimers()
+
+      // 增量绕过完成态早退（本 pass 重新 ping）
+      expect(vi.mocked(sendMessage).mock.calls.filter(([type]) => type === 'get-marks-for-url').length).toBe(3)
+      // 不搜索（未尝试 ≠ 失败）
+      expect(searchLogCount(logSpy)).toBe(0)
+      // 不刷新冷却（值与增量前一致，全量重验兜底）
+      expect(state.failedRestoreCooldowns.get('shadow-1')).toBe(cooldownBefore)
+      // 不重复上报 restoreFailedAt
+      const failedAfterIncremental = vi.mocked(sendMessage).mock.calls
+        .filter(([type, payload]: any[]) => type === 'update-mark-details' && payload?.restoreFailedAt).length
+      expect(failedAfterIncremental).toBe(failedAfterFull)
     })
   })
 })

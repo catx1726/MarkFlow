@@ -3,7 +3,6 @@
  *
  * 本模块实现了网页标记的模糊搜索与恢复机制。
  */
-/* eslint-disable no-console -- 搜索诊断日志（[WebMarker-Search]）为线上排障功能面输出 */
 
 import type { Mark } from './storage'
 import { calculateSimilarity, findCommonAncestor, getAllTextNodes } from './dom'
@@ -122,6 +121,7 @@ export class ConsensusMatchStrategy implements SearchStrategy {
     // 核心优化：如果模糊匹配分数过低，直接放弃该候选者，避免干扰歧义判断
     const actualText = context.fullText.substring(alignedRange.start, alignedRange.end)
     if (alignedRange.score < SEARCH_CONFIG.MIN_DISAMBIGUATION_SCORE) {
+      // eslint-disable-next-line no-console -- [WebMarker-Search] 为线上排障诊断日志
       console.log(`[WebMarker-Search] L3 Match rejected: score too low (${alignedRange.score.toFixed(1)}%)`)
       return []
     }
@@ -130,6 +130,7 @@ export class ConsensusMatchStrategy implements SearchStrategy {
     if (candidate) {
       candidate.similarityScore = alignedRange.score
       candidate.displayTextSnippet = actualText
+      // eslint-disable-next-line no-console -- [WebMarker-Search] 为线上排障诊断日志
       console.log(`[WebMarker-Search] L3 Match: "${actualText.substring(0, 30)}..." (Sim: ${alignedRange.score.toFixed(1)}%)`)
       return [candidate]
     }
@@ -344,6 +345,11 @@ export class LocalAligner {
  * SearchContext pass 级缓存：同一恢复批次内多个标记、多根重搜复用同一份
  * 全文/结构边界，避免每标记重复 O(N) 全页遍历（issue #91 B1/B5）。
  * 失效时机由调用方控制（restoreHighlights 入口 + 高亮应用后）。
+ *
+ * 内存行为（PR #92 CR Blocking #3 设计决策）：version 不匹配时同 root 条目
+ * 覆盖写（旧 fullText 立即可回收）；已从 DOM 移除的 root 条目依赖 WeakMap
+ * 语义随节点引用 GC 回收；document.documentElement 等常驻 root 始终只保留
+ * 最新一份，不会累积。
  */
 let searchCacheVersion = 0
 const searchContextCache = new WeakMap<Node, { version: number, context: SearchContext }>()
@@ -371,6 +377,7 @@ export function findCandidateElements(mark: Mark, searchRoot: Node, _extLen: num
  * 各根独立执行策略（context 按根缓存去重），候选聚合后统一去重与歧义裁决。
  */
 export function findCandidateElementsInRoots(mark: Mark, roots: Node[], _extLen: number = 10): { ambiguityLevel: AmbiguityLevel, candidates: Candidate[] } {
+  // eslint-disable-next-line no-console -- [WebMarker-Search] 为线上排障诊断日志（issue #91 的标志性观测点）
   console.log(`[WebMarker-Search] Searching ID: ${mark.id}`)
   const strategies: SearchStrategy[] = [new ExactMatchStrategy(), new RegexMatchStrategy()]
   const candidates: Candidate[] = []
@@ -411,6 +418,7 @@ function resolveAmbiguity(candidates: Candidate[]): { ambiguityLevel: AmbiguityL
 
     // 如果第一名的上下文匹配度极高（>85%），且显著高于第二名（领先20分以上），则自动胜出
     if ((best.contextScore || 0) > 85 && ((best.contextScore || 0) - (second.contextScore || 0) > 20)) {
+      // eslint-disable-next-line no-console -- [WebMarker-Search] 为线上排障诊断日志
       console.log(`[WebMarker-Search] Context-based tie-break success. Winner Score: ${best.contextScore}%`)
       return { ambiguityLevel: 'unique', candidates: [best] }
     }

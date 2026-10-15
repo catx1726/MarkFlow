@@ -2,14 +2,16 @@
  * 判断节点是否位于输入控件（input/textarea/contenteditable）子树内。
  * 打字类 DOM 变更不应触发高亮恢复：既无恢复价值，又会以 300ms 周期
  * 重触发搜索兜底造成输入卡顿（issue #91）。
+ *
+ * isContentEditable 本身已含祖先链渲染语义（一次调用即可判定整条链），
+ * 但部分环境（jsdom）不可靠，故辅以属性级检查；属性级检查只看当前
+ * 元素，祖先上的 contenteditable 声明由外层循环补足（PR #92 CR Nit 1）。
  */
 function isFromTypingContext(node: Node): boolean {
   let el = node.nodeType === Node.ELEMENT_NODE ? (node as Element) : node.parentElement
   while (el) {
     if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement)
       return true
-    // isContentEditable 依赖渲染语义（部分环境不可靠），辅以属性级检查；
-    // 祖先链上任何 contenteditable 声明均会被本遍历命中
     if (el instanceof HTMLElement && (el.isContentEditable || isContentEditableAttr(el)))
       return true
     el = el.parentElement
@@ -70,10 +72,13 @@ export class ContentChangeMonitor {
   }
 
   /**
-   * 收集新增子树根作为增量搜索范围。去重规则：
-   * 已有 root 包含新节点 → 跳过；新节点包含已有 root → 移除旧的。
+   * 收集新增子树根作为增量搜索范围。两阶段去重（PR #92 CR Blocking #1）：
+   * 阶段一完整移除被新根覆盖的全部旧根（可能多个，不首中即断）；
+   * 阶段二再判断新根是否被任一现存根覆盖，未被覆盖才加入。
+   * 无论迭代顺序如何，最终都收敛到最小覆盖集合。
    */
   private collectAddedRoots(mutations: MutationRecord[]) {
+    const candidates: Element[] = []
     for (const m of mutations) {
       for (const node of Array.from(m.addedNodes)) {
         if (isFromTypingContext(node))
@@ -81,18 +86,25 @@ export class ContentChangeMonitor {
         const root = node.nodeType === Node.ELEMENT_NODE ? (node as Element) : node.parentElement
         if (!root || !root.isConnected)
           continue
-        let covered = false
-        for (const existing of this.pendingAddedRoots) {
-          if (existing.contains(root)) {
-            covered = true
-            break
-          }
-          if (root.contains(existing))
-            this.pendingAddedRoots.delete(existing)
-        }
-        if (!covered)
-          this.pendingAddedRoots.add(root)
+        candidates.push(root)
       }
+    }
+    for (const root of candidates) {
+      // 阶段一：新根包含的旧根全部移除（新根为其超集）
+      for (const existing of this.pendingAddedRoots) {
+        if (root.contains(existing))
+          this.pendingAddedRoots.delete(existing)
+      }
+      // 阶段二：新根已被现存根覆盖则跳过
+      let covered = false
+      for (const existing of this.pendingAddedRoots) {
+        if (existing.contains(root)) {
+          covered = true
+          break
+        }
+      }
+      if (!covered)
+        this.pendingAddedRoots.add(root)
     }
   }
 
