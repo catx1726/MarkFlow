@@ -66,8 +66,8 @@ class ExactMatchStrategy implements SearchStrategy {
         candidate.similarityScore = 100
         candidates.push(candidate)
       }
-      // 候选数封顶 10（收集满即停；Regex 策略沿用基线 >10 写法）：
-      // 防重复文本页面候选爆炸（issue #91 B2，PR #92 CR2 Nit 1）
+      // 候选数封顶 10（收集满即停，与 Regex 策略对齐）：
+      // 防重复文本页面候选爆炸（issue #91 B2，PR #92 CR3 Nit 2）
       if (candidates.length >= 10)
         break
       mIdx = fullText.indexOf(mark.text, mIdx + 1)
@@ -96,7 +96,7 @@ class RegexMatchStrategy implements SearchStrategy {
           candidate.similarityScore = 98
           candidates.push(candidate)
         }
-        if (candidates.length > 10)
+        if (candidates.length >= 10)
           break
         match = regex.exec(fullText)
       }
@@ -383,6 +383,12 @@ export function findCandidateElements(mark: Mark, searchRoot: Node, _extLen: num
 /**
  * 在多个搜索根（如增量恢复的新增子树）中查找标记候选。
  * 各根独立执行策略（context 按根缓存去重），候选聚合后统一去重与歧义裁决。
+ *
+ * ExactMatch 的提前终止是「该根内」语义（PR #92 CR3 Blocking #2 设计说明）：
+ * 跨根候选有意累积而非替换——不同根的 Exact(100)/Regex(98) 候选统一进入
+ * resolveAmbiguity 按分数与上下文优选，丢弃先序根的模糊候选反而可能丢失
+ * 真实位置（后序根的精确命中可能是巧合重复文本）。单根场景与原
+ * findCandidateElements 行为完全一致（ExactMatch 为首个策略，无先序累积）。
  */
 export function findCandidateElementsInRoots(mark: Mark, roots: Node[], _extLen: number = 10): { ambiguityLevel: AmbiguityLevel, candidates: Candidate[] } {
   // eslint-disable-next-line no-console -- [WebMarker-Search] 为线上排障诊断日志（issue #91 的标志性观测点）

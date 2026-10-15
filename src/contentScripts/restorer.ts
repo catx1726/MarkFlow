@@ -80,8 +80,10 @@ export class HighlightRestorer {
     // 全量触发 + 窗内 → 早退（monitor 在无限滚动场景下的主要节流点）
     if (!scopeRoots && withinRevalidateWindow)
       return this.state.ambiguousMarksQueue.value
-    // 增量触发 + 窗外/首次 → 升级全量
+    // 增量触发 + 窗外/首次 → 升级全量；空数组归一化为全量（CR3 Nit 3）
     if (scopeRoots && !withinRevalidateWindow)
+      scopeRoots = undefined
+    if (scopeRoots && scopeRoots.length === 0)
       scopeRoots = undefined
 
     invalidateSearchContextCache()
@@ -188,6 +190,11 @@ export class HighlightRestorer {
       failedMarks.push(mark)
     }
 
+    // 防御性缓存失效（PR #92 CR3 Blocking #3）：当前时序下 Phase2 首次
+    // 搜索才构建 context（晚于 Phase1 全部 DOM 修改），本就干净；此调用
+    // 为零成本兜底，防止未来重构将 context 构建提前到 Phase1 之前。
+    invalidateSearchContextCache()
+
     // 第二阶段：回退路径 (Search Fallback) - 处理失效的标记
     // 异步执行，且通过 requestAnimationFrame 避免长任务阻塞 UI
     // 增量模式下仅搜索 scopeRoots 子树（O(新增) 而非 O(全页)，issue #91）
@@ -288,7 +295,7 @@ export class HighlightRestorer {
 
     console.warn(`[HighlightRestorer] Path failed for ${mark.id}, falling back to search.`)
     let { ambiguityLevel, candidates }
-      = scopeRoots && scopeRoots.length > 0
+      = scopeRoots
         ? findCandidateElementsInRoots(mark, scopeRoots, 10)
         : findCandidateElements(mark, deserializationRoot || document.documentElement, 10)
 

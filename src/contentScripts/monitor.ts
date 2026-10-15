@@ -20,11 +20,12 @@ function isFromTypingContext(node: Node): boolean {
 }
 
 function isContentEditableAttr(el: HTMLElement): boolean {
-  // contenteditable="" 等价 "true"；"inherit" 按规范应继承父级，此处判 true
-  // 属保守方向（误判为打字 → 跳过恢复，绝不反向把打字误判为页面变更触发
-  // 搜索）。渲染语义下的精确继承由 isContentEditable 负责（PR #92 CR2 Nit 3）
+  // contenteditable="" 等价 "true"；"inherit" 按规范继承父级，此处判 false
+  // （若父级为 false 则该元素实际不可编辑，判 true 会误静默真实变更，
+  // PR #92 CR3 Nit 1）——继承语义交由 isContentEditable 及外层祖先遍历
+  // 命中真实 editable 祖先处理。保守方向：仅拦截确定的编辑区
   const attr = el.getAttribute('contenteditable')
-  return attr !== null && attr !== 'false'
+  return attr !== null && attr !== 'false' && attr !== 'inherit'
 }
 
 /** 增量恢复的最小间隔：持续滚动时合并变更，避免高频小 pass */

@@ -181,18 +181,22 @@ describe('highlightStateManager', () => {
       expect(state.failedRestoreCooldowns.get('mark-1')).toBe(Date.now() + 3000)
     })
 
-    it('markTransientFailure 固定 3s 冷却且不累积退避（PR #92 CR2 Blocking #1）', () => {
+    it('markTransientFailure 前 4 次固定 3s，第 5 次升级退避（PR #92 CR3 Blocking #1）', () => {
       vi.useFakeTimers()
       vi.setSystemTime(new Date('2026-10-15T00:00:00Z'))
       const state = new HighlightStateManager()
-      // 连续多次瞬时失败：冷却恒为 3s
-      for (let i = 0; i < 5; i++) {
+      // 前 4 次瞬时失败：冷却恒为 3s（结构性未就绪快重试）
+      for (let i = 0; i < 4; i++) {
         state.markTransientFailure('mark-1')
         expect(state.failedRestoreCooldowns.get('mark-1')).toBe(Date.now() + 3000)
         vi.setSystemTime(new Date(Date.now() + 3001))
       }
-      // 瞬时失败不影响内容性失败的退避基线（streak 未被污染）
-      state.markFailed('mark-1')
+      // 第 5 次：疑似永久移除，升级 markFailed 进入指数退避
+      state.markTransientFailure('mark-1')
+      expect(state.failedRestoreCooldowns.get('mark-1')).toBe(Date.now() + 30_000)
+      // 恢复成功清除一切失败状态
+      state.markRestored('mark-1')
+      state.markTransientFailure('mark-1')
       expect(state.failedRestoreCooldowns.get('mark-1')).toBe(Date.now() + 3000)
     })
   })

@@ -87,9 +87,18 @@ describe('search logic - recursive traversal', () => {
       const p = document.querySelector('p')!
       p.innerHTML = '<span class="webext-highlight-m2">target text</span>'
 
-      // 不失效（命中脏缓存）：脱离 DOM 的旧节点使 findCommonAncestor 返回
-      // null，证明"textContent 不变 → 无需失效"不成立——失效是必需的
-      expect(() => findCandidateElements(mark, document.body)).toThrow(TypeError)
+      // 不失效（命中脏缓存）：脱离 DOM 的旧节点使后续节点定位失败。
+      // 宽松断言（不锁异常类型）：任何异常或空候选都证明脏缓存不可用
+      // ——这正是"高亮应用后必须失效"的必要性依据（PR #92 CR3 Nit 5）
+      let staleBroken = false
+      try {
+        const stale = findCandidateElements(mark, document.body)
+        staleBroken = stale.candidates.length === 0
+      }
+      catch {
+        staleBroken = true
+      }
+      expect(staleBroken).toBe(true)
 
       // 失效重建：恢复正常
       invalidateSearchContextCache()

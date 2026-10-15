@@ -15,6 +15,8 @@ export interface DisambiguationModalInstance {
 const COOLDOWN_DURATION = 3000
 /** 连续失败指数退避上限：3s → 6s → 12s → 24s → 30s(封顶) */
 const COOLDOWN_MAX_DURATION = 30_000
+/** 瞬时失败连续达到此次数后升级为退避冷却（约 5×3s=15s 内 host 未出现） */
+const TRANSIENT_FAILURE_ESCALATE_AFTER = 5
 
 export class HighlightStateManager {
   restoredMarkIds = new Set<string>()
@@ -50,11 +52,19 @@ export class HighlightStateManager {
 
   /**
    * 瞬时失败（如 shadow host 尚未挂载）：固定 3s 冷却且不累积退避。
-   * 语义区分（PR #92 CR2 Blocking #1）：结构性未就绪的重试成本极低
-   * （仅 querySelector，无搜索），不应随连续失败退避到 30s——
-   * 否则 SPA 挂载 shadow DOM 后用户最长需等 30s 才能重试。
+   * 语义区分（PR #92 CR2/R3 Blocking #1）：结构性未就绪的重试成本极低
+   * （querySelector + 2 条消息往返），不应随连续失败退避到 30s。
+   * 但 host 缺失也可能是永久性移除（用户删除节点），故连续达到
+   * TRANSIENT_FAILURE_ESCALATE_AFTER 次后升级 markFailed 进入退避——
+   * 慢挂载 SPA（15s 内）仍享快重试，永久移除则收敛到 30s 兜底。
    */
   markTransientFailure(id: string): void {
+    const streak = (this.failureStreaks.get(id) || 0) + 1
+    this.failureStreaks.set(id, streak)
+    if (streak >= TRANSIENT_FAILURE_ESCALATE_AFTER) {
+      this.markFailed(id)
+      return
+    }
     this.failedRestoreCooldowns.set(id, Date.now() + COOLDOWN_DURATION)
   }
 
@@ -70,6 +80,7 @@ export class HighlightStateManager {
 
   deleteRestored(id: string): void {
     this.restoredMarkIds.delete(id)
+    this.failureStreaks.delete(id)
   }
 
   canRestore(id: string): boolean {
